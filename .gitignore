@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.debug
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js
+.next/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.playwright-mcp
+.specify
+.cursor
+.superpowers
+
+# OS
+.DS_Store
+Thumbs.db
+*.pem
+
+# Testing
+coverage/
+.nyc_output/
+
+# Prisma
+*.db
+*.db-journal
+
+# Misc
+.turbo/
+.cache/
+.vercel
+.pypa
+*.pyc
+__pycache__/
+
+# Uploads
+server/uploads/
+web/uploads/
+
+# Vercel
+.vercel
+
+# Package managers
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions

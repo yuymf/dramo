@@ -1,0 +1,78 @@
+services:
+  # AgentOS Service (Python AI)
+  agentos:
+    build: ./agentos
+    ports:
+      - "12322:12322"
+    environment:
+      PORT: 12322
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-}
+      OPENAI_MODEL_ID: ${OPENAI_MODEL_ID:-gpt-4-turbo-preview}
+      HUNYUAN_OPENAPI_URL: ${HUNYUAN_OPENAPI_URL:-}
+      HUNYUAN_OPENAPI_KEY: ${HUNYUAN_OPENAPI_KEY:-}
+      HUNYUAN_MODEL_ID: ${HUNYUAN_MODEL_ID:-hunyuan-turbos-latest}
+      ARK_API_KEY: ${ARK_API_KEY}
+      AGENTOS_SECURITY_KEY: ${AGENTOS_SECURITY_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:12322/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # API Service (Hono)
+  api:
+    build: ./server
+    ports:
+      - "12321:12321"
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 12321
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: ${DATABASE_URL}
+      AGENTOS_BASE_URL: http://agentos:12322
+      AGENTOS_SECURITY_KEY: ${AGENTOS_SECURITY_KEY:-}
+      JWT_SECRET: ${JWT_SECRET}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-supabase}
+      STORAGE_LOCAL_DIR: /app/uploads
+      STORAGE_BASE_URL: ${STORAGE_BASE_URL:-http://localhost:12321/uploads}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_BUCKET: ${SUPABASE_BUCKET:-images}
+    volumes:
+      - api_uploads:/app/uploads
+    depends_on:
+      - agentos
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:12321/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Optional: Local PostgreSQL (use profile localpg)
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-story_agent}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    profiles:
+      - localpg
+
+volumes:
+  postgres_data:
+  api_uploads:
+
+networks:
+  default:
+    name: dramo-network

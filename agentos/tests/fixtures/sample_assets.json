@@ -1,0 +1,31 @@
+{
+  "characters_lib": [
+    {
+      "name": "李明",
+      "description": "程序员，30岁，戴眼镜，穿格子衬衫",
+      "alias": "明哥"
+    },
+    {
+      "name": "王芳",
+      "description": "设计师，28岁，短发，穿风衣",
+      "alias": null
+    },
+    {
+      "name": "张伟",
+      "description": "产品经理，35岁，西装，戴手表",
+      "alias": "张总"
+    }
+  ],
+  "locations_lib": [
+    {
+      "name": "咖啡馆",
+      "description": "现代风格咖啡馆，落地窗，暖色调灯光",
+      "alias": null
+    },
+    {
+      "name": "办公室",
+      "description": "开放式办公空间，白色隔断，荧光灯",
+      "alias": null
+    }
+  ]
+}

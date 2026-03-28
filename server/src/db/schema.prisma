@@ -1,0 +1,284 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String?  // 密码哈希（使用bcrypt）
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects     Project[]
+  subscription Subscription?
+  llmConfigs   UserLLMConfig[]
+}
+
+enum LLMConfigType {
+  TEXT_LLM
+  IMAGE_GEN
+}
+
+model UserLLMConfig {
+  id        String        @id @default(cuid())
+  userId    String
+  name      String
+  type      LLMConfigType
+  baseUrl   String
+  apiKey    String        // AES-256-GCM encrypted
+  modelId   String
+  isDefault Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId, type, isDefault])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scripts            Script[]
+  characterRelations CharacterRelation[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Script {
+  id         String   @id @default(cuid())
+  title      String
+  projectId  String
+  type       String   @default("drama")
+  style      String   @default("casual")
+  form       String?
+  contentType String?
+  goal       String?
+  keyword    String?
+  target     String?
+  topic      String?
+  status     String   @default("draft")
+  scenes     Json     @default("[]")
+  acts       Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project  Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions ScriptVersion[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ScriptVersion {
+  id        String   @id @default(cuid())
+  scriptId  String
+  version   Int
+  summary   String?
+  author    String?
+  content   Json
+  createdAt DateTime @default(now())
+
+  script Script @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@unique([scriptId, version])
+  @@index([scriptId, createdAt])
+}
+
+model Task {
+  id               String   @id @default(cuid())
+  type             String
+  status           String   @default("queued")
+  progress         Int      @default(0)
+  input            Json
+  result           Json?
+  error            Json?
+  userId           String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  estimatedSeconds Int?
+
+  @@index([userId, status])
+  @@index([createdAt])
+  @@index([status])
+}
+
+model Inspiration {
+  id         String   @id @default(cuid())
+  text       String
+  category   String
+  relevance  Float?
+  source     String?
+  projectId  String?
+  isFavorite Boolean  @default(false)
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@index([projectId])
+  @@index([category])
+  @@index([userId, isFavorite])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  projectId String
+  role      String
+  content   String
+  blocks    Json?
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
+}
+
+model Character3ViewAsset {
+  id            String   @id @default(cuid())
+  projectId     String
+  characterName String
+  front         String
+  side          String
+  back          String
+  createdAt     DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model LocationImageAsset {
+  id           String   @id @default(cuid())
+  projectId    String
+  locationName String
+  image        String
+  createdAt    DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// V2 multi-image assets
+model CharacterAsset {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  alias       String?
+  images      Json     @default("[]")
+  createdAt   DateTime @default(now())
+
+  relationsAsNodeA CharacterRelation[] @relation("Relation_NodeA")
+  relationsAsNodeB CharacterRelation[] @relation("Relation_NodeB")
+
+  @@index([projectId])
+}
+
+model LocationAsset {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  alias       String?
+  images      Json     @default("[]")
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// Storyboard frame image persistence
+model StoryboardFrameImage {
+  id        String   @id @default(cuid())
+  projectId String
+  frameId   String
+  image     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, frameId])
+  @@index([projectId])
+}
+
+// Character relationship (undirected graph edges)
+model CharacterRelation {
+  id        String   @id @default(cuid())
+  projectId String
+  nodeAId   String // Normalized: always the smaller ID
+  nodeBId   String // Normalized: always the larger ID
+  type      String? // Free text: "friend", "mentor", "同事", etc.
+  weight    Int? // Strength (0-100), optional
+  notes     String? // Additional notes, optional
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  nodeA   CharacterAsset @relation("Relation_NodeA", fields: [nodeAId], references: [id], onDelete: Cascade)
+  nodeB   CharacterAsset @relation("Relation_NodeB", fields: [nodeBId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, nodeAId, nodeBId, type])
+  @@index([projectId])
+}
+
+// Storyboard data persistence
+model Storyboard {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  frames    Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+// Image generation job queue
+model GenerationJob {
+  id            String   @id @default(cuid())
+  userId        String
+  projectId     String
+  storyboardId  String?
+  frameId       String?
+  params        Json     // {name, description, style, referenceImages, mode, assetType}
+  status        String   @default("queued") // queued, running, succeeded, failed, canceled
+  progress      Int      @default(0) // 0-100
+  queuePosition Int?
+  resultUrl     String?
+  error         Json?    // {message, code, retryable}
+  retryCount    Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([projectId])
+}
+
+// Stripe subscription billing
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  stripeCustomerId     String    @unique
+  stripeSubscriptionId String?   @unique
+  planId               String    @default("free")
+  status               String    @default("active")
+  billingInterval      String?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+}
+

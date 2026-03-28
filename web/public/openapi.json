@@ -1,0 +1,1462 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AI Live Script Assistant API",
+    "version": "2.0.0",
+    "description": "AI 直播台本生成助手后端 API 规范，支持异步任务与高并发场景"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "开发环境"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "健康检查",
+        "tags": ["System"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "服务健康",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "summary": "获取项目列表",
+        "tags": ["Projects"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "minimum": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            },
+            "description": "按项目名称模糊搜索"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedProjects"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "创建项目",
+        "tags": ["Projects"],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/projects/{id}": {
+      "get": {
+        "summary": "获取项目详情",
+        "tags": ["Projects"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectWithScripts"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "put": {
+        "summary": "更新项目",
+        "tags": ["Projects"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除项目",
+        "tags": ["Projects"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "删除成功"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/scripts": {
+      "get": {
+        "summary": "获取台本列表",
+        "tags": ["Scripts"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "projectId",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": ["draft", "published", "archived"]
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedScripts"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "创建/生成台本（异步）",
+        "tags": ["Scripts"],
+        "description": "生产环境返回 202 + taskId，开发环境可配置同步返回 201",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScriptCreateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "任务已创建（异步模式）",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "$ref": "#/components/headers/X-RateLimit-Limit"
+              },
+              "X-RateLimit-Remaining": {
+                "$ref": "#/components/headers/X-RateLimit-Remaining"
+              },
+              "X-RateLimit-Reset": {
+                "$ref": "#/components/headers/X-RateLimit-Reset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "创建成功（同步模式 - 仅开发环境）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Script"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/scripts/{id}": {
+      "get": {
+        "summary": "获取台本详情",
+        "tags": ["Scripts"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Script"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/scripts/{id}/content": {
+      "patch": {
+        "summary": "更新台本内容",
+        "tags": ["Scripts"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScriptContentUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Script"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "版本冲突",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scripts/{id}/regenerate": {
+      "post": {
+        "summary": "重新生成场景内容（异步）",
+        "tags": ["Scripts"],
+        "description": "生产环境返回 202 + taskId，开发环境可配置同步返回 200",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["sceneId"],
+                "properties": {
+                  "sceneId": {
+                    "type": "string"
+                  },
+                  "parameters": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "任务已创建（异步模式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "生成成功（同步模式 - 仅开发环境）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegenerateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/inspirations": {
+      "get": {
+        "summary": "获取灵感推荐",
+        "tags": ["Inspirations"],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "projectId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "项目ID"
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string",
+              "enum": ["quotes", "topics", "interactions", "hotspots"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspirationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/inspirations/refresh": {
+      "post": {
+        "summary": "刷新灵感推荐（异步）",
+        "tags": ["Inspirations"],
+        "description": "依据当前项目内容生成最贴近的灵感推荐",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["projectId"],
+                "properties": {
+                  "projectId": {
+                    "type": "string",
+                    "description": "项目ID"
+                  },
+                  "locale": {
+                    "type": "string",
+                    "description": "语言代码",
+                    "default": "zh-CN"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "任务已创建（异步模式）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "刷新成功（同步模式 - 仅开发环境）",
+            "headers": {
+              "X-Stub": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["true"]
+                },
+                "description": "标记为占位实现"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspirationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/api/inspirations/favorite": {
+      "post": {
+        "summary": "收藏/取消收藏灵感",
+        "tags": ["Inspirations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["inspirationId"],
+                "properties": {
+                  "inspirationId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "inspirationId": {
+                      "type": "string"
+                    },
+                    "isFavorite": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inspirations/favorites": {
+      "get": {
+        "summary": "获取收藏列表",
+        "tags": ["Inspirations"],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspirationsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/personas": {
+      "get": {
+        "summary": "获取人设列表",
+        "tags": ["Personas"],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Persona"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/personas/{id}": {
+      "get": {
+        "summary": "获取人设详情",
+        "tags": ["Personas"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Persona"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/polish": {
+      "post": {
+        "summary": "文本润色",
+        "tags": ["AI"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "maxLength": 5000
+                  },
+                  "style": {
+                    "type": "string",
+                    "enum": ["humorous", "formal", "enthusiastic", "custom"]
+                  },
+                  "personaId": {
+                    "type": "string"
+                  },
+                  "operation": {
+                    "type": "string",
+                    "enum": ["enhance", "simplify", "adjust_tone"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "润色成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "original": {
+                      "type": "string"
+                    },
+                    "polished": {
+                      "type": "string"
+                    },
+                    "explanation": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          }
+        }
+      }
+    },
+    "/api/tasks/{taskId}": {
+      "get": {
+        "summary": "查询任务状态",
+        "tags": ["Tasks"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "taskId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Bearer Token 认证（除 /api/health 外所有接口必需）"
+      }
+    },
+    "parameters": {
+      "IdempotencyKey": {
+        "in": "header",
+        "name": "Idempotency-Key",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "幂等键，防止重复操作"
+      }
+    },
+    "headers": {
+      "X-RateLimit-Limit": {
+        "description": "时间窗口内的请求限制",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "X-RateLimit-Remaining": {
+        "description": "时间窗口内剩余请求数",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "X-RateLimit-Reset": {
+        "description": "限流重置时间（Unix 时间戳）",
+        "schema": {
+          "type": "integer"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "请求参数错误",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "INVALID_INPUT",
+                "message": "请求参数不合法",
+                "details": {
+                  "field": "title",
+                  "reason": "长度必须在 1-120 字符之间"
+                },
+                "retryable": false
+              },
+              "requestId": "req_abc123"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "未认证",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "UNAUTHORIZED",
+                "message": "未提供有效的认证凭据",
+                "retryable": false
+              },
+              "requestId": "req_def456"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "资源不存在",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "NOT_FOUND",
+                "message": "资源不存在",
+                "retryable": false
+              },
+              "requestId": "req_ghi789"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "请求频率超限",
+        "headers": {
+          "X-RateLimit-Limit": {
+            "$ref": "#/components/headers/X-RateLimit-Limit"
+          },
+          "X-RateLimit-Remaining": {
+            "$ref": "#/components/headers/X-RateLimit-Remaining"
+          },
+          "X-RateLimit-Reset": {
+            "$ref": "#/components/headers/X-RateLimit-Reset"
+          },
+          "Retry-After": {
+            "description": "建议重试等待秒数",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": {
+                "code": "RATE_LIMITED",
+                "message": "请求频率超限，请稍后再试",
+                "details": {
+                  "limit": 10,
+                  "window": "1 hour"
+                },
+                "retryable": true
+              },
+              "requestId": "req_jkl012"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": ["ok", "version", "uptimeSeconds", "timestamp"],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string"
+          },
+          "uptimeSeconds": {
+            "type": "number"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error", "requestId"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "错误码（大写下划线）"
+              },
+              "message": {
+                "type": "string",
+                "description": "用户可读的错误信息"
+              },
+              "details": {
+                "type": "object",
+                "description": "详细信息"
+              },
+              "retryable": {
+                "type": "boolean",
+                "description": "是否可重试"
+              }
+            }
+          },
+          "requestId": {
+            "type": "string",
+            "description": "请求追踪ID"
+          }
+        }
+      },
+      "TaskResponse": {
+        "type": "object",
+        "required": ["taskId", "status"],
+        "properties": {
+          "taskId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "running"]
+          },
+          "estimatedSeconds": {
+            "type": "integer"
+          }
+        }
+      },
+      "TaskStatus": {
+        "type": "object",
+        "required": ["taskId", "status", "createdAt", "updatedAt"],
+        "properties": {
+          "taskId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["queued", "running", "succeeded", "failed"]
+          },
+          "progress": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "result": {
+            "description": "任务成功时的结果"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estimatedSeconds": {
+            "type": "integer"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "required": ["total", "page", "limit", "pages"],
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "pages": {
+            "type": "integer"
+          }
+        }
+      },
+      "ProjectCreateInput": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "personaId": {
+            "type": "string"
+          }
+        }
+      },
+      "ProjectUpdateInput": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ProjectCreateInput"
+          }
+        ]
+      },
+      "Project": {
+        "type": "object",
+        "required": ["id", "name", "createdAt", "updatedAt", "scriptCount"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "scriptCount": {
+            "type": "integer"
+          }
+        }
+      },
+      "ProjectWithScripts": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Project"
+          }
+        ],
+        "properties": {
+          "scripts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScriptSummary"
+            }
+          }
+        }
+      },
+      "ScriptSummary": {
+        "type": "object",
+        "required": ["id", "title", "status"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginatedProjects": {
+        "type": "object",
+        "required": ["data", "pagination"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "ScriptCreateInput": {
+        "type": "object",
+        "required": ["projectId", "title"],
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "type": {
+            "type": "string",
+            "enum": ["product", "game", "talk", "interview", "custom"]
+          },
+          "style": {
+            "type": "string",
+            "enum": ["humorous", "formal", "enthusiastic", "custom"]
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/GenerationParams"
+          }
+        }
+      },
+      "GenerationParams": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "scene": {
+            "type": "string"
+          },
+          "currentEvents": {
+            "type": "string"
+          }
+        }
+      },
+      "Script": {
+        "type": "object",
+        "required": ["id", "title", "projectId", "type", "style", "status", "scenes", "createdAt", "updatedAt"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "style": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["draft", "published", "archived"]
+          },
+          "scenes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Scene"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Scene": {
+        "type": "object",
+        "required": ["id", "title", "order", "content"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Block"
+            }
+          }
+        }
+      },
+      "Block": {
+        "type": "object",
+        "required": ["id", "label", "text"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "ScriptContentUpdate": {
+        "type": "object",
+        "required": ["scenes"],
+        "properties": {
+          "scenes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Scene"
+            }
+          }
+        }
+      },
+      "RegenerateResponse": {
+        "type": "object",
+        "required": ["scriptId", "sceneId", "candidates", "regeneratedAt"],
+        "properties": {
+          "scriptId": {
+            "type": "string"
+          },
+          "sceneId": {
+            "type": "string"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "text", "rank"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "rank": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "regeneratedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PaginatedScripts": {
+        "type": "object",
+        "required": ["data", "pagination"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Script"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "InspirationsResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Inspiration"
+            }
+          }
+        }
+      },
+      "Inspiration": {
+        "type": "object",
+        "required": ["id", "text", "category"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["quotes", "topics", "interactions", "hotspots"]
+          },
+          "relevance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      },
+      "Persona": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "styleTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "speechFeatures": {
+            "type": "object",
+            "properties": {
+              "catchphrases": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tabooWords": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "sentencePatterns": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System",
+      "description": "系统接口"
+    },
+    {
+      "name": "Projects",
+      "description": "项目管理"
+    },
+    {
+      "name": "Scripts",
+      "description": "台本管理"
+    },
+    {
+      "name": "Inspirations",
+      "description": "灵感推荐"
+    },
+    {
+      "name": "Personas",
+      "description": "人设管理"
+    },
+    {
+      "name": "AI",
+      "description": "AI 能力"
+    },
+    {
+      "name": "Tasks",
+      "description": "异步任务"
+    }
+  ]
+}

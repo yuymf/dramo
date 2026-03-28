@@ -1,0 +1,1573 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafaf9;
+  --foreground: #1c1917;
+
+  /* ========================================
+     Atelier Design System
+     Premium creative workspace aesthetic
+     ======================================== */
+
+  /* Surfaces */
+  --at-bg: #fafaf9;           /* Page background — warm white */
+  --at-surface: #ffffff;       /* Cards, panels — pure white */
+  --at-surface-raised: #ffffff; /* Elevated surfaces */
+  --at-surface-sunken: #f5f5f4; /* Recessed areas, sidebar bg */
+  --at-surface-hover: #f5f5f4;  /* Hover state bg */
+  --at-surface-active: #fef2f2; /* Active/selected bg — terracotta tint */
+
+  /* Borders */
+  --at-border: #e7e5e4;        /* Default border */
+  --at-border-light: #f0efed;  /* Subtle border */
+  --at-border-focus: #c2410c;  /* Focus ring — terracotta */
+
+  /* Text */
+  --at-text: #1c1917;          /* Primary text — stone-900 */
+  --at-text-secondary: #78716c; /* Secondary text — stone-500 */
+  --at-text-tertiary: #a8a29e;  /* Muted text — stone-400 */
+  --at-text-inverse: #fafaf9;   /* Text on dark bg */
+
+  /* Accent — Terracotta (warm, grounded, creative) */
+  --at-accent: #c2410c;        /* Primary accent */
+  --at-accent-hover: #9a3412;  /* Accent hover */
+  --at-accent-light: #fff7ed;  /* Accent tint bg */
+  --at-accent-soft: #fdba74;   /* Accent soft — for badges */
+
+  /* Semantic */
+  --at-success: #16a34a;
+  --at-warning: #d97706;
+  --at-error: #dc2626;
+  --at-info: #2563eb;
+
+  /* Shadows */
+  --at-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --at-shadow-md: 0 4px 12px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.04);
+  --at-shadow-lg: 0 12px 40px rgba(28, 25, 23, 0.08), 0 4px 12px rgba(28, 25, 23, 0.04);
+  --at-shadow-focus: 0 0 0 2px #fafaf9, 0 0 0 4px rgba(194, 65, 12, 0.3);
+
+  /* Legacy compat — mapped to Atelier */
+  --brand-50: #fff7ed;
+  --brand-100: #ffedd5;
+  --brand-500: #c2410c;
+  --brand-600: #9a3412;
+  --brand-700: #7c2d12;
+  --muted-bg: #f5f5f4;
+  --panel-bg: #ffffff;
+  --border-line: #e7e5e4;
+  --text-muted: #78716c;
+  --muji-cream: #fafaf9;
+  --muji-light-gray: #f5f5f4;
+  --muji-oatmeal: #e7e5e4;
+  --muji-charcoal: #1c1917;
+  --muji-dark-gray: #57534e;
+  --muji-sage: #78716c;
+  --muji-amber: #c2410c;
+  --ink-black: #1c1917;
+  --ink-wash: #44403c;
+  --ink-light: #78716c;
+  --rice-paper: #fafaf9;
+  --rice-warm: #f5f5f4;
+  --rice-dark: #e7e5e4;
+  --persimmon: #c2410c;
+  --persimmon-soft: #ea580c;
+  --bamboo: #78716c;
+  --bamboo-muted: #a8a29e;
+  --clay: #a8a29e;
+  --clay-light: #d6d3d1;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-dm-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--at-bg);
+  color: var(--at-text);
+  font-family: var(--font-dm-sans), "PingFang SC", "Hiragino Sans GB", -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv01", "cv02", "cv03", "cv04";
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Prose styling for editor */
+.prose {
+  color: var(--foreground);
+}
+
+.prose p {
+  margin-bottom: 0.75em;
+  line-height: 1.75;
+}
+
+.prose strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.prose em {
+  color: var(--foreground);
+}
+
+.prose h2 {
+  font-size: 1.5em;
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+.prose h3 {
+  font-size: 1.25em;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+/* Tiptap/ProseMirror 编辑器样式 - 移除焦点黑框 */
+.ProseMirror {
+  outline: none !important;
+}
+
+.ProseMirror:focus {
+  outline: none !important;
+  border: none !important;
+}
+
+.ProseMirror-focused {
+  outline: none !important;
+  border: none !important;
+}
+
+/* Placeholder 样式 - 书本编辑器风格 */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: rgb(203 213 225); /* slate-300 */
+  font-style: italic;
+  font-size: 0.875rem; /* 14px - 比正文小一点 */
+  pointer-events: none;
+  height: 0;
+  opacity: 0.7;
+}
+
+/* Glassmorphism effect */
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(230, 232, 230, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass-morphism {
+    background: rgba(10, 10, 10, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Unified panel header styles */
+.panel-header {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-line);
+  background: var(--panel-bg);
+}
+
+.panel-title {
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 900;
+  color: #334155; /* slate-700 */
+  letter-spacing: 0.01em;
+}
+
+.jp-serif {
+  font-family: Georgia, "Times New Roman", serif;
+  font-variant-east-asian: jis90;
+  line-break: strict;
+}
+
+/* Muji风格字体系统 */
+/* 正文内容：使用宋体类字体（中文）和衬线字体（英文），营造印刷感 */
+.muji-serif {
+  font-family: "Songti SC", "STSong", "SimSun", Georgia, "Times New Roman", serif;
+  color: var(--muji-charcoal);
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+}
+
+/* UI元素：使用系统字体，保持现代感和可读性 */
+.muji-ui {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "思源黑体", "Source Han Sans CN", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--muji-charcoal);
+}
+
+/* 书本编辑器样式 */
+.book-editor {
+  font-family: Georgia, "Songti SC", "STSong", "SimSun", "Times New Roman", serif;
+  white-space: pre-wrap; /* 自动换行 */
+  word-wrap: break-word; /* 长单词换行 */
+  overflow-wrap: break-word; /* 兼容性 */
+  line-height: 2; /* 舒适的行高 */
+  font-size: 1rem; /* 16px */
+  color: #1e293b; /* slate-800 */
+  letter-spacing: 0.02em; /* 略微增加字间距 */
+}
+
+/* 书本编辑器段落样式 */
+.book-editor p {
+  margin-bottom: 1.5em;
+  text-indent: 0; /* 可以根据需要调整首行缩进 */
+  line-height: 2;
+}
+
+/* 书本编辑器格式样式 */
+.book-editor strong,
+.book-editor b {
+  font-weight: 700 !important;
+  color: #0f172a; /* slate-900 - 加粗文字颜色更深 */
+}
+
+.book-editor em,
+.book-editor i {
+  font-style: italic !important;
+}
+
+.book-editor s,
+.book-editor strike {
+  text-decoration: line-through !important;
+}
+
+.book-editor h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+  line-height: 1.3;
+}
+
+.book-editor h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  line-height: 1.4;
+}
+
+.book-editor ul,
+.book-editor ol {
+  padding-left: 2em;
+  margin-bottom: 1.5em;
+}
+
+.book-editor ul {
+  list-style-type: disc;
+}
+
+.book-editor ol {
+  list-style-type: decimal;
+}
+
+.book-editor li {
+  margin-bottom: 0.5em;
+}
+
+/* 编辑器容器背景 - 仿纸张质感 */
+.book-editor-container {
+  background: linear-gradient(to bottom, #fdfdfb 0%, #fefefe 100%);
+  box-shadow: 
+    inset 0 1px 2px rgba(0, 0, 0, 0.02),
+    0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Landing 页面等高线动态背景 */
+.topo-bg {
+  position: relative;
+  background: linear-gradient(135deg, #fafbfc 0%, #f0f4f8 100%);
+}
+
+.topo-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.03) 0px,
+      rgba(0, 0, 0, 0.03) 1px,
+      transparent 1px,
+      transparent 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.03) 0px,
+      rgba(0, 0, 0, 0.03) 1px,
+      transparent 1px,
+      transparent 40px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgba(35, 192, 154, 0.02) 0px,
+      rgba(35, 192, 154, 0.02) 1px,
+      transparent 1px,
+      transparent 60px
+    );
+  background-size: 40px 40px, 40px 40px, 60px 60px;
+  animation: topoMove 30s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes topoMove {
+  0% {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  100% {
+    background-position: 200px 0, 0 200px, 100px 100px;
+  }
+}
+
+/* Muji风格纸张纹理背景 */
+.muji-paper-bg {
+  position: relative;
+  background-color: var(--muji-cream);
+}
+
+.muji-paper-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.01) 2px,
+      rgba(0, 0, 0, 0.01) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.01) 2px,
+      rgba(0, 0, 0, 0.01) 4px
+    );
+  background-size: 4px 4px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* 纸张纹理噪点效果 */
+.muji-paper-texture {
+  position: relative;
+}
+
+.muji-paper-texture::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Logo呼吸动画 - 减少幅度至1.03 */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes blink {
+  0%, 90%, 100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink 4s ease-in-out infinite;
+}
+
+/* 纸质卡片效果 - 符合计划规格 */
+.paper-card {
+  background: #fdfcf9;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+
+.paper-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.paper-card-script {
+  background: linear-gradient(to bottom, #fefefe 0%, #faf9f6 100%);
+  position: relative;
+}
+
+.paper-card-script::before {
+  content: "";
+  position: absolute;
+  left: 60px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.paper-card-storyboard {
+  background: var(--muji-light-gray);
+  border: 2px dashed rgba(0, 0, 0, 0.1);
+}
+
+.paper-card-character {
+  background: var(--muji-cream);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* 笔记本风格输入框 */
+.notebook-input-container {
+  position: relative;
+  background: var(--muji-cream);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background-image: 
+    repeating-linear-gradient(
+      transparent,
+      transparent 28px,
+      rgba(0, 0, 0, 0.03) 28px,
+      rgba(0, 0, 0, 0.03) 29px
+    );
+}
+
+.notebook-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-size: 16px;
+  line-height: 28px;
+  color: var(--muji-charcoal);
+  font-family: inherit;
+  padding: 0;
+  padding-right: 60px;
+}
+
+.notebook-textarea::placeholder {
+  color: var(--muji-dark-gray);
+  opacity: 0.5;
+}
+
+/* 快捷指令标签 */
+.quick-action-tag {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--muji-cream);
+  color: var(--muji-charcoal);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.quick-action-tag:hover {
+  background: var(--muji-oatmeal);
+  border-color: rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.quick-action-tag:active {
+  transform: translateY(0);
+}
+
+/* Muji风格按钮 - 纸片风格 */
+.muji-button {
+  background: transparent;
+  border: 1px solid rgba(44, 44, 44, 0.08);
+  border-radius: 4px;
+  color: var(--muji-charcoal);
+  transition: all 160ms ease;
+  font-weight: 400;
+}
+
+.muji-button:hover {
+  background: var(--muji-oatmeal);
+  border-color: rgba(44, 44, 44, 0.12);
+  box-shadow: 0 0 0 1px rgba(44, 44, 44, 0.2);
+  transform: translateY(-1px);
+}
+
+.muji-button:active {
+  transform: scale(0.98) translateY(0);
+  box-shadow: 0 0 0 1px rgba(44, 44, 44, 0.15);
+}
+
+/* Muji风格输入框 - 淡描边 */
+.muji-input {
+  background: transparent;
+  border: 1px solid rgba(44, 44, 44, 0.08);
+  border-radius: 4px;
+  color: var(--muji-charcoal);
+  transition: border-color 160ms ease;
+}
+
+.muji-input:focus {
+  outline: none;
+  border-color: rgba(44, 44, 44, 0.2);
+  box-shadow: 0 0 0 1px rgba(44, 44, 44, 0.1);
+}
+
+/* 项目名编辑下划线动画 */
+@keyframes underline-scale {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.project-name-edit-underline {
+  position: relative;
+}
+
+.project-name-edit-underline::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--muji-charcoal);
+  transform-origin: left;
+  animation: underline-scale 0.2s ease-out;
+}
+
+/* 侧栏激活指示器 - 左侧细线 */
+.sidebar-active-indicator {
+  position: relative;
+}
+
+.sidebar-active-indicator::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--muji-charcoal);
+  transition: border-color 160ms ease;
+}
+
+/* 标签导航样式 - 手账标签 */
+.muji-tab-nav {
+  background: var(--muji-oatmeal);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.muji-tab {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  color: var(--muji-charcoal);
+  transition: all 160ms ease;
+}
+
+.muji-tab-active {
+  background: var(--muji-cream);
+  border-bottom: 2px solid var(--muji-amber);
+}
+
+/* 遮罩层 - 米白色系 */
+.muji-overlay {
+  background: rgba(249, 247, 241, 0.8);
+  position: relative;
+}
+
+.muji-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* 手账标签样式 - 版头 */
+.muji-notebook-header {
+  font-family: "Songti SC", "STSong", "SimSun", Georgia, "Times New Roman", serif;
+  color: var(--muji-charcoal);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.muji-notebook-subtitle {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--muji-dark-gray);
+  text-transform: lowercase;
+}
+
+/* 淡入动画 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 300ms ease-out;
+}
+
+/* 按钮按压效果 */
+@keyframes press {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-press {
+  animation: press 0.15s ease-out;
+}
+
+/* AI助手按钮轻晃 */
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotateZ(0deg);
+  }
+  25% {
+    transform: rotateZ(-2deg);
+  }
+  75% {
+    transform: rotateZ(2deg);
+  }
+}
+
+.animate-wiggle {
+  animation: wiggle 0.3s ease-in-out;
+}
+
+/* ========================================
+   Landing Page — Cinematic Screenplay Style
+   ======================================== */
+
+:root {
+  --cinema-black: #0d0c0a;
+  --cinema-dark: #1a1816;
+  --cinema-surface: #232019;
+  --cinema-amber: #d4a853;
+  --cinema-amber-glow: #e8c06a;
+  --cinema-warm-white: #f5f0e6;
+  --cinema-warm-gray: #a89e8c;
+  --cinema-dim: #6b6358;
+  --cinema-red: #c25a3c;
+}
+
+/* Cinematic page wrapper */
+.cinema-page {
+  background: var(--cinema-black);
+  color: var(--cinema-warm-white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Film grain overlay */
+.cinema-grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='1'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* Screenplay-style monospace font */
+.screenplay-font {
+  font-family: "Courier New", "Courier", "Noto Sans Mono", monospace;
+  letter-spacing: 0.04em;
+}
+
+/* Scene heading style */
+.scene-heading {
+  font-family: "Courier New", "Courier", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  color: var(--cinema-amber);
+}
+
+/* Amber underline accent */
+.amber-line {
+  position: relative;
+}
+.amber-line::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  width: 48px;
+  height: 2px;
+  background: var(--cinema-amber);
+}
+
+/* Stage spotlight gradient */
+.spotlight-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(212, 168, 83, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 50%, rgba(212, 168, 83, 0.04) 0%, transparent 50%),
+    var(--cinema-black);
+}
+
+/* Hero section - dramatic reveal */
+@keyframes cinema-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cinema-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cinema-line-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes typewriter-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes cinema-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.cinema-reveal {
+  animation: cinema-fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+.cinema-reveal-delay-1 { animation-delay: 0.15s; }
+.cinema-reveal-delay-2 { animation-delay: 0.3s; }
+.cinema-reveal-delay-3 { animation-delay: 0.45s; }
+.cinema-reveal-delay-4 { animation-delay: 0.6s; }
+.cinema-reveal-delay-5 { animation-delay: 0.75s; }
+.cinema-reveal-delay-6 { animation-delay: 0.9s; }
+
+/* Horizontal divider with amber center */
+.cinema-divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(212, 168, 83, 0.3) 30%,
+    rgba(212, 168, 83, 0.6) 50%,
+    rgba(212, 168, 83, 0.3) 70%,
+    transparent 100%
+  );
+}
+
+/* Feature card - screenplay scene style */
+.cinema-card {
+  background: var(--cinema-surface);
+  border: 1px solid rgba(212, 168, 83, 0.12);
+  border-radius: 2px;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cinema-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: linear-gradient(135deg, rgba(212, 168, 83, 0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.cinema-card:hover {
+  border-color: rgba(212, 168, 83, 0.35);
+  transform: translateY(-4px);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(212, 168, 83, 0.06);
+}
+
+/* Screenplay action line */
+.cinema-action-line {
+  color: var(--cinema-warm-gray);
+  font-family: "Courier New", "Courier", monospace;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+}
+
+/* Amber glow button */
+.cinema-cta {
+  background: var(--cinema-amber);
+  color: var(--cinema-black);
+  font-family: "Courier New", "Courier", monospace;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 2px;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cinema-cta::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 4px;
+  background: var(--cinema-amber);
+  opacity: 0;
+  filter: blur(12px);
+  transition: opacity 0.3s;
+  z-index: -1;
+}
+
+.cinema-cta:hover {
+  background: var(--cinema-amber-glow);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(212, 168, 83, 0.3);
+}
+
+.cinema-cta:hover::before {
+  opacity: 0.4;
+}
+
+/* Cinema header */
+.cinema-header {
+  background: var(--cinema-black);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(212, 168, 83, 0.1);
+}
+
+/* Screenplay page number */
+.cinema-page-num {
+  font-family: "Courier New", "Courier", monospace;
+  font-size: 0.75rem;
+  color: var(--cinema-dim);
+  letter-spacing: 0.1em;
+}
+
+/* Cat silhouette glow */
+.cat-glow {
+  filter: drop-shadow(0 0 40px rgba(212, 168, 83, 0.15));
+  animation: float-gentle 6s ease-in-out infinite;
+}
+
+/* Scrollbar styling for cinema */
+.cinema-page::-webkit-scrollbar {
+  width: 6px;
+}
+.cinema-page::-webkit-scrollbar-track {
+  background: var(--cinema-black);
+}
+.cinema-page::-webkit-scrollbar-thumb {
+  background: var(--cinema-dim);
+  border-radius: 3px;
+}
+
+/* Stat counter */
+.cinema-stat {
+  font-family: "Courier New", "Courier", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Horizontal scroll ticker — infinite loop */
+@keyframes cinema-ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.cinema-ticker-wrap {
+  display: flex;
+  width: max-content;
+  animation: cinema-ticker 40s linear infinite;
+}
+
+.cinema-ticker-track {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  padding-right: 3rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Cursor blink */
+.cursor-blink::after {
+  content: "▎";
+  color: var(--cinema-amber);
+  animation: typewriter-cursor 1s ease-in-out infinite;
+}
+
+/* ========================================
+   Ink & Paper Studio — 墨纸工坊
+   ======================================== */
+
+/* Staggered reveal animation */
+@keyframes ink-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes ink-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ink-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes ink-brush-stroke {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  to {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+@keyframes ink-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-6px) rotate(0.5deg); }
+  66% { transform: translateY(-3px) rotate(-0.3deg); }
+}
+
+@keyframes ink-pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.ink-reveal {
+  animation: ink-reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ink-reveal-1 { animation-delay: 0.08s; }
+.ink-reveal-2 { animation-delay: 0.16s; }
+.ink-reveal-3 { animation-delay: 0.24s; }
+.ink-reveal-4 { animation-delay: 0.32s; }
+.ink-reveal-5 { animation-delay: 0.4s; }
+.ink-reveal-6 { animation-delay: 0.48s; }
+.ink-reveal-7 { animation-delay: 0.56s; }
+
+.ink-float {
+  animation: ink-float 8s ease-in-out infinite;
+}
+
+/* Rice paper background with layered texture */
+.rice-paper-bg {
+  background-color: var(--rice-paper);
+  position: relative;
+}
+
+.rice-paper-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(196, 168, 130, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(138, 154, 123, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(212, 101, 74, 0.02) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+.rice-paper-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Ink wash card */
+.ink-card {
+  background: linear-gradient(145deg, #fdfaf4 0%, #f8f5ef 50%, #f4f0e8 100%);
+  border: 1px solid rgba(26, 26, 24, 0.06);
+  border-radius: 12px;
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+
+.ink-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.015'/%3E%3C/svg%3E");
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.ink-card:hover {
+  border-color: rgba(26, 26, 24, 0.12);
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 40px rgba(26, 26, 24, 0.08),
+    0 4px 12px rgba(26, 26, 24, 0.04);
+}
+
+/* Sidebar ink line active indicator */
+.ink-nav-active {
+  position: relative;
+}
+
+.ink-nav-active::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 24px;
+  background: var(--persimmon);
+  border-radius: 1px;
+  animation: ink-brush-stroke 0.3s ease-out both;
+}
+
+/* Persimmon accent dot */
+.ink-dot::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--persimmon);
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Ink serif display font */
+.ink-display {
+  font-family: "Noto Serif SC", "Songti SC", "STSong", Georgia, "Times New Roman", serif;
+  color: var(--ink-black);
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.ink-body {
+  font-family: "Noto Serif SC", "Songti SC", "STSong", Georgia, serif;
+  color: var(--ink-wash);
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+.ink-ui {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Segoe UI", sans-serif;
+  color: var(--ink-wash);
+}
+
+/* Ink input — minimal bottom border style */
+.ink-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid rgba(26, 26, 24, 0.1);
+  padding: 12px 0;
+  color: var(--ink-black);
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+  outline: none;
+  width: 100%;
+}
+
+.ink-input:focus {
+  border-bottom-color: var(--persimmon);
+}
+
+.ink-input::placeholder {
+  color: var(--ink-light);
+  opacity: 0.6;
+}
+
+/* Ink button */
+.ink-button {
+  background: var(--ink-black);
+  color: var(--rice-paper);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.ink-button:hover {
+  background: var(--ink-wash);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(26, 26, 24, 0.15);
+}
+
+.ink-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.ink-button-ghost {
+  background: transparent;
+  color: var(--ink-wash);
+  border: 1px solid rgba(26, 26, 24, 0.1);
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-weight: 400;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.ink-button-ghost:hover {
+  background: var(--rice-warm);
+  border-color: rgba(26, 26, 24, 0.15);
+}
+
+/* Creative textarea — artisan paper feel */
+.ink-textarea-wrap {
+  position: relative;
+  background: linear-gradient(180deg, #fdfaf4 0%, #faf6ee 100%);
+  border: 1px solid rgba(26, 26, 24, 0.08);
+  border-radius: 16px;
+  padding: 28px 28px 64px;
+  box-shadow:
+    0 1px 2px rgba(26, 26, 24, 0.04),
+    0 8px 32px rgba(26, 26, 24, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ink-textarea-wrap:focus-within {
+  border-color: rgba(212, 101, 74, 0.2);
+  box-shadow:
+    0 1px 2px rgba(26, 26, 24, 0.04),
+    0 12px 48px rgba(26, 26, 24, 0.06),
+    0 0 0 3px rgba(212, 101, 74, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.ink-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-size: 17px;
+  line-height: 1.8;
+  color: var(--ink-black);
+  padding: 0;
+}
+
+.ink-textarea::placeholder {
+  color: var(--ink-light);
+  opacity: 0.45;
+  font-style: italic;
+}
+
+/* Section divider — ink brush line */
+.ink-divider {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(26, 26, 24, 0.08) 20%,
+    rgba(26, 26, 24, 0.12) 50%,
+    rgba(26, 26, 24, 0.08) 80%,
+    transparent 100%
+  );
+  margin: 48px 0;
+}
+
+/* Quick action chips — ink stamp style */
+.ink-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(26, 26, 24, 0.08);
+  background: rgba(248, 245, 239, 0.6);
+  color: var(--ink-wash);
+  font-size: 14px;
+  font-weight: 400;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+
+.ink-chip:hover {
+  background: var(--rice-warm);
+  border-color: rgba(26, 26, 24, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(26, 26, 24, 0.06);
+}
+
+.ink-chip:active {
+  transform: translateY(0);
+}
+
+/* Profile avatar placeholder */
+.ink-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--rice-warm) 0%, var(--rice-dark) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink-wash);
+  border: 2px solid rgba(26, 26, 24, 0.06);
+}
+
+/* Stat card for profile */
+.ink-stat {
+  text-align: center;
+  padding: 20px 16px;
+}
+
+.ink-stat-value {
+  font-family: "Noto Serif SC", Georgia, serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink-black);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.ink-stat-label {
+  font-size: 13px;
+  color: var(--ink-light);
+  letter-spacing: 0.02em;
+}
+
+/* Scrollbar for ink pages */
+.ink-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.ink-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ink-scroll::-webkit-scrollbar-thumb {
+  background: rgba(26, 26, 24, 0.12);
+  border-radius: 2px;
+}
+
+.ink-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(26, 26, 24, 0.2);
+}
+
+/* ========================================
+   Ink & Paper Studio — Shared Utilities
+   ======================================== */
+
+/* 1. Section header — flex baseline, bottom border, serif title + subtitle */
+.ink-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(26, 26, 24, 0.08);
+  margin-bottom: 16px;
+}
+
+.ink-section-title {
+  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-black);
+  letter-spacing: 0.01em;
+}
+
+/* 2. Count badge — persimmon-tinted pill */
+.ink-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: rgba(212, 101, 74, 0.1);
+  color: var(--persimmon);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 3. Empty state — centered placeholder */
+.ink-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--ink-light);
+}
+
+.ink-empty-state-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  color: var(--ink-light);
+  opacity: 0.4;
+}
+
+.ink-empty-state-title {
+  font-family: "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-wash);
+  margin-bottom: 6px;
+}
+
+.ink-empty-state-desc {
+  font-size: 13px;
+  color: var(--ink-light);
+  opacity: 0.7;
+  max-width: 260px;
+}
+
+/* 4. Tab bar — handcraft notebook tabs */
+.ink-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(26, 26, 24, 0.03);
+  border-radius: 12px;
+}
+
+.ink-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--ink-light);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  text-align: center;
+}
+
+.ink-tab:hover {
+  color: var(--ink-wash);
+  background: rgba(26, 26, 24, 0.04);
+}
+
+.ink-tab-active {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink-black);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(26, 26, 24, 0.08), 0 1px 2px rgba(26, 26, 24, 0.04);
+}
+
+/* 5. Toolbar button — clean 32px icon buttons */
+.ink-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink-wash);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ink-toolbar-btn:hover {
+  background: var(--rice-warm);
+  color: var(--ink-black);
+}
+
+.ink-toolbar-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.ink-toolbar-btn-active {
+  background: var(--ink-black);
+  color: var(--rice-paper);
+}
+
+.ink-toolbar-btn-active:hover {
+  background: var(--ink-wash);
+  color: var(--rice-paper);
+}
+
+/* 6. Toolbar group — visual grouping container */
+.ink-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 7. Toolbar divider — 1px vertical line */
+.ink-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(26, 26, 24, 0.1);
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+/* 8. Dot grid background — subtle graph/canvas texture */
+.ink-dot-grid-bg {
+  background-color: var(--rice-paper);
+  background-image: radial-gradient(circle, rgba(26, 26, 24, 0.08) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* 9. Interactive card — persimmon accent on hover */
+.ink-card-interactive {
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: pointer;
+}
+
+.ink-card-interactive:hover {
+  border-color: rgba(212, 101, 74, 0.3);
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 24px rgba(26, 26, 24, 0.06),
+    0 2px 8px rgba(26, 26, 24, 0.04);
+}
+
+.ink-card-interactive:active {
+  transform: translateY(0);
+}
+
+/* 10. Panel transition — smooth width/opacity for collapsible panels */
+.ink-panel-transition {
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.25s ease,
+              transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}

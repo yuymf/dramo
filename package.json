@@ -1,0 +1,23 @@
+{
+  "name": "dramo",
+  "private": true,
+  "workspaces": ["web", "server"],
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail -n web,api,os -c blue,green,yellow \"npm run dev -w @dramo/web\" \"npm run dev -w @dramo/server\" \"cd agentos && uvicorn app:app --host 0.0.0.0 --port 12322 --reload\"",
+    "dev:web": "npm run dev -w @dramo/web",
+    "dev:server": "npm run dev -w @dramo/server",
+    "dev:agentos": "cd agentos && uvicorn app:app --host 0.0.0.0 --port 12322 --reload",
+    "build": "npm run build -w @dramo/server && npm run build -w @dramo/web",
+    "lint": "npm run lint -w @dramo/web && npm run lint -w @dramo/server",
+    "test": "npm run test -w @dramo/server",
+    "prisma:generate": "npm run prisma:generate -w @dramo/server",
+    "prisma:migrate": "npm run prisma:migrate -w @dramo/server",
+    "prisma:studio": "npm run prisma:studio -w @dramo/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

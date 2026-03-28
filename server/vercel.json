@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/[[...route]]"
+    }
+  ],
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 60,
+      "includeFiles": "dist/**"
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, PATCH, DELETE, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Request-Id, Idempotency-Key" }
+      ]
+    }
+  ]
+}

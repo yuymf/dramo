@@ -1,0 +1,15 @@
+import { NextRequest } from "next/server";
+import { proxyRequest, validateRouteParam } from "@/app/api/_utils/proxy";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ jobId: string }> }
+) {
+  const { jobId } = await params;
+  const error = validateRouteParam(jobId, "jobId");
+  if (error) return error;
+
+  return proxyRequest(request, `/api/jobs/${jobId}`, {
+    requireAuth: true,
+  });
+}
