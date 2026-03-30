@@ -49,6 +49,7 @@ export function ProjectSidebar({ locale = "zh", currentProjectId, projectName, a
               src="/logo.jpg"
               alt="Logo"
               fill
+              sizes="32px"
               className="object-contain rounded"
             />
           </div>

@@ -61,6 +61,7 @@ interface ProxyOptions {
   cache?: RequestCache;
   body?: BodyInit | Record<string, unknown> | null;
   appendQuery?: boolean;
+  timeoutMs?: number;
 }
 
 async function ensureSession(
@@ -197,7 +198,8 @@ export async function proxyRequest(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeoutMs = options.timeoutMs ?? 30000; // default 30s
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const backendResponse = await fetch(targetUrl, {
       method,
@@ -218,6 +220,17 @@ export async function proxyRequest(
     responseHeaders.set("Cache-Control", "no-store");
 
     const contentType = backendResponse.headers.get("content-type") ?? "";
+
+    // SSE streaming passthrough — pipe the stream directly to the client
+    if (contentType.includes("text/event-stream")) {
+      responseHeaders.set("Content-Type", "text/event-stream");
+      responseHeaders.set("Cache-Control", "no-cache");
+      responseHeaders.set("Connection", "keep-alive");
+      return new NextResponse(backendResponse.body, {
+        status: backendResponse.status,
+        headers: responseHeaders,
+      });
+    }
 
     if (contentType.includes("application/json")) {
       // Read body as text first, then parse — avoids double-consumption of response stream

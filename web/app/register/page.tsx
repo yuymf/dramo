@@ -99,6 +99,8 @@ function RegisterPageContent() {
               src="/logo.jpg"
               alt="Logo"
               fill
+              sizes="96px"
+              priority
               className="object-contain"
             />
           </div>
@@ -170,6 +172,7 @@ function RegisterPageContent() {
                 setError(null);
               }}
               placeholder="至少6个字符"
+              autoComplete="new-password"
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent outline-none transition"
               required
               disabled={isLoading}

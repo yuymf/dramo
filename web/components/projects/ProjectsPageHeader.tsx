@@ -21,6 +21,7 @@ export function ProjectsPageHeader() {
                   src="/icon.png"
                   alt="Dramo.ai Logo"
                   fill
+                  sizes="40px"
                   className="object-contain rounded-lg"
                 />
               </div>

@@ -1,5 +1,5 @@
 import { prisma } from '../lib/db';
-import { postAgentOS } from '../lib/agentos-client';
+import { startWorkflowRun } from '../lib/agentos-client';
 
 export class ScriptService {
   async getProjectScript(projectId: string, userId: string) {
@@ -23,14 +23,18 @@ export class ScriptService {
     projectId: string,
     userId: string,
     data: {
-      title: string;
-      source: 'structured' | 'raw_text';
+      title?: string;
+      source?: string;
+      content?: string;
       form?: string;
       contentType?: string;
       styles?: string[];
       goal?: string;
       keyword?: string;
       topic?: string;
+      situation?: string;
+      hot_stuffs?: string;
+      target?: string;
     },
     llmHeaders?: Record<string, string>
   ) {
@@ -42,26 +46,48 @@ export class ScriptService {
       throw new Error('NOT_FOUND');
     }
 
-    // Generate script synchronously via AgentOS
-    const aiResult = await postAgentOS<{ scenes?: any[]; acts?: any[] }>(
-      '/agentos/generate_script',
-      {
-        projectId,
-        title: data.title,
-        form: data.form,
-        contentType: data.contentType,
-        styles: data.styles,
-        goal: data.goal,
-        keyword: data.keyword,
-        topic: data.topic,
-      },
-      { llmHeaders }
+    // Build workflow params from input data
+    const workflowParams: Record<string, unknown> = {
+      projectId,
+    };
+    if (data.title) workflowParams.title = data.title;
+    if (data.topic) workflowParams.topic = data.topic;
+    if (data.keyword) workflowParams.keyword = data.keyword;
+    if (data.goal) workflowParams.goal = data.goal;
+    if (data.target) workflowParams.target = data.target;
+    if (data.contentType) workflowParams.contentType = data.contentType;
+    if (data.form) workflowParams.form = data.form;
+    if (data.styles) workflowParams.styles = data.styles;
+    if (data.hot_stuffs) workflowParams.hot_stuffs = data.hot_stuffs;
+    if (data.situation) workflowParams.situation = data.situation;
+
+    // For raw text input (base mode), use topic as the content summary
+    if (data.content && !data.topic) {
+      workflowParams.topic = data.content.substring(0, 500);
+      workflowParams.situation = data.content;
+    }
+
+    // Generate script via AgentOS ScriptWorkflow
+    const res = await startWorkflowRun(
+      'scriptworkflow',
+      workflowParams,
+      { llmHeaders, timeoutMs: 120000 }
     );
+
+    const workflowResult = (await res.json()) as { content?: string; output?: string; scenes?: any[]; acts?: any[] };
+    // AgentOS workflow returns { content: "json_string" }
+    const outputStr = workflowResult.content || workflowResult.output || JSON.stringify(workflowResult);
+    let parsed: { scenes?: any[]; acts?: any[] };
+    try {
+      parsed = JSON.parse(outputStr);
+    } catch {
+      parsed = { scenes: [], acts: [] };
+    }
 
     const script = await prisma.script.create({
       data: {
         projectId,
-        title: data.title,
+        title: data.title || data.topic || '未命名剧本',
         type: data.contentType || 'drama',
         style: data.styles?.[0] || 'casual',
         form: data.form,
@@ -70,8 +96,8 @@ export class ScriptService {
         keyword: data.keyword,
         topic: data.topic,
         status: 'completed',
-        scenes: aiResult.scenes || [],
-        acts: aiResult.acts || [],
+        scenes: parsed.scenes || [],
+        acts: parsed.acts || [],
       },
     });
 
@@ -155,20 +181,57 @@ export class ScriptService {
       throw new Error('NOT_FOUND');
     }
 
-    // Regenerate scene synchronously via AgentOS
-    const result = await postAgentOS<{ scene?: any; candidates?: any[] }>(
-      '/agentos/regenerate_scene',
+    // Build context: existing script + target scene info
+    const scenes = (script.scenes as any[]) || [];
+    const targetScene = scenes.find((s: any) => s.id === sceneId);
+
+    if (!targetScene) {
+      throw new Error('SCENE_NOT_FOUND');
+    }
+
+    const contextStr = JSON.stringify({
+      title: script.title,
+      acts: script.acts,
+      scenes: scenes.map(s => ({
+        id: s.id,
+        title: s.title,
+        location: s.location,
+        characters: s.characters,
+        blocks: s.blocks,
+      })),
+      targetSceneId: sceneId,
+    });
+
+    // Use ScriptWorkflow to regenerate scene via workflow
+    const res = await startWorkflowRun(
+      'scriptworkflow',
       {
-        scriptId: script.id,
-        sceneId,
-        context: params?.script,
-        styles: params?.styles,
-        goal: params?.goal,
+        projectId,
+        topic: `重新生成场景：${targetScene.title || '未命名'}`,
+        situation: `请重新生成以下场景。保持整体剧情一致，但创作新的对话和动作。\n\n现有剧本上下文：\n${contextStr}`,
+        form: script.form,
+        contentType: script.contentType,
+        styles: params?.styles || [script.style],
+        goal: params?.goal || 'regenerate_scene',
       },
-      { llmHeaders }
+      { llmHeaders, timeoutMs: 120000 }
     );
 
-    return { scene: result.scene || result, candidates: result.candidates || [], async: false };
+    const aiResult = (await res.json()) as { content?: string; output?: string; scenes?: any[]; acts?: any[] };
+    const outputStr = aiResult.content || aiResult.output || JSON.stringify(aiResult);
+    let parsed: { scenes?: any[]; acts?: any[] };
+    try {
+      parsed = JSON.parse(outputStr);
+    } catch {
+      parsed = { scenes: [], acts: [] };
+    }
+    const newScenes = parsed.scenes || [];
+
+    // Find the regenerated scene in the result
+    const regenerated = newScenes.length > 0 ? newScenes[newScenes.length - 1] : null;
+    const candidates = newScenes.slice(0, Math.max(0, newScenes.length - 1));
+
+    return { scene: regenerated, candidates, async: false };
   }
 
   async listVersions(projectId: string, userId: string) {

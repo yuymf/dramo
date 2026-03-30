@@ -72,6 +72,8 @@ function LoginPageContent() {
               src="/logo.jpg"
               alt="Logo"
               fill
+              sizes="96px"
+              priority
               className="object-contain"
             />
           </div>
@@ -106,6 +108,7 @@ function LoginPageContent() {
                 setError(null);
               }}
               placeholder="your@email.com"
+              autoComplete="email"
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent outline-none transition"
               required
               disabled={isLoading}
@@ -125,6 +128,7 @@ function LoginPageContent() {
                 setError(null);
               }}
               placeholder="••••••••"
+              autoComplete="current-password"
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--brand-500)] focus:border-transparent outline-none transition"
               required
               disabled={isLoading}

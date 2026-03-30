@@ -14,10 +14,9 @@ RUN npm ci --only=production=false
 
 # Copy source code
 COPY src ./src
+COPY scripts ./scripts
 
-# Generate Prisma client
-COPY src/db/schema.prisma ./prisma/schema.prisma
-COPY src/db/migrations ./prisma/migrations
+# Generate Prisma client (schema is at src/db/schema.prisma per package.json)
 RUN npx prisma generate
 
 # Build TypeScript
@@ -35,9 +34,9 @@ RUN apk add --no-cache openssl
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy Prisma schema, migrations and generate client
-COPY src/db/schema.prisma ./prisma/schema.prisma
-COPY src/db/migrations ./prisma/migrations
+# Copy Prisma schema and generate client
+COPY src/db/schema.prisma ./src/db/schema.prisma
+COPY src/db/migrations ./src/db/migrations
 RUN npx prisma generate
 
 # Copy built files from builder

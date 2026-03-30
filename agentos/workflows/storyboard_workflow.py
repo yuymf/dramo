@@ -248,11 +248,23 @@ class StoryboardWorkflow(Workflow):
         with ThreadPoolExecutor(max_workers=2) as executor:
             future_cine = executor.submit(self._cinematographer, panels, assets_context, model_cine)
             future_act = executor.submit(self._acting_direction, panels, assets_context, model_act)
-            cinematography = future_cine.result()
-            acting = future_act.result()
+            try:
+                cinematography = future_cine.result(timeout=120)
+            except Exception as e:
+                logger.warning(f"[clip {clip_index+1}] cinematographer failed: {e}")
+                cinematography = []
+            try:
+                acting = future_act.result(timeout=120)
+            except Exception as e:
+                logger.warning(f"[clip {clip_index+1}] acting_direction failed: {e}")
+                acting = []
 
         logger.info(f"[clip {clip_index+1}/{total_clips}] Phase 3: detail_refiner")
         shots = self._detail_refiner(panels, cinematography, acting, clip, model)
+
+        if not shots:
+            logger.warning(f"[clip {clip_index+1}] detail_refiner empty, using raw panels as fallback")
+            shots = [{"shot_number": f"{i+1:03d}", **p} for i, p in enumerate(panels)]
 
         progress = int(10 + (clip_index + 1) / total_clips * 80)
         logger.info(json.dumps({"type": "progress", "phase": "clip_done",

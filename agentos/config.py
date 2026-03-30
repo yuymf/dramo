@@ -114,9 +114,14 @@ def get_model_from_config(llm_config: dict) -> "OpenAIChat":
     """
     from agno.models.openai import OpenAIChat
 
+    timeout = float(os.getenv("LLM_TIMEOUT_SECONDS", "90"))
+    max_retries = int(os.getenv("LLM_MAX_RETRIES", "2"))
+
     return OpenAIChat(
         id=llm_config["model_id"],
         api_key=llm_config["api_key"],
         base_url=llm_config["base_url"],
+        timeout=timeout,
+        max_retries=max_retries,
     )
 

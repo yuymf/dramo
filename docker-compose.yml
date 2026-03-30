@@ -18,7 +18,7 @@ services:
       AGENTOS_SECURITY_KEY: ${AGENTOS_SECURITY_KEY:-}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:12322/api/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:12322/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -43,6 +43,16 @@ services:
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
       SUPABASE_BUCKET: ${SUPABASE_BUCKET:-images}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_PRO_MONTHLY: ${STRIPE_PRICE_PRO_MONTHLY:-}
+      STRIPE_PRICE_PRO_YEARLY: ${STRIPE_PRICE_PRO_YEARLY:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:12323}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-}
+      OPENAI_MODEL_ID: ${OPENAI_MODEL_ID:-}
     volumes:
       - api_uploads:/app/uploads
     depends_on:

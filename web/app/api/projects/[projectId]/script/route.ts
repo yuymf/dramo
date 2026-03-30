@@ -18,6 +18,7 @@ export async function POST(
   const { projectId } = await params;
   return proxyRequest(request, `/api/projects/${projectId}/script`, {
     requireAuth: true,
+    timeoutMs: 180000, // 3 minutes for AI generation
   });
 }
 
