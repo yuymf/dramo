@@ -17,6 +17,8 @@ interface TaskData {
 interface UseTaskPollingOptions {
   /** Polling interval in milliseconds (default: 3000) */
   intervalMs?: number;
+  /** Maximum consecutive poll failures before giving up (default: 20 → ~60s at 3s interval) */
+  maxConsecutiveErrors?: number;
   /** Whether polling is enabled (default: true when taskId is provided) */
   enabled?: boolean;
 }
@@ -44,7 +46,7 @@ export function useTaskPolling(
   taskId: string | null,
   options?: UseTaskPollingOptions
 ): UseTaskPollingResult {
-  const { intervalMs = 3000, enabled = true } = options ?? {};
+  const { intervalMs = 3000, maxConsecutiveErrors = 20, enabled = true } = options ?? {};
 
   const [status, setStatus] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -55,6 +57,7 @@ export function useTaskPolling(
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stoppedRef = useRef(false);
+  const errorCountRef = useRef(0);
 
   const stopPolling = useCallback(() => {
     stoppedRef.current = true;
@@ -73,6 +76,7 @@ export function useTaskPolling(
 
     // Reset state for new task
     stoppedRef.current = false;
+    errorCountRef.current = 0;
     setStatus(null);
     setProgress(0);
     setResult(null);
@@ -91,6 +95,9 @@ export function useTaskPolling(
 
         if (stoppedRef.current) return;
 
+        // Reset error counter on successful poll
+        errorCountRef.current = 0;
+
         setStatus(data.status);
         setProgress(data.progress);
         setEstimatedSeconds(data.estimatedSeconds);
@@ -108,11 +115,34 @@ export function useTaskPolling(
           );
           stopPolling();
         } else if (TERMINAL_STATUSES.has(data.status)) {
+          // Handles "cancelled" and any future terminal statuses
+          setError({
+            code: "TASK_CANCELLED",
+            message: "任务已取消",
+            retryable: false,
+          });
           stopPolling();
         }
       } catch (err) {
-        // Network errors during polling are transient — keep polling
-        console.warn("[useTaskPolling] Poll error:", err);
+        errorCountRef.current += 1;
+
+        if (errorCountRef.current >= maxConsecutiveErrors) {
+          console.error(
+            `[useTaskPolling] ${errorCountRef.current} consecutive poll failures, giving up:`,
+            err
+          );
+          setError({
+            code: "POLL_FAILED",
+            message: "无法获取任务状态，请刷新页面重试",
+            retryable: true,
+          });
+          stopPolling();
+        } else {
+          console.warn(
+            `[useTaskPolling] Poll error (${errorCountRef.current}/${maxConsecutiveErrors}):`,
+            err
+          );
+        }
       }
     };
 
@@ -122,6 +152,7 @@ export function useTaskPolling(
     // Set up interval
     intervalRef.current = setInterval(poll, intervalMs);
 
+    // Cleanup on unmount — avoid calling setIsPolling on unmounted component
     return () => {
       stoppedRef.current = true;
       if (intervalRef.current) {
@@ -129,7 +160,7 @@ export function useTaskPolling(
         intervalRef.current = null;
       }
     };
-  }, [taskId, enabled, intervalMs, stopPolling]);
+  }, [taskId, enabled, intervalMs, maxConsecutiveErrors, stopPolling]);
 
   return {
     status,

@@ -6,6 +6,15 @@ import { logger } from './lib/logger';
 
 const port = config.port;
 
+/**
+ * Server timeout configuration for long-running background tasks.
+ * The storyboard pipeline runs fire-and-forget (up to ~9 min),
+ * so the HTTP server must not close connections prematurely.
+ */
+const SERVER_HEADERS_TIMEOUT_MS = 600_000;     // 10 min
+const SERVER_REQUEST_TIMEOUT_MS = 720_000;     // 12 min
+const SERVER_KEEP_ALIVE_TIMEOUT_MS = 620_000;  // 10 min 20s (must be > headersTimeout)
+
 logger.info({ port, nodeEnv: config.nodeEnv }, 'Starting dev server...');
 
 const server = serve({
@@ -22,8 +31,7 @@ const server = serve({
   );
 });
 
-// Increase timeouts for long-running storyboard pipeline (fire-and-forget background tasks)
 const httpServer = server as unknown as Server;
-httpServer.headersTimeout = 600_000;   // 10 min
-httpServer.requestTimeout = 720_000;   // 12 min
-httpServer.keepAliveTimeout = 620_000; // 10 min 20s
+httpServer.headersTimeout = SERVER_HEADERS_TIMEOUT_MS;
+httpServer.requestTimeout = SERVER_REQUEST_TIMEOUT_MS;
+httpServer.keepAliveTimeout = SERVER_KEEP_ALIVE_TIMEOUT_MS;

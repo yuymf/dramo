@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { proxyRequest } from "@/app/api/_utils/proxy";
+import { proxyRequest, validateRouteParam } from "@/app/api/_utils/proxy";
 
 /**
  * POST /api/projects/{projectId}/storyboard/import
@@ -10,6 +10,10 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
+
+  const validationError = validateRouteParam(projectId, "projectId");
+  if (validationError) return validationError;
+
   return proxyRequest(
     request,
     `/api/projects/${projectId}/storyboard/import`,

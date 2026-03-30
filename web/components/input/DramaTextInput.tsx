@@ -1,6 +1,6 @@
 /**
  * Drama Text Input - 成段剧本输入模式
- * 支持文本粘贴或文件上传，限制 20,000 字
+ * 支持文本粘贴或 .txt/.md 文件上传，限制 20,000 字
  * 使用异步 Task 模式：提交 → 获取 taskId → 轮询进度 → 完成跳转
  */
 "use client";
@@ -22,7 +22,20 @@ interface DramaTextInputProps {
 
 const MAX_CHARS = 20000;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_EXTENSIONS = [".txt", ".md", ".docx", ".pdf", ".csv"];
+const ALLOWED_EXTENSIONS = [".txt", ".md"];
+
+/**
+ * Derive a user-friendly progress phase message from polling status + progress.
+ */
+function getProgressPhase(status: string | null, progress: number): string {
+  if (status === "queued") return "排队中...";
+  if (status !== "processing") return "";
+
+  if (progress < 20) return "正在准备资源...";
+  if (progress < 50) return "正在分析剧本结构...";
+  if (progress < 80) return "正在生成分镜面板...";
+  return "正在合并最终结果...";
+}
 
 export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
   const { showToast } = useToast();
@@ -30,7 +43,6 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,16 +54,15 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
     intervalMs: 3000,
   });
 
-  // Handle task completion/failure
+  // Handle task completion/failure/cancellation
   useEffect(() => {
     if (status === "completed" && result) {
-      // Cache storyboard data to localStorage
       saveJSON(`storyboard_${projectId}`, result);
       showToast("分镜生成成功！", "success");
       setLoading(false);
       setTaskId(null);
       router.push(`/projects/${projectId}/storyboard`);
-    } else if (status === "failed" && error) {
+    } else if ((status === "failed" || status === "cancelled") && error) {
       const message = error.message || "生成失败";
       if (message.includes("TIMEOUT") || message.includes("timeout")) {
         showToast("处理时间过长，请尝试缩短文本或稍后重试", "error");
@@ -60,13 +71,18 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
       }
       setLoading(false);
       setTaskId(null);
+    } else if (!isPolling && taskId && !result && !error) {
+      // Polling stopped unexpectedly (e.g. max consecutive errors reached)
+      // The hook sets error in this case, but guard against edge cases
+      setLoading(false);
+      setTaskId(null);
     }
-  }, [status, result, error, projectId, router, showToast]);
+  }, [status, result, error, isPolling, taskId, projectId, router, showToast]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
     if (fileName) {
-      setFileName(null); // 手动编辑后清除文件名
+      setFileName(null);
     }
   };
 
@@ -74,14 +90,12 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 检查文件大小
     if (file.size > MAX_FILE_SIZE) {
-      showToast(`文件大小不能超过 10MB`, "error");
+      showToast("文件大小不能超过 10MB", "error");
       e.target.value = "";
       return;
     }
 
-    // 检查文件扩展名
     const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
       showToast(
@@ -92,33 +106,19 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
       return;
     }
 
-    // 保存文件
-    setUploadedFile(file);
-    setFileName(file.name);
-
-    // 仅对 .txt 和 .md 文件进行本地预览
-    if (ext === ".txt" || ext === ".md") {
-      try {
-        const content = await file.text();
-        if (content.length > MAX_CHARS) {
-          showToast(`文件内容超过 ${MAX_CHARS} 字限制`, "error");
-          e.target.value = "";
-          setUploadedFile(null);
-          setFileName(null);
-          return;
-        }
-        setText(content);
-        showToast(`已加载文件：${file.name}`, "success");
-      } catch (err) {
-        showToast("文件读取失败", "error");
-        console.error(err);
-        setUploadedFile(null);
-        setFileName(null);
+    try {
+      const content = await file.text();
+      if (content.length > MAX_CHARS) {
+        showToast(`文件内容超过 ${MAX_CHARS} 字限制`, "error");
+        e.target.value = "";
+        return;
       }
-    } else {
-      // .docx、.pdf、.csv 显示占位提示
-      setText(`[文件已选择：${file.name}]\n\n该文件将由后端解析并生成分镜。`);
-      showToast(`已选择文件：${file.name}`, "success");
+      setText(content);
+      setFileName(file.name);
+      showToast(`已加载文件：${file.name}`, "success");
+    } catch (err) {
+      showToast("文件读取失败", "error");
+      console.error(err);
     }
 
     e.target.value = "";
@@ -127,19 +127,18 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
   const handleClearFile = () => {
     setText("");
     setFileName(null);
-    setUploadedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
   const handleSubmit = async () => {
-    if (!text.trim() && !uploadedFile) {
+    if (!text.trim()) {
       showToast("请输入或上传剧本内容", "error");
       return;
     }
 
-    if (text.trim() && isOverLimit) {
+    if (isOverLimit) {
       showToast(`内容超过 ${MAX_CHARS} 字限制`, "error");
       return;
     }
@@ -159,19 +158,20 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
         {
           method: "POST",
           body: { text },
-          timeoutMs: 30000, // 30s — backend returns immediately
+          timeoutMs: 30000,
         }
       );
 
       setTaskId(response.taskId);
       showToast("已提交分镜生成任务，请等待处理完成...", "info");
     } catch (err) {
-      const errorMessage = (err as Error).message || "提交失败";
+      const errorMessage = err instanceof Error ? err.message : "提交失败";
+      const errorCode = err instanceof Error && "code" in err ? (err as Error & { code?: string }).code : undefined;
 
-      if (errorMessage.includes("timeout") || errorMessage.includes("TIMEOUT")) {
+      if (errorCode === "UPSTREAM_TIMEOUT" || errorMessage.includes("timeout")) {
         showToast("提交请求超时，请稍后重试", "error");
-      } else if (errorMessage.includes("500")) {
-        showToast("服务器处理失败，请检查文本内容或稍后重试", "error");
+      } else if (errorCode === "LLM_NOT_CONFIGURED") {
+        showToast("请先配置 AI 模型", "error");
       } else {
         showToast(errorMessage, "error");
       }
@@ -181,23 +181,9 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
     }
   };
 
-  const isFormValid = (text.trim() || uploadedFile) && !isOverLimit;
-
-  // Derive progress display from polling
+  const isFormValid = text.trim().length > 0 && !isOverLimit;
   const displayProgress = isPolling ? progress : 0;
-  const progressPhase = isPolling
-    ? status === "queued"
-      ? "排队中..."
-      : status === "processing"
-        ? progress < 20
-          ? "正在准备资源..."
-          : progress < 50
-            ? "正在分析剧本结构..."
-            : progress < 80
-              ? "正在生成分镜面板..."
-              : "正在合并最终结果..."
-        : ""
-    : "";
+  const progressPhase = isPolling ? getProgressPhase(status, progress) : "";
 
   return (
     <div className="p-6 md:p-8">
@@ -243,7 +229,7 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
                   className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white text-sm rounded-lg hover:bg-slate-800 transition-colors jp-serif disabled:opacity-50"
                 >
                   <Upload className="w-4 h-4" />
-                  上传大纲
+                  上传文本
                 </button>
               </label>
 
@@ -258,7 +244,7 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
               )}
 
               <span className="text-xs text-slate-400 jp-serif">
-                PDF、TXT 或 CSV (最大 10mb)
+                TXT 或 MD 文本文件 (最大 10MB)
               </span>
             </div>
 
@@ -270,7 +256,6 @@ export function DramaTextInput({ projectId, onSubmit }: DramaTextInputProps) {
             </span>
           </div>
         </div>
-
 
         {/* Progress indicator */}
         {loading && displayProgress > 0 && (
