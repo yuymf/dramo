@@ -14,7 +14,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : 1,
   reporter: 'html',
-  timeout: 30000,
+  timeout: 150000, // 2.5 minutes for complete E2E with backend processing
   expect: {
     timeout: 5000,
   },

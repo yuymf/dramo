@@ -389,25 +389,38 @@ AI processes edited content, updates tasks, resumes generation
 - JSON application (from AI suggestions)
 
 **New Features:**
-- Display active GenerationTasks inline ("现在生成中：Scripts 50%...")
-- Allow user to see task decomposition ("我会生成以下内容...")
-- Pause/Resume buttons during generation
+- **Task List Display (Collapsible):** Shows decomposed GenerationPlan tasks ("我会生成以下内容..." expandable section). User can collapse to save space.
+  - Format:
+    ```
+    📋 生成计划 (可折叠)
+    ✓ 脚本：5个主要场景对话
+    ⧖ 角色：月球猫、地球观察者 (进行中 30%)
+    ⏳ 场景：月球环境描写
+    ⏳ 分镜：5个镜头规划
+    ```
+  - Clicking each task shows its details and current status
+
+- Display active GenerationTasks inline with progress ("现在生成中：Scripts 50%...")
+- Pause/Resume buttons during generation with visual state
 - Settings toggle for image generation permission
-- Real-time context showing left-side edits ("你修改了：Character - 猫的性格")
+- **Real-time edit acknowledgment:** When user edits left-side content, AI automatically sends system message: "用户修改了xx块的xxx内容为xxx" or "用户修改了分镜x的提示词xxx为xxx"
+  - These are displayed as **system messages** (lightly styled, not full user messages)
+  - Provide context for AI to adapt next generation round
 
 ### 5.2 Workbench Enhancements
 
 **Left-Side Panels (All New):**
-- **Scripts tab:** Shows incoming dialogue/scene structure. User can select a scene and edit inline. Marked as "paused" if generation stopped mid-way.
-- **Characters tab:** Shows generated character cards. Each card is editable. Streaming updates add new characters or expand existing ones.
-- **Scenes tab:** Environmental descriptions, location blocking. Streamable and editable.
-- **Storyboard tab:** Shot planning, visual descriptions. Can integrate with image generation (if user allows).
+- **Scripts tab:** Shows incoming dialogue/scene structure. User can select a scene and edit inline. Marked as "paused" if generation stopped mid-way. Initial state: empty skeleton loaders.
+- **Characters tab:** Shows generated character cards. Each card is editable. Streaming updates add new characters or expand existing ones. Initial state: empty skeleton loaders.
+- **Scenes tab:** Environmental descriptions, location blocking. Streamable and editable. Initial state: empty skeleton loaders.
+- **Storyboard tab:** Shot planning, visual descriptions. Can integrate with image generation (if user allows). Initial state: empty skeleton loaders.
 
 **Interaction Model:**
 - User can't edit during generation (to avoid conflicts)
 - User clicks "暂停" (Pause) to stop generation and unlock editing
 - After editing, "继续生成" (Continue) resumes with new context
 - All edits are recorded in GenerationPlan for context preservation
+- **Edit Acknowledgment:** When user edits content on left-side, AI automatically acknowledges in chat: "用户修改了xx块的xxx内容为xxx" or "用户修改了分镜x的提示词xxx为xxx"
 
 ### 5.3 Pause/Resume State Machine
 
@@ -544,10 +557,11 @@ interface SSETaskMessage {
 ## 8. Edge Cases & Error Handling
 
 ### 8.1 Interruption Scenarios
-- User closes browser during generation → Resume from last checkpoint on return
+- User closes browser during generation → **Resume from last checkpoint on return** (session/storage recovery)
 - Network drops during SSE → Graceful reconnect with progress recovery
 - User edits affect multiple tasks → Recompute dependencies, resume affected tasks only
-- User interrupts, edits, then closes without saving → Warn user about unsaved changes
+- User interrupts, edits, then closes without saving → Resume state preserved; on return, show "上次编辑: xx分钟前" with option to discard or keep
+- User resumes after return → Generation picks up with latest edits incorporated
 
 ### 8.2 Generation Conflicts
 - User edits Character while Character stream still active → Lock stream, save edits, resume after conflict resolution
@@ -611,7 +625,44 @@ interface SSETaskMessage {
 
 ---
 
-## Appendix: Visual Mockup Description
+## Appendix A: User Choice Resolution
+
+Based on user feedback during design phase, the following decisions were made:
+
+### A.1 Workbench Initial State
+**Decision:** Left side shows empty skeleton loaders
+**Rationale:** Signals to user that content is coming, maintains engagement, prepares visual hierarchy for incoming content
+
+### A.2 Edit Acknowledgment in Chat
+**Decision:** Chat automatically acknowledges user edits with system messages
+**Format:** "用户修改了xx块的xxx内容为xxx" or "用户修改了分镜x的提示词xxx为xxx"
+**Rationale:**
+- AI maintains context awareness of all changes
+- User sees their edits acknowledged (confirmation)
+- AI can intelligently adapt next generation round
+- System messages are lightly styled to not clutter conversation flow
+
+### A.3 Task List in Chat UI
+**Decision:** Visible to user but collapsible
+**Implementation:**
+- Task list appears as expandable section in chat: "📋 生成计划"
+- Shows all tasks with status indicators (✓ completed, ⧖ in progress, ⏳ pending)
+- User can collapse to save space
+- Clicking individual tasks shows details/progress
+**Rationale:** User stays informed of overall plan without overwhelming chat interface
+
+### A.4 Browser Close Recovery
+**Decision:** Preserve paused state and allow resume on return
+**Implementation:**
+- Store GenerationState in localStorage with session key
+- On page return, detect saved state and offer: "检测到上次中断的生成，要继续吗？"
+- Show edits made before close: "上次编辑: xx分钟前"
+- User can discard or resume with latest state
+**Rationale:** Maximum user continuity, respects work-in-progress
+
+---
+
+## Appendix B: Visual Mockup Description
 
 ```
 ┌─────────────────────────────────────────┐
@@ -647,4 +698,5 @@ interface SSETaskMessage {
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-03-31 | Initial design with user feedback (A: immediate nav, B: conversational clarification, B: parallel multi-stream, A: pause & preserve, plan system) |
+| 1.1 | 2026-03-31 | User clarifications: empty skeleton loaders on left, auto-acknowledge edits in chat, visible collapsible task list, preserve state on browser close |
 

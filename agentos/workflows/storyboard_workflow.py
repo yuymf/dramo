@@ -11,7 +11,7 @@ import json
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from config import get_model_from_config
+from config import get_model_from_config, get_long_timeout_model
 
 try:
     from ..env_loader import load_backend_env
@@ -260,7 +260,18 @@ class StoryboardWorkflow(Workflow):
                 acting = []
 
         logger.info(f"[clip {clip_index+1}/{total_clips}] Phase 3: detail_refiner")
-        shots = self._detail_refiner(panels, cinematography, acting, clip, model)
+        refiner_model = get_long_timeout_model(llm_config)
+        detail_refiner_timeout = int(os.getenv("DETAIL_REFINER_TIMEOUT_SECONDS", "200"))
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future_refiner = executor.submit(
+                self._detail_refiner, panels, cinematography, acting, clip, refiner_model
+            )
+            try:
+                shots = future_refiner.result(timeout=detail_refiner_timeout)
+            except Exception as e:
+                logger.warning(f"[clip {clip_index+1}] detail_refiner failed/timed out ({e}), using raw panels")
+                shots = []
 
         if not shots:
             logger.warning(f"[clip {clip_index+1}] detail_refiner empty, using raw panels as fallback")
