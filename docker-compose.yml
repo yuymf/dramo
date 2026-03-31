@@ -1,9 +1,40 @@
 services:
+  # Nginx Reverse Proxy (唯一对外暴露端口)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Frontend (Next.js standalone)
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
+    environment:
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - BACKEND_API_URL=http://api:12321
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
   # AgentOS Service (Python AI)
   agentos:
     build: ./agentos
-    ports:
-      - "12322:12322"
     environment:
       PORT: 12322
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -16,6 +47,8 @@ services:
       HUNYUAN_MODEL_ID: ${HUNYUAN_MODEL_ID:-hunyuan-turbos-latest}
       ARK_API_KEY: ${ARK_API_KEY}
       AGENTOS_SECURITY_KEY: ${AGENTOS_SECURITY_KEY:-}
+      LLM_TIMEOUT_LONG_SECONDS: ${LLM_TIMEOUT_LONG_SECONDS:-180}
+      DETAIL_REFINER_TIMEOUT_SECONDS: ${DETAIL_REFINER_TIMEOUT_SECONDS:-200}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:12322/health')"]
@@ -27,13 +60,12 @@ services:
   # API Service (Hono)
   api:
     build: ./server
-    ports:
-      - "12321:12321"
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: 12321
       LOG_LEVEL: ${LOG_LEVEL:-info}
       DATABASE_URL: ${DATABASE_URL}
+      DIRECT_URL: ${DIRECT_URL:-}
       AGENTOS_BASE_URL: http://agentos:12322
       AGENTOS_SECURITY_KEY: ${AGENTOS_SECURITY_KEY:-}
       JWT_SECRET: ${JWT_SECRET}
@@ -47,7 +79,7 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       STRIPE_PRICE_PRO_MONTHLY: ${STRIPE_PRICE_PRO_MONTHLY:-}
       STRIPE_PRICE_PRO_YEARLY: ${STRIPE_PRICE_PRO_YEARLY:-}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:12323}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       AI_PROVIDER: ${AI_PROVIDER:-openai}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -56,7 +88,8 @@ services:
     volumes:
       - api_uploads:/app/uploads
     depends_on:
-      - agentos
+      agentos:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:12321/api/health')"]
