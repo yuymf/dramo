@@ -9,6 +9,7 @@ Dramo 是一个全栈 AI 驱动的直播台本生成工具，采用 Monorepo 架
 - `web/` — Next.js 15 前端 (React 19, Tailwind CSS v4, 端口 12323)
 - `server/` — Hono v4 后端 API (Prisma 5, Supabase, 端口 12321)
 - `agentos/` — Python AgentOS AI 服务 (FastAPI + Agno, 端口 12322)
+- `deploy/` — 部署脚本与配置 (setup-dramo.sh, nginx.conf, update.sh, logs.sh)
 
 ## 开发
 
@@ -36,9 +37,53 @@ npm run prisma:studio     # 打开数据库浏览器
 
 ## 部署
 
-- 后端 Vercel: Root Directory 指向 `server/`
-- Docker: `docker compose up` (api + agentos，可选 localpg)
-- 环境切换: `./switch-env.sh prod`
+### 腾讯云 VPS 一键部署（推荐）
+
+推荐配置：轻量应用服务器 2C4G Ubuntu 22.04（~60-80 元/月）
+
+```bash
+# SSH 到服务器后执行
+bash <(curl -fsSL https://raw.githubusercontent.com/你的仓库/main/deploy/setup-dramo.sh)
+```
+
+脚本自动完成：系统检测 → Docker 安装 → 代码克隆 → 环境变量配置 → 构建启动 → 健康检查
+
+架构：
+
+```
+用户 :80 → Nginx → ├── /     → Next.js (:3000)
+                    └── /api/ → Hono API (:12321) → AgentOS (:12322, 仅内网)
+```
+
+日常运维：
+
+```bash
+cd /opt/dramo
+./deploy/update.sh       # 拉取最新代码并重启
+./deploy/logs.sh         # 查看所有服务日志
+./deploy/logs.sh api -f  # 实时跟踪某个服务
+docker compose ps        # 查看服务状态
+```
+
+### Vercel 部署
+
+- 后端 Vercel: Root Directory 指向 `server/`（注意：Serverless 有 60s 超时限制，分镜生成等长任务不可用）
+- AgentOS 需独立部署到 VPS
+
+### 本地 Docker 开发
+
+```bash
+docker compose up -d                        # 启动 nginx + web + api + agentos
+docker compose --profile localpg up -d      # 同上 + 本地 PostgreSQL
+```
+
+### 环境切换
+
+```bash
+./switch-env.sh debug   # 切换到本地开发环境
+./switch-env.sh prod    # 切换到生产环境
+./switch-env.sh status  # 查看当前环境状态
+```
 
 ## 注意事项
 
