@@ -1380,9 +1380,7 @@ body {
   background: rgba(26, 26, 24, 0.2);
 }
 
-/* ========================================
-   Ink & Paper Studio — Shared Utilities
-   ======================================== */
+/* Ink & Paper Studio — Shared Utilities */
 
 /* 1. Section header — flex baseline, bottom border, serif title + subtitle */
 .ink-section-header {
@@ -1570,4 +1568,15 @@ body {
   transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1),
               opacity 0.25s ease,
               transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Tailwind Extensions */
+@layer utilities {
+  .bg-gradient-radial {
+    background-image: radial-gradient(var(--gradient-color-stops));
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
 }

@@ -40,53 +40,60 @@ export function ProjectSidebar({ locale = "zh", currentProjectId, projectName, a
   ], [currentProjectId, t]);
 
   return (
-    <aside className="w-[220px] h-screen bg-[var(--at-surface)] border-r border-[var(--at-border)] flex flex-col">
-      {/* Logo */}
-      <Link href="/">
-        <div className="h-[56px] px-5 flex items-center gap-2 border-b border-[var(--at-border-light)] cursor-pointer hover:bg-[var(--at-surface-hover)] transition-colors">
-          <div className="relative w-8 h-8 shrink-0">
-            <Image
-              src="/logo.jpg"
-              alt="Logo"
-              fill
-              sizes="32px"
-              className="object-contain rounded"
-            />
+    <aside className="w-[220px] h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50/50 border-r border-stone-200/40 flex flex-col relative overflow-hidden">
+      {/* 背景纹理 - 优雅的纸质效果 */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(234,179,8,0.03)_0%,transparent_50%)]"></div>
+      </div>
+
+      {/* 内容容器 */}
+      <div className="relative z-10 flex flex-col h-screen">
+        {/* Logo */}
+        <Link href="/">
+          <div className="h-[56px] px-5 flex items-center gap-2 border-b border-stone-200/50 cursor-pointer hover:bg-stone-100/30 transition-colors group">
+            <div className="relative w-8 h-8 shrink-0 group-hover:scale-110 transition-transform duration-300">
+              <Image
+                src="/logo.jpg"
+                alt="Logo"
+                fill
+                sizes="32px"
+                className="object-contain rounded"
+              />
+            </div>
+            <span className="text-[15px] font-bold tracking-tight text-stone-800 group-hover:text-orange-700 transition-colors">
+              DRAMO
+            </span>
           </div>
-          <span className="text-[15px] font-semibold tracking-tight text-[var(--at-text)]">
-            DRAMO
-          </span>
-        </div>
-      </Link>
+        </Link>
 
       {/* Search + Actions */}
-      <div className="px-3 py-3 space-y-1.5">
-        <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--at-text-tertiary)]" />
+      <div className="px-3 py-3 space-y-1.5 border-b border-stone-200/30">
+        <div className="relative group">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-stone-600 transition-colors" />
           <input
             type="text"
             placeholder={t("search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-[var(--at-border-light)] bg-[var(--at-surface-sunken)] text-[var(--at-text)] placeholder:text-[var(--at-text-tertiary)] focus:outline-none focus:border-[var(--at-border)] focus:bg-[var(--at-surface)] transition-all"
+            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-stone-200 bg-white/50 text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-orange-400/50 focus:bg-white focus:ring-1 focus:ring-orange-200/50 transition-all"
           />
         </div>
-        <button className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-[var(--at-text-secondary)] rounded-lg hover:bg-[var(--at-surface-hover)] transition-colors">
-          <FolderOpen size={14} />
+        <button className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-stone-600 rounded-lg hover:bg-stone-100/50 hover:text-stone-900 transition-all duration-200 group">
+          <FolderOpen size={14} className="group-hover:scale-110 transition-transform" />
           <span>{t("allProject")}</span>
         </button>
-        <button className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-[var(--at-text-secondary)] rounded-lg hover:bg-[var(--at-surface-hover)] transition-colors">
-          <Plus size={14} />
+        <button className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-stone-600 rounded-lg hover:bg-stone-100/50 hover:text-stone-900 transition-all duration-200 group">
+          <Plus size={14} className="group-hover:scale-110 transition-transform" />
           <span>{t("newProject")}</span>
         </button>
       </div>
 
       {/* Project Name + Nav */}
-      <div className="flex-1 overflow-hidden px-3">
+      <div className="flex-1 overflow-hidden px-3 py-4">
         {/* Project header */}
-        <div className="mb-3 mt-1">
-          <div className="text-[10px] uppercase tracking-widest text-[var(--at-text-tertiary)] font-medium mb-2 px-2.5">
-            项目
+        <div className="mb-4">
+          <div className="text-[10px] uppercase tracking-widest text-stone-400 font-semibold mb-2.5 px-2.5">
+            项目工作空间
           </div>
           {isEditingProjectName ? (
             <input
@@ -115,24 +122,24 @@ export function ProjectSidebar({ locale = "zh", currentProjectId, projectName, a
                 }
               }}
               autoFocus
-              className="w-full px-2.5 py-1 text-sm font-medium border-b-2 border-[var(--at-accent)] bg-transparent text-[var(--at-text)] focus:outline-none"
+              className="w-full px-2.5 py-1.5 text-sm font-semibold border-b-2 border-orange-500 bg-transparent text-stone-900 focus:outline-none rounded-sm"
             />
           ) : (
             <h3
-              className="text-sm font-medium text-[var(--at-text)] cursor-pointer px-2.5 py-1 rounded-lg hover:bg-[var(--at-surface-hover)] transition-colors flex items-center justify-between group"
+              className="text-sm font-semibold text-stone-900 cursor-pointer px-2.5 py-1.5 rounded-lg hover:bg-stone-100/50 transition-colors flex items-center justify-between group"
               onDoubleClick={() => {
                 setIsEditingProjectName(true);
                 setEditProjectName(projectName || "");
               }}
             >
               <span className="truncate">{projectName || t("projectName")}</span>
-              <ChevronRight size={12} className="text-[var(--at-text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ChevronRight size={14} className="text-stone-300 opacity-0 group-hover:opacity-100 transition-opacity" />
             </h3>
           )}
         </div>
 
         {/* Nav items */}
-        <nav className="space-y-0.5">
+        <nav className="space-y-1">
           {projectMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.id === activeMenuItem;
@@ -141,16 +148,16 @@ export function ProjectSidebar({ locale = "zh", currentProjectId, projectName, a
                 key={item.id}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2.5 px-2.5 py-2 text-[13px] rounded-lg transition-all duration-200 relative",
+                  "flex items-center gap-2.5 px-2.5 py-2.5 text-[13px] rounded-lg transition-all duration-200 relative group",
                   isActive
-                    ? "bg-[var(--at-surface-active)] text-[var(--at-accent)] font-medium"
-                    : "text-[var(--at-text-secondary)] hover:bg-[var(--at-surface-hover)] hover:text-[var(--at-text)]"
+                    ? "bg-gradient-to-r from-orange-50 to-orange-50/50 text-orange-700 font-semibold shadow-sm"
+                    : "text-stone-600 hover:bg-stone-100/60 hover:text-stone-900"
                 )}
               >
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-[var(--at-accent)]" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-gradient-to-b from-orange-500 to-orange-600 shadow-sm" />
                 )}
-                <Icon size={16} strokeWidth={isActive ? 2 : 1.5} />
+                <Icon size={16} strokeWidth={isActive ? 2 : 1.5} className="group-hover:scale-110 transition-transform" />
                 <span>{item.label}</span>
               </Link>
             );
@@ -159,16 +166,17 @@ export function ProjectSidebar({ locale = "zh", currentProjectId, projectName, a
       </div>
 
       {/* User section */}
-      <div className="px-3 py-3 border-t border-[var(--at-border-light)]">
-        <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg hover:bg-[var(--at-surface-hover)] transition-colors cursor-pointer">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--at-accent)] to-orange-400 flex items-center justify-center text-[11px] font-semibold text-white">
+      <div className="px-3 py-3 border-t border-stone-200/30 bg-gradient-to-t from-stone-50/50 to-transparent">
+        <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-stone-100/50 transition-colors cursor-pointer group">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-[11px] font-bold text-white shadow-sm group-hover:shadow-md transition-shadow">
             U
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-[var(--at-text)] truncate">用户名</p>
-            <p className="text-[10px] text-[var(--at-text-tertiary)] truncate">user@example.com</p>
+            <p className="text-xs font-medium text-stone-900 truncate">用户名</p>
+            <p className="text-[10px] text-stone-400 truncate">user@example.com</p>
           </div>
         </div>
+      </div>
       </div>
     </aside>
   );
