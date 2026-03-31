@@ -35,26 +35,29 @@ export function ContentBlockSkeleton() {
 
 export function PageLoadingSkeleton() {
   return (
-    <div className="grid grid-cols-[theme(spacing.64)_1fr_theme(spacing.80)] min-h-screen">
-      <aside className="hidden md:block border-r bg-slate-50 p-3">
-        <div className="h-6 bg-slate-200 rounded w-1/2 mb-4"></div>
-        <SceneListSkeleton />
-      </aside>
-      <main className="border-x bg-white p-4">
-        <div className="h-8 bg-slate-200 rounded w-1/3 mb-4"></div>
-        <div className="space-y-2">
-          <ContentBlockSkeleton />
-          <ContentBlockSkeleton />
-          <ContentBlockSkeleton />
+    <div className="w-full min-h-screen bg-gradient-to-b from-stone-50 via-white to-stone-50/50 animate-pulse">
+      {/* Header area */}
+      <div className="h-12 bg-gradient-to-r from-stone-100/40 to-stone-200/40 border-b border-stone-200/50"></div>
+
+      {/* Main content - staggered skeleton blocks */}
+      <div className="max-w-4xl mx-auto px-8 py-12 space-y-6">
+        {/* Title skeleton */}
+        <div className="mb-8">
+          <div className="h-10 bg-stone-200 rounded-lg w-1/3 mb-4"></div>
+          <div className="h-4 bg-stone-100 rounded-lg w-2/3"></div>
         </div>
-      </main>
-      <aside className="hidden md:block bg-slate-100/50 p-3">
-        <div className="h-6 bg-slate-200 rounded w-1/2 mb-3"></div>
-        <div className="space-y-2">
-          <InspirationCardSkeleton />
-          <InspirationCardSkeleton />
-        </div>
-      </aside>
+
+        {/* Content blocks */}
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="space-y-3 p-4 bg-white/40 rounded-lg border border-stone-200/20">
+            <div className="h-6 bg-stone-200 rounded-lg w-1/4"></div>
+            <div className="space-y-2">
+              <div className="h-4 bg-stone-100 rounded-lg w-full"></div>
+              <div className="h-4 bg-stone-100 rounded-lg w-5/6"></div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

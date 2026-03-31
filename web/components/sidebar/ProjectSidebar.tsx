@@ -50,19 +50,16 @@ export function ProjectSidebar({ locale = "zh", currentProjectId, projectName, a
       <div className="relative z-10 flex flex-col h-screen">
         {/* Logo */}
         <Link href="/">
-          <div className="h-[56px] px-5 flex items-center gap-2 border-b border-stone-200/50 cursor-pointer hover:bg-stone-100/30 transition-colors group">
-            <div className="relative w-8 h-8 shrink-0 group-hover:scale-110 transition-transform duration-300">
+          <div className="h-[56px] px-5 flex items-center justify-center border-b border-stone-200/50 cursor-pointer hover:bg-stone-100/30 transition-colors group">
+            <div className="relative w-9 h-9 shrink-0 group-hover:scale-110 transition-transform duration-300 opacity-90 group-hover:opacity-100">
               <Image
                 src="/logo.jpg"
-                alt="Logo"
+                alt="Dramo Logo"
                 fill
-                sizes="32px"
+                sizes="36px"
                 className="object-contain rounded"
               />
             </div>
-            <span className="text-[15px] font-bold tracking-tight text-stone-800 group-hover:text-orange-700 transition-colors">
-              DRAMO
-            </span>
           </div>
         </Link>
 
