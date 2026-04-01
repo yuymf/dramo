@@ -258,3 +258,14 @@ export interface StoryboardResponse {
 
 // Billing types (re-export for convenience)
 export type { PlanId, SubscriptionStatus, BillingInterval, Subscription, Usage } from '@/lib/billing/types';
+
+// Re-export extended chat types
+export type {
+  OptionCard,
+  ChatMessageOptions,
+  StructuredRequirements,
+  ExtendedChatMessage,
+  PipelineStep,
+  PipelineTaskStatus,
+  PipelineTask,
+} from '@/lib/types/chat';
