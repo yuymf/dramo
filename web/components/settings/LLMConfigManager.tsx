@@ -276,7 +276,7 @@ function ConfigForm({ editConfig, onSave, onCancel }: ConfigFormProps) {
     setVerifyResult(null);
     setError(null);
     try {
-      const result = await verifyLLMConfig({ baseUrl, apiKey, modelId });
+      const result = await verifyLLMConfig({ baseUrl, apiKey, modelId, type });
       setVerifyResult(result);
     } catch (err) {
       setVerifyResult({ success: false, error: err instanceof Error ? err.message : '验证请求失败' });

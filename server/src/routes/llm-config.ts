@@ -199,38 +199,68 @@ llmConfigs.post('/api/llm-configs/verify', async (c) => {
   try {
     await validateResolvedIPs(body.baseUrl);
   } catch (err) {
-    return c.json({ valid: false, error: (err as Error).message });
+    return c.json({ success: false, error: (err as Error).message });
   }
 
   try {
-    const response = await fetch(`${sanitizeHeaderValue(body.baseUrl.trim())}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${sanitizeHeaderValue(body.apiKey)}`,
-      },
-      body: JSON.stringify({
-        model: sanitizeHeaderValue(body.modelId.trim()),
-        messages: [{ role: 'user', content: 'say hi' }],
-        max_tokens: 5,
-      }),
-      signal: AbortSignal.timeout(10_000),
-      redirect: 'error',
-    });
+    const baseUrl = sanitizeHeaderValue(body.baseUrl.trim());
+    const isImageGen = body.type === 'IMAGE_GEN';
 
-    if (response.ok) {
-      return c.json({ valid: true });
+    let testResponse: Response;
+    if (isImageGen) {
+      // 图片生成模型：调用 /models 端点验证连通性（不消耗生成额度）
+      testResponse = await fetch(`${baseUrl}/models`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${sanitizeHeaderValue(body.apiKey)}`,
+        },
+        signal: AbortSignal.timeout(10_000),
+        redirect: 'error',
+      });
+    } else {
+      // 文本生成模型：调用 /chat/completions 测试端点
+      testResponse = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sanitizeHeaderValue(body.apiKey)}`,
+        },
+        body: JSON.stringify({
+          model: sanitizeHeaderValue(body.modelId.trim()),
+          messages: [{ role: 'user', content: 'say hi' }],
+          max_tokens: 5,
+        }),
+        signal: AbortSignal.timeout(10_000),
+        redirect: 'error',
+      });
     }
 
-    logger.warn({ status: response.status, userId }, 'LLM config verify failed');
-    return c.json({ valid: false, error: `API returned status ${response.status}` });
+    if (testResponse.ok) {
+      return c.json({ success: true });
+    }
+
+    // 401/403 表示认证失败（连通但 key 无效或无权限）
+    if (testResponse.status === 401 || testResponse.status === 403) {
+      const hint = body.baseUrl.includes('woa.com')
+        ? 'API key 认证失败（该 API 可能仅限内网访问，在外网无法验证）'
+        : 'API key 无效或无访问权限';
+      return c.json({ success: false, error: hint });
+    }
+
+    // IMAGE_GEN 其他 4xx（400/404 等）表示可以连通，key 可能有效
+    if (isImageGen && testResponse.status >= 400 && testResponse.status < 500) {
+      return c.json({ success: true });
+    }
+
+    logger.warn({ status: testResponse.status, userId }, 'LLM config verify failed');
+    return c.json({ success: false, error: `API returned status ${testResponse.status}` });
   } catch (err) {
     logger.warn({ err, userId }, 'LLM config verify error');
     const message =
       err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError')
-        ? 'Connection timed out'
-        : 'Connection failed';
-    return c.json({ valid: false, error: message });
+        ? '连接超时'
+        : '连接失败';
+    return c.json({ success: false, error: message });
   }
 });
 

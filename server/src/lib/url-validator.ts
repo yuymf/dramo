@@ -52,8 +52,8 @@ export function validateBaseUrl(url: string): void {
     throw new Error(`Invalid URL: ${url}`);
   }
 
-  if (parsed.protocol !== 'https:') {
-    throw new Error('Base URL must use HTTPS scheme');
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error('Base URL must use HTTP or HTTPS scheme');
   }
 
   const hostname = parsed.hostname;

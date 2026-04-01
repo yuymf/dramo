@@ -1,103 +1,186 @@
-# CLAUDE.md
+# Dramo Web — Next.js 15 前端
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+> Monorepo 子项目。全局文档见 [根目录 CLAUDE.md](../CLAUDE.md)，详细参考见 [docs/](../docs/)。
 
-## Project Overview
+## 概览
 
-**Dramo.ai** — an AI-powered livestream script creation tool (AI 直播台本生成助手). The frontend is a Next.js 15 App Router application (React 19, TypeScript, Tailwind CSS v4) that proxies all API calls to a separate backend (Fastify on port 12321) and an AgentOS service (FastAPI on port 12322).
+Next.js 15 App Router 应用 (React 19, TypeScript strict, Tailwind CSS v4)，端口 12323。
+所有 API 调用通过 Next.js API Routes 代理到后端 Hono API (:12321)。
 
-## Commands
+## 命令
 
 ```bash
-npm run dev          # Dev server with Turbopack on port 12323
-npm run build        # Production build (Turbopack)
-npm start            # Production server on port 12323
-npm run lint         # ESLint (next/core-web-vitals + next/typescript)
-npm run openapi:build  # Convert specs/001-ai-ai-ai/contracts/openapi.yaml → public/openapi.json
+npm run dev            # Turbopack 开发服务器 (:12323)
+npm run build          # 生产构建
+npm start              # 生产服务器 (:12323)
+npm run lint           # ESLint v9 (Flat Config)
 ```
 
-No test runner is configured in package.json. MSW (`msw` + `@faker-js/faker`) is set up for mock data in `mock/`.
+MSW (`msw` + `@faker-js/faker`) 用于 mock 数据 (`mock/`)，无独立测试运行器。
 
-## Environment Variables
+## 环境变量 (.env.local)
 
-Copy `env.local.example` → `.env.local`:
+| 变量 | 用途 |
+|------|------|
+| `NEXTAUTH_SECRET` | NextAuth JWT 签名密钥 |
+| `NEXTAUTH_URL` | NextAuth 回调 URL (`http://localhost:12323`) |
+| `NEXT_PUBLIC_API_URL` | 后端 API 地址 (`http://localhost:12321`) |
+| `BACKEND_API_URL` | 服务端覆盖后端地址 (优先于 `NEXT_PUBLIC_API_URL`) |
+| `NEXT_PUBLIC_APP_MODE` | `development` / `production` |
+| `DEV_USER_EMAIL` | 开发测试账号 (`demo@example.com`) |
+| `DEV_USER_PASSWORD` | 开发测试密码 (`demo123456`) |
 
-| Variable | Purpose |
-|---|---|
-| `NEXTAUTH_SECRET` | NextAuth JWT signing secret |
-| `NEXTAUTH_URL` | NextAuth callback URL (`http://localhost:12323`) |
-| `NEXT_PUBLIC_API_URL` | Backend API base URL (`http://localhost:12321`) |
-| `BACKEND_API_URL` | Server-side override for backend URL (takes precedence over `NEXT_PUBLIC_API_URL`) |
+> 完整环境变量说明见 [docs/env-and-deploy.md](../docs/env-and-deploy.md)
 
-## Architecture
+## 目录结构
 
-### Port Allocation
-- **12323** — Frontend (Next.js)
-- **12321** — Backend API (Fastify)
-- **12322** — AgentOS (FastAPI)
+```
+web/
+├── app/
+│   ├── api/                    # Next.js API Routes (代理到后端)
+│   │   └── _utils/             #   proxyRequest(), auth guard
+│   ├── projects/[id]/          # 项目工作区 (并行路由)
+│   │   ├── @sidebar/           #   持久侧边栏 (场景列表、导航)
+│   │   └── @content/           #   深链接内容区
+│   │       ├── scripts/        #     台本编辑 (linear, dialogue, hollywood)
+│   │       ├── characters/     #     角色管理 + relations/ 关系图谱
+│   │       ├── locations/      #     场景管理
+│   │       └── storyboard/     #     分镜面板
+│   ├── home/                   # 仪表盘
+│   ├── settings/               # LLM 配置管理
+│   ├── pricing/                # 定价页
+│   ├── billing/                # 支付结果 (success/cancel)
+│   ├── login/ register/        # 认证页
+│   ├── profile/ cases/ blog/   # 其他页
+│   ├── providers.tsx           # AppProviders (SessionProvider, ThemeProvider)
+│   ├── ai-chat-provider.tsx    # AI 对话状态 Context
+│   └── generation-jobs-provider.tsx  # 任务轮询 Context
+│
+├── components/                 # 按功能分组
+│   ├── ui/                     # Radix + shadcn 基础组件
+│   ├── editor/                 # TipTap + @dnd-kit 台本编辑器
+│   ├── characters/             # 角色卡片、表单、@xyflow 关系图
+│   ├── locations/              # 场景卡片、表单
+│   ├── storyboard/             # FrameCard, GeneratorModal, SavedAssetsPanel
+│   ├── chat/                   # AI 对话面板、消息展示
+│   ├── billing/                # 订阅、SubscriptionProvider
+│   ├── sidebar/                # ProjectSidebar, SceneList
+│   ├── settings/               # LLMConfigManager, AIProviderSettings
+│   ├── home/                   # 仪表盘组件
+│   └── landing/                # CatLogo, SiteHeader, FeatureCard
+│
+├── lib/
+│   ├── api/                    # 类型化 API 客户端
+│   │   ├── client.ts           #   api<T>() — 统一 fetch 封装 (缓存, 超时, 错误)
+│   │   ├── projects.ts         #   项目 CRUD
+│   │   ├── scripts.ts          #   台本操作
+│   │   ├── characters.ts       #   角色操作
+│   │   ├── storyboard.ts       #   分镜操作
+│   │   ├── llm-configs.ts      #   LLM 配置
+│   │   ├── relations.ts        #   角色关系
+│   │   ├── jobs.ts             #   图片生成任务
+│   │   ├── billing.ts          #   Stripe 订阅
+│   │   └── ai-providers.ts     #   AI 供应商切换
+│   ├── hooks/
+│   │   ├── useTaskPolling.ts   #   通用任务轮询
+│   │   ├── useGenerationJobs.ts#   生成任务 Context hook
+│   │   ├── useAutosave.ts      #   自动保存台本
+│   │   ├── useKeyboardShortcuts.ts
+│   │   ├── use-subscription.ts #   订阅状态
+│   │   └── useIsLargeScreen.ts #   响应式断点
+│   ├── types/                  # TypeScript 类型
+│   │   ├── storyboard.ts       #   Frame, Scene, Shot
+│   │   ├── chat.ts             #   Message 类型
+│   │   └── generation-job.ts   #   Job 状态类型
+│   ├── utils/
+│   │   ├── exporter.ts         #   导出 DOCX/PDF
+│   │   ├── json-applier.ts     #   应用 AI 建议
+│   │   ├── json-context-extractor.ts  # 提取 AI 上下文
+│   │   └── format-check.ts     #   JSON 格式校验
+│   └── models.ts               # 核心领域模型 (Script, Character, Storyboard, ...)
+│
+└── mock/                       # MSW mock service worker
+```
 
-### API Proxy Pattern
-All client-side API calls go through Next.js API Routes (`app/api/`) which proxy to the backend. The central proxy utility is `app/api/_utils/proxy.ts` (`proxyRequest`). It handles:
-- Auth injection via `next-auth` session (Bearer token from `session.backendToken`)
-- Body format detection (JSON, FormData, URL-encoded)
-- Unified error envelope (`{ error: { code, message, retryable } }`)
+## 架构
 
-Client-side code uses `lib/api/client.ts` (`api<T>()`) — a typed fetch wrapper that always calls relative `/api/` paths with cookie-based auth (`credentials: 'include'`). Supports optional client-side GET caching and request timeouts.
+### API 代理模式
 
-### Authentication
-NextAuth v4 with Credentials provider. Login calls `POST /api/auth/login` on the backend, stores the returned token in the JWT. The `backendToken` is augmented onto the Session type (see `next-auth.d.ts`). Custom login page at `/login`.
+```
+Browser → fetch('/api/projects') → Next.js API Route → proxyRequest() → Hono :12321
+```
 
-### Routing (Parallel Routes)
-The project page at `app/projects/[id]/` uses Next.js parallel routes:
-- `@sidebar` — persistent project navigation sidebar
-- `@content` — deep-linked content area with independent URLs
+- `app/api/_utils/proxy.ts` (`proxyRequest`) — 从 NextAuth session 提取 `backendToken`，注入 Bearer header
+- 支持 JSON / FormData / URL-encoded body
+- 统一错误信封: `{ error: { code, message, retryable } }`
+- `lib/api/client.ts` (`api<T>()`) — 客户端 fetch 封装:
+  - Cookie-based auth (`credentials: 'include'`)
+  - 可选 GET 缓存 (TTL-based LRU, 最多 100 条)
+  - AbortController 超时控制
+  - `PLAN_LIMIT_EXCEEDED` 错误自动触发升级弹窗
 
-Key content routes under `@content`:
-- `/scripts` — Script editor (linear mode, default)
-- `/scripts/dialogue` — Branching editor (WIP)
-- `/scripts/hollywood` — Storyboard editor (WIP)
-- `/input` — Generation input form
-- `/characters` — Character management + relation graph
-- `/locations` — Location management
-- `/storyboard` — Storyboard frames with shot-level detail
+### 认证
 
-Legacy route `/scripts/:id` redirects to `/projects/:id/scripts` via `next.config.ts`.
+NextAuth v4 + Credentials provider:
+- 登录调用后端 `POST /api/auth/login`，返回 token 存入 JWT
+- `backendToken` 扩展到 Session 类型 (见 `next-auth.d.ts`)
+- 自定义登录页 `/login`
 
-### Domain Model
-Core types are in `lib/models.ts`:
-- **Script** — has Acts → Scenes → Blocks (HTML content). Three forms: `linear`, `branching`, `storyboard`
-- **Character** — with speech features, style tags, image assets, and relation graphs (`@xyflow/react`)
-- **Storyboard** — scenes containing Shots with camera, dialogue, and generation prompts
-- **GenerationJob** — async task tracking for AI operations (`lib/types/generation-job.ts`)
+### 路由 (并行路由)
 
-### State & Data Flow
-- `next-auth/react` `SessionProvider` wraps the app (`app/providers.tsx`)
-- `AIChatProvider` (`app/ai-chat-provider.tsx`) — manages AI chat drawer state, current page type detection, JSON data for AI context, and pending AI-suggested changes
-- `GenerationJobsProvider` — tracks async image/script generation job polling
-- No global state library (Zustand listed as "on-demand" but not currently installed)
+项目工作区 `app/projects/[id]/` 使用 Next.js parallel routes:
 
-### UI Stack
-- **Tailwind CSS v4** with `@tailwindcss/postcss`
-- **Radix UI** primitives (dropdown-menu, scroll-area, separator, tabs)
-- **shadcn/ui** components in `components/ui/`
-- **TipTap** rich text editor for script content
-- **@dnd-kit** for drag-and-drop (sortable scenes/blocks)
-- **Lucide React** + **React Icons** for iconography
-- **docx** + **jspdf** for script export (`lib/utils/exporter.ts`)
+| 路由 | 页面 | 说明 |
+|------|------|------|
+| `/` | Landing | 落地页 |
+| `/login` `/register` | Auth | 认证 |
+| `/home` | Dashboard | 仪表盘 |
+| `/projects` | ProjectsList | 项目列表 |
+| `/projects/[id]/scripts` | ScriptEditor | 线性台本编辑器 (默认) |
+| `/projects/[id]/scripts/dialogue` | DialogueEditor | 分支编辑器 (WIP) |
+| `/projects/[id]/scripts/hollywood` | HollywoodEditor | 分镜编辑器 (WIP) |
+| `/projects/[id]/characters` | CharacterManager | 角色管理 |
+| `/projects/[id]/characters/relations` | RelationGraph | @xyflow 关系图谱 |
+| `/projects/[id]/locations` | LocationManager | 场景管理 |
+| `/projects/[id]/storyboard` | StoryboardPanel | 分镜面板 |
+| `/settings` | Settings | LLM 配置 |
+| `/pricing` | Pricing | 定价 |
+| `/profile` `/cases` `/blog` | Other | 其他页面 |
 
-### Design Guidelines (from Cursor rules)
-Product name: DRAMO. Muji-inspired visual style:
-- Background: cream/off-white/oatmeal tones (not pure black/white)
-- Typography: Songti SC / Georgia for content; system sans-serif for UI
-- Generous whitespace, line-style icons, subtle paper textures
-- The AI companion is portrayed as a focused, cute cat character
+Legacy 路由 `/scripts/:id` 通过 `next.config.ts` 重定向到 `/projects/:id/scripts`。
 
-### Key Directories
-- `app/api/` — Next.js API route handlers (proxy to backend)
-- `app/projects/[id]/` — Main project workspace with parallel routes
-- `components/` — Feature-grouped React components (editor, chat, storyboard, characters, etc.)
-- `lib/api/` — Client-side API functions and typed wrappers
-- `lib/hooks/` — Custom hooks (autosave, generation jobs, SSE, keyboard shortcuts)
-- `lib/models.ts` — Core TypeScript domain types
-- `lib/utils/` — Export utilities, JSON processing, format validation
-- `docs/` — Backend API specs, architecture docs, integration guides
+### 领域模型
+
+核心类型定义在 `lib/models.ts`:
+
+- **Script** — Acts → Scenes → Blocks (HTML)。三种形态: `linear`, `branching`, `storyboard`
+- **Character** — 语言特征、风格标签、图片资产、关系图
+- **Storyboard** — Scenes → Shots (镜头、对话、生成提示词)
+- **GenerationJob** — 异步任务追踪 (`lib/types/generation-job.ts`)
+
+### 状态管理
+
+- `SessionProvider` (NextAuth) — 认证状态
+- `AIChatProvider` — AI 对话抽屉、当前页面类型、JSON 上下文、待应用的 AI 建议
+- `GenerationJobsProvider` — 异步任务轮询 (图片/台本生成)
+- 无全局状态库 (Zustand 按需引入但未安装)
+
+### UI 技术栈
+
+| 技术 | 用途 |
+|------|------|
+| Tailwind CSS v4 + @tailwindcss/postcss | 样式 |
+| Radix UI + shadcn/ui | 基础组件 |
+| TipTap | 富文本编辑 |
+| @dnd-kit | 拖拽排序 (场景/区块) |
+| @xyflow/react | 角色关系图谱 |
+| Lucide React + React Icons | 图标 |
+| docx + jspdf | 台本导出 |
+
+### 设计风格
+
+产品名: DRAMO。MUJI 风格:
+- 背景: 奶油色/米白/燕麦色 (非纯黑白)
+- 正文: Songti SC / Georgia; UI: 系统无衬线
+- 大量留白、线条图标、淡纸纹理
+- AI 伙伴: 专注可爱的猫咪角色

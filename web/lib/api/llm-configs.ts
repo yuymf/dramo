@@ -90,6 +90,7 @@ export async function verifyLLMConfig(input: {
   baseUrl: string;
   apiKey: string;
   modelId: string;
+  type?: LLMConfigType;
 }): Promise<VerifyResult> {
   return api<VerifyResult>('/api/llm-configs/verify', {
     method: 'POST',
