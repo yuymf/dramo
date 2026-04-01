@@ -48,7 +48,14 @@ chat.post('/api/chat/:projectId/messages', async (c) => {
 
   // Store user message
   const userMessage = await prisma.chatMessage.create({
-    data: { projectId, role: 'user', content: body.content, blocks: body.blocks || [] },
+    data: {
+      projectId,
+      role: 'user',
+      content: body.content,
+      blocks: body.blocks || [],
+      messageType: body.messageType || null,
+      selectedOption: body.selectedOption || null,
+    },
   });
 
   // Get conversation history (latest 20)
@@ -101,26 +108,87 @@ chat.post('/api/chat/:projectId/messages', async (c) => {
     return streamSSEResponse(c, generateSSE());
   }
 
-  // Non-streaming: call AgentOS for chat completion
+  // Non-streaming: route based on mode
   try {
     const llmHeaders = await llmConfigService.getLLMHeaders(userId, 'TEXT_LLM');
-    const aiResponse = await postAgentOS<{
-      choices?: Array<{ message: { role: string; content: string } }>;
-      content?: string;
-      message?: string;
-    }>('/agentos/chat_completion', { messages, stream: false }, { llmHeaders });
+    let content = '';
+    let messageType: string | null = null;
+    let options: unknown = null;
+    let clarificationComplete: unknown = null;
 
-    const content =
-      aiResponse.choices?.[0]?.message?.content ||
-      aiResponse.content ||
-      aiResponse.message ||
-      'No response';
+    if (body.mode === 'clarification') {
+      // Use ClarificationWorkflow
+      const response = await startWorkflowRun('ClarificationWorkflow', {
+        messages,
+        stream: false,
+      }, { requestId, stream: false, llmHeaders });
+
+      const responseText = await response.text();
+      let parsed: Record<string, unknown> = {};
+      try {
+        // AgentOS workflow returns JSON string in "output" or directly
+        const outer = JSON.parse(responseText);
+        const inner = outer.output || outer;
+        parsed = typeof inner === 'string' ? JSON.parse(inner) : inner;
+      } catch {
+        parsed = { content: responseText };
+      }
+
+      content = (parsed.content as string) || 'No response';
+
+      if (parsed.options) {
+        messageType = 'options';
+        options = parsed.options;
+      }
+
+      if (parsed.clarificationComplete) {
+        clarificationComplete = parsed.clarificationComplete;
+
+        // Create PipelineRun record
+        await prisma.pipelineRun.create({
+          data: {
+            projectId,
+            status: 'running',
+            requirements: parsed.clarificationComplete as object,
+            currentStep: 'script',
+          },
+        });
+      }
+    } else {
+      // Default: call AgentOS chat_completion endpoint
+      const aiResponse = await postAgentOS<{
+        choices?: Array<{ message: { role: string; content: string } }>;
+        content?: string;
+        message?: string;
+      }>('/agentos/chat_completion', { messages, stream: false }, { llmHeaders });
+
+      content =
+        aiResponse.choices?.[0]?.message?.content ||
+        aiResponse.content ||
+        aiResponse.message ||
+        'No response';
+    }
 
     const assistantMessage = await prisma.chatMessage.create({
-      data: { projectId, role: 'assistant', content },
+      data: {
+        projectId,
+        role: 'assistant',
+        content,
+        messageType,
+        options: options ? (options as object) : undefined,
+      },
     });
 
-    return c.json({ userMessage, assistantMessage });
+    // Add clarificationComplete to response (transient, not stored in DB)
+    const responsePayload: Record<string, unknown> = {
+      userMessage,
+      assistantMessage: {
+        ...assistantMessage,
+        clarificationComplete: clarificationComplete || undefined,
+      },
+    };
+
+    return c.json(responsePayload);
   } catch (err) {
     logger.error({ err, projectId }, 'Chat completion failed');
     throw err;
