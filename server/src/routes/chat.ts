@@ -73,6 +73,7 @@ chat.post('/api/chat/:projectId/messages', async (c) => {
 
   if (body.stream) {
     // SSE streaming response
+    // eslint-disable-next-line no-inner-declarations
     async function* generateSSE(): AsyncGenerator<SSEEvent, void, unknown> {
       try {
         const llmHeaders = await llmConfigService.getLLMHeaders(userId, 'TEXT_LLM');

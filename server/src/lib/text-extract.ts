@@ -6,6 +6,7 @@ import * as mammoth from 'mammoth';
  */
 export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   // Dynamic import to handle pdf-parse's CommonJS export
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const pdfParse = require('pdf-parse');
   const parser = new pdfParse.PDFParse({ data: buffer });
   const result = await parser.getText();
