@@ -136,14 +136,30 @@ model Inspiration {
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
-  projectId String
-  role      String
-  content   String
-  blocks    Json?
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  projectId      String
+  role           String
+  content        String
+  blocks         Json?
+  messageType    String?  // 'text' | 'options' | 'progress'
+  options        Json?    // OptionCards data (AI-generated)
+  selectedOption Json?    // User's selection result
+  createdAt      DateTime @default(now())
 
   @@index([projectId, createdAt])
+}
+
+model PipelineRun {
+  id           String   @id @default(cuid())
+  projectId    String
+  status       String   @default("running") // running | completed | paused | failed
+  requirements Json     // StructuredRequirements
+  currentStep  String?  // script | characters | locations | storyboard
+  stepResults  Json?    // Per-step completion status
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId])
 }
 
 model Character3ViewAsset {
