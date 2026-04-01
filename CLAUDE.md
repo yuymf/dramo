@@ -91,3 +91,10 @@ docker compose --profile localpg up -d      # 同上 + 本地 PostgreSQL
 - `server/.env` 供后端和 AgentOS 使用
 - `web/.env.local` 供 Next.js 前端使用
 - AgentOS 的 `env_loader.py` 从 `../server/.env` 读取后端环境变量
+
+## 测试账号
+
+### 本地测试账号
+
+- 邮箱: `demo@example.com`
+- 密码: `demo123456`
