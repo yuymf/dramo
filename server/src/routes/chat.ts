@@ -77,7 +77,7 @@ chat.post('/api/chat/:projectId/messages', async (c) => {
     async function* generateSSE(): AsyncGenerator<SSEEvent, void, unknown> {
       try {
         const llmHeaders = await llmConfigService.getLLMHeaders(userId, 'TEXT_LLM');
-        const response = await startWorkflowRun('ChatWorkflow', {
+        const response = await startWorkflowRun('clarificationworkflow', {
           messages,
           stream: true,
         }, { requestId, stream: true, llmHeaders });
@@ -119,7 +119,7 @@ chat.post('/api/chat/:projectId/messages', async (c) => {
 
     if (body.mode === 'clarification') {
       // Use ClarificationWorkflow
-      const response = await startWorkflowRun('ClarificationWorkflow', {
+      const response = await startWorkflowRun('clarificationworkflow', {
         messages,
         stream: false,
       }, { requestId, stream: false, llmHeaders });
@@ -127,13 +127,33 @@ chat.post('/api/chat/:projectId/messages', async (c) => {
       const responseText = await response.text();
       let parsed: Record<string, unknown> = {};
       try {
-        // AgentOS workflow returns JSON string in "output" or directly
+        // AgentOS workflow wraps output: { content: "<json_string>" } or { output: "<json_string>" }
         const outer = JSON.parse(responseText);
-        const inner = outer.output || outer;
-        parsed = typeof inner === 'string' ? JSON.parse(inner) : inner;
+        let inner = outer.output || outer.content || outer;
+        // The workflow returns a JSON string, which may be nested
+        if (typeof inner === 'string') {
+          try { inner = JSON.parse(inner); } catch { /* keep as string */ }
+        }
+        // inner should now be { content, options, clarificationComplete }
+        // But the LLM might return JSON inside content field too
+        if (typeof inner === 'object' && inner !== null) {
+          parsed = inner as Record<string, unknown>;
+        } else {
+          parsed = { content: String(inner) };
+        }
+        // If content itself is a JSON string with our expected fields, parse it
+        if (typeof parsed.content === 'string' && parsed.content.startsWith('{')) {
+          try {
+            const innerContent = JSON.parse(parsed.content);
+            if (innerContent.content) {
+              parsed = innerContent;
+            }
+          } catch { /* content is just a string, keep it */ }
+        }
       } catch {
         parsed = { content: responseText };
       }
+
 
       content = (parsed.content as string) || 'No response';
 
@@ -156,18 +176,43 @@ chat.post('/api/chat/:projectId/messages', async (c) => {
         });
       }
     } else {
-      // Default: call AgentOS chat_completion endpoint
-      const aiResponse = await postAgentOS<{
-        choices?: Array<{ message: { role: string; content: string } }>;
-        content?: string;
-        message?: string;
-      }>('/agentos/chat_completion', { messages, stream: false }, { llmHeaders });
+      // Default: use ClarificationWorkflow as general chat
+      const response = await startWorkflowRun('clarificationworkflow', {
+        messages,
+        stream: false,
+      }, { requestId, stream: false, llmHeaders });
 
-      content =
-        aiResponse.choices?.[0]?.message?.content ||
-        aiResponse.content ||
-        aiResponse.message ||
-        'No response';
+      const responseText = await response.text();
+      let parsed: Record<string, unknown> = {};
+      try {
+        const outer = JSON.parse(responseText);
+        let inner = outer.output || outer.content || outer;
+        if (typeof inner === 'string') {
+          try { inner = JSON.parse(inner); } catch { /* keep as string */ }
+        }
+        if (typeof inner === 'object' && inner !== null) {
+          parsed = inner as Record<string, unknown>;
+        } else {
+          parsed = { content: String(inner) };
+        }
+        if (typeof parsed.content === 'string' && parsed.content.startsWith('{')) {
+          try {
+            const innerContent = JSON.parse(parsed.content);
+            if (innerContent.content) {
+              parsed = innerContent;
+            }
+          } catch { /* content is just a string, keep it */ }
+        }
+      } catch {
+        parsed = { content: responseText };
+      }
+
+      content = (parsed.content as string) || 'No response';
+
+      if (parsed.options) {
+        messageType = 'options';
+        options = parsed.options;
+      }
     }
 
     const assistantMessage = await prisma.chatMessage.create({
