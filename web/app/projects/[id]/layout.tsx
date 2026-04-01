@@ -18,7 +18,7 @@ export default function ProjectLayout({
 }: ProjectLayoutProps) {
   return (
     <ProjectLayoutClient>
-      <div className="flex min-h-screen bg-[var(--at-bg)]">
+      <div className="flex h-screen overflow-hidden bg-[var(--at-bg)]">
         {/* 并行路由：侧栏常驻 */}
         {sidebar}
         

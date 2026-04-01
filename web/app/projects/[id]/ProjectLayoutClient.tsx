@@ -43,7 +43,8 @@ function ProjectLayoutContent({ children }: ProjectLayoutClientProps) {
 
   return (
     <AIChatProvider>
-      <PanelGroup orientation="horizontal">
+      <div className="h-screen overflow-hidden">
+        <PanelGroup orientation="horizontal" className="h-full">
         {/* Content area */}
         <Panel defaultSize={65} minSize={40}>
           {children}
@@ -58,7 +59,8 @@ function ProjectLayoutContent({ children }: ProjectLayoutClientProps) {
         <Panel defaultSize={35} minSize={20} collapsible collapsedSize={0}>
           {projectId && <ChatPanel projectId={projectId} />}
         </Panel>
-      </PanelGroup>
+        </PanelGroup>
+      </div>
 
       <PipelineTabListener />
     </AIChatProvider>
