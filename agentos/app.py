@@ -30,6 +30,7 @@ from workflows.characters_workflow import CharactersWorkflow
 from workflows.locations_workflow import LocationsWorkflow
 from workflows.polish_workflow import PolishWorkflow
 from workflows.script_workflow import ScriptWorkflow
+from workflows.clarification_workflow import ClarificationWorkflow
 
 # Import image generation service
 from services.image_service import get_image_service, ImageGenerationService
@@ -51,6 +52,7 @@ characters_workflow = CharactersWorkflow()
 locations_workflow = LocationsWorkflow()
 polish_workflow = PolishWorkflow()
 script_workflow = ScriptWorkflow()
+clarification_workflow = ClarificationWorkflow()
 
 # ============ Custom FastAPI App with Image Generation ============
 
@@ -244,6 +246,7 @@ agent_os = AgentOS(
         locations_workflow,
         polish_workflow,
         script_workflow,
+        clarification_workflow,
     ],
     # teams=[research_team],  # Uncomment if needed
     base_app=custom_app,  # Pass custom FastAPI app
