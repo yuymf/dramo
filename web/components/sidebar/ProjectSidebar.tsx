@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { useTranslation, type Locale } from "@/lib/i18n";
 import {
   FileText,
-  PenLine,
   Users,
   MapPin,
   Film,
@@ -32,7 +31,6 @@ export function ProjectSidebar({ locale = "zh", currentProjectId, projectName, a
   const [editProjectName, setEditProjectName] = useState(projectName || "");
 
   const projectMenuItems = useMemo(() => [
-    { id: "input", label: t("input"), icon: PenLine, href: `/projects/${currentProjectId}/input` },
     { id: "script", label: t("script"), icon: FileText, href: `/projects/${currentProjectId}/scripts` },
     { id: "characters", label: t("characters"), icon: Users, href: `/projects/${currentProjectId}/characters` },
     { id: "locations", label: "地点", icon: MapPin, href: `/projects/${currentProjectId}/locations` },

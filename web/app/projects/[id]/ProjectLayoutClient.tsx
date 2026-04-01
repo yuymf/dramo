@@ -1,30 +1,38 @@
 "use client";
 
 import { Suspense, useEffect } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { AIChatProvider, useAIChat } from "@/app/ai-chat-provider";
-import { AIChatDrawer } from "@/components/projects/AIChatDrawer";
-import { AIChatTriggerButton } from "@/components/projects/AIChatTriggerButton";
+import { useParams, useRouter, usePathname } from "next/navigation";
+import {
+  Panel,
+  Group as PanelGroup,
+  Separator as PanelResizeHandle,
+} from "react-resizable-panels";
+import { AIChatProvider } from "@/app/ai-chat-provider";
+import { ChatPanel } from "@/components/chat/ChatPanel";
 
 interface ProjectLayoutClientProps {
   children: React.ReactNode;
 }
 
-function AutoOpenChat() {
-  const searchParams = useSearchParams();
-  const { openDrawer } = useAIChat();
+function PipelineTabListener() {
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // 检测URL参数openChat=true，自动展开抽屉
-    const openChat = searchParams?.get("openChat");
-    if (openChat === "true") {
-      // 延迟一点展开，让页面先渲染完成，动画更流畅
-      const timer = setTimeout(() => {
-        openDrawer();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [searchParams, openDrawer]);
+    const handleTabSwitch = (e: Event) => {
+      const { tab } = (e as CustomEvent).detail;
+      if (!pathname) return;
+
+      const match = pathname.match(/\/projects\/([^/]+)/);
+      if (match) {
+        const projectId = match[1];
+        router.push(`/projects/${projectId}/${tab}`);
+      }
+    };
+
+    window.addEventListener('pipeline-tab-switch', handleTabSwitch);
+    return () => window.removeEventListener('pipeline-tab-switch', handleTabSwitch);
+  }, [router, pathname]);
 
   return null;
 }
@@ -35,18 +43,24 @@ function ProjectLayoutContent({ children }: ProjectLayoutClientProps) {
 
   return (
     <AIChatProvider>
-      {children}
-      {/* AI助手抽屉 - 只在有projectId时渲染 */}
-      {projectId && (
-        <>
-          <AIChatDrawer projectId={projectId} />
-          <Suspense fallback={null}>
-            <AutoOpenChat />
-          </Suspense>
-        </>
-      )}
-      {/* 右下角触发按钮 */}
-      <AIChatTriggerButton />
+      <PanelGroup orientation="horizontal">
+        {/* Content area */}
+        <Panel defaultSize={65} minSize={40}>
+          {children}
+        </Panel>
+
+        {/* Resize handle */}
+        <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-orange-200/50 active:bg-orange-300/50 transition-colors cursor-col-resize relative group">
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-stone-200 group-hover:bg-orange-300 transition-colors" />
+        </PanelResizeHandle>
+
+        {/* Chat panel */}
+        <Panel defaultSize={35} minSize={20} collapsible collapsedSize={0}>
+          {projectId && <ChatPanel projectId={projectId} />}
+        </Panel>
+      </PanelGroup>
+
+      <PipelineTabListener />
     </AIChatProvider>
   );
 }
@@ -58,4 +72,3 @@ export function ProjectLayoutClient({ children }: ProjectLayoutClientProps) {
     </Suspense>
   );
 }
-

@@ -29,7 +29,7 @@ export function CreativeInput({ userName }: CreativeInputProps) {
       const project = await createProject(input.trim());
       const initialMessage = input.trim();
       sessionStorage.setItem(`project_${project.id}_initialMessage`, initialMessage);
-      router.push(`/projects/${project.id}?openChat=true`);
+      router.push(`/projects/${project.id}/scripts`);
       showToast("项目已创建", "success");
     } catch (err) {
       console.error("Failed to create project:", err);
