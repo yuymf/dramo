@@ -72,10 +72,19 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
 
         const res = await api<{ data: ExtendedChatMessage[] }>(
           `/api/chat/${projectId}/messages`
-        );
+        ).catch(() => ({ data: [] as ExtendedChatMessage[] }));
         setMessages(res.data || []);
-      } catch {
-        // Failed to load history — show empty state (normal for new projects or unauthenticated)
+      } catch (err) {
+        // 404 = project not found in DB; 401 = not authenticated
+        // Both are expected in certain flows — show empty state with contextual hint
+        const status = (err as Error & { status?: number }).status;
+        if (status === 404) {
+          console.warn(`[ChatPanel] Project ${projectId} not found — may be a stale link`);
+        } else if (status === 401) {
+          console.warn('[ChatPanel] Not authenticated — redirecting to login');
+        } else {
+          console.error('[ChatPanel] Failed to load chat history:', err);
+        }
       } finally {
         setInitialLoading(false);
       }
