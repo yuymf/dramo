@@ -73,9 +73,9 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
         const res = await api<{ data: ExtendedChatMessage[] }>(
           `/api/chat/${projectId}/messages`
         );
-        setMessages(res.data);
-      } catch (err) {
-        console.error("Failed to load chat history:", err);
+        setMessages(res.data || []);
+      } catch {
+        // Failed to load history — show empty state (normal for new projects or unauthenticated)
       } finally {
         setInitialLoading(false);
       }

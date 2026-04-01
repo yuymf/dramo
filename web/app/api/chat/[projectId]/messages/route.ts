@@ -60,6 +60,9 @@ export async function POST(
       data: object | null;
     };
     stream?: boolean;
+    mode?: string;
+    selectedOption?: string[] | string;
+    messageType?: string;
   };
 
   try {
@@ -97,6 +100,9 @@ export async function POST(
         blocks: body.blocks,
         context: body.context,
         stream: body.stream || false,
+        mode: body.mode,
+        selectedOption: body.selectedOption,
+        messageType: body.messageType,
       }),
     });
 
@@ -112,6 +118,7 @@ export async function POST(
       assistantMessage: {
         ...result.assistantMessage,
         suggestedChanges: result.assistantMessage?.suggestedChanges || undefined,
+        clarificationComplete: result.assistantMessage?.clarificationComplete || undefined,
       },
     });
   } catch (err) {
