@@ -32,13 +32,9 @@ export function sanitizeMessage(msg: MessageFields): MessageFields {
   try {
     parsed = JSON.parse(content);
   } catch {
-    // LLM often emits JSON with real newlines — sanitize and retry
+    // LLM often emits JSON with real newlines — collapse to spaces and retry
     try {
-      const sanitized = content
-        .replace(/\r\n/g, '\\n')
-        .replace(/\r/g, '\\n')
-        .replace(/\n/g, '\\n')
-        .replace(/\t/g, '\\t');
+      const sanitized = content.replace(/\r?\n/g, ' ').replace(/\t/g, ' ');
       parsed = JSON.parse(sanitized);
     } catch {
       // Not valid JSON even after sanitization → it's real content, leave it

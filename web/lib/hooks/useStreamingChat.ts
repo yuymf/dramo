@@ -209,11 +209,7 @@ export function useStreamingChat({
                   try {
                     obj = JSON.parse(chunk) as Record<string, unknown>;
                   } catch {
-                    const sanitized = chunk
-                      .replace(/\r\n/g, '\\n')
-                      .replace(/\r/g, '\\n')
-                      .replace(/\n/g, '\\n')
-                      .replace(/\t/g, '\\t');
+                    const sanitized = chunk.replace(/\r?\n/g, ' ').replace(/\t/g, ' ');
                     obj = JSON.parse(sanitized) as Record<string, unknown>;
                   }
                   if (obj && typeof obj.content === 'string' && (obj.options || obj.clarificationComplete || obj.options === null)) {

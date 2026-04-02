@@ -44,18 +44,21 @@ function stripMarkdownCodeBlock(text: string): string {
  * Fixes common LLM output issues: unescaped control characters in string values.
  */
 function sanitizeForJSON(text: string): string {
-  // Replace real newlines/tabs inside JSON string values with escaped versions.
-  // Strategy: try parsing as-is first; only sanitize on failure.
   try {
     JSON.parse(text);
     return text; // Already valid
   } catch {
-    // Replace control characters that break JSON: real \n, \r, \t inside strings
-    return text
-      .replace(/\r\n/g, '\\n')
-      .replace(/\r/g, '\\n')
-      .replace(/\n/g, '\\n')
-      .replace(/\t/g, '\\t');
+    // Strategy: collapse all real newlines/carriage-returns to spaces.
+    // This works for both formatted JSON (newlines between tokens) and
+    // newlines inside string values (LLM outputting real \n instead of \\n).
+    const collapsed = text.replace(/\r?\n/g, ' ').replace(/\t/g, ' ');
+    try {
+      JSON.parse(collapsed);
+      return collapsed;
+    } catch {
+      // Last resort: also collapse multiple spaces
+      return collapsed.replace(/\s+/g, ' ');
+    }
   }
 }
 
