@@ -19,7 +19,7 @@ const STEP_CONFIG: Record<
     tab: 'locations',
   },
   storyboard: {
-    endpoint: (id) => `/api/projects/${id}/storyboard/generate`,
+    endpoint: (id) => `/api/projects/${id}/storyboard/import`,
     tab: 'storyboard',
   },
 };
@@ -87,6 +87,11 @@ export function runPipeline(
 
         store.updateTaskStatus(step, 'completed');
         callbacks.onStepComplete(step);
+
+        // Notify left-side tab components to refresh their data
+        window.dispatchEvent(
+          new CustomEvent('pipeline-step-complete', { detail: { step, tab: config.tab } })
+        );
       } catch (err) {
         if (controller.signal.aborted) {
           store.updateTaskStatus(step, 'paused');
@@ -148,10 +153,8 @@ async function executeSSEStep(
   signal: AbortSignal,
   onChunk: (data: unknown) => void
 ): Promise<Record<string, unknown> | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-  const url = `${baseUrl}${endpoint}`;
-
-  const response = await fetch(url, {
+  // Relative path routes through Next.js API proxy, which injects Bearer token.
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...body, stream: true }),

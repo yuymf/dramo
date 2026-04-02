@@ -37,7 +37,7 @@ import {
 import { useAutosave } from "@/lib/hooks/useAutosave";
 import { useKeyboardShortcuts } from "@/lib/hooks/useKeyboardShortcuts";
 import { useIsLargeScreen } from "@/lib/hooks/useIsLargeScreen";
-import { readJSON, saveJSON, addFavorite, saveVersion } from "@/lib/storage/local";
+import { readJSON, saveJSON, addFavorite, saveVersion, remove as removeLocal } from "@/lib/storage/local";
 import { exportAsText, downloadTextFile, exportAsPDF, exportAsSRT, exportAsTeleprompter, exportAsMarkdown, exportAsDOCX, exportAsJSON } from "@/lib/utils/exporter";
 import { useAIChat } from "@/app/ai-chat-provider";
 import { extractScriptJson } from "@/lib/utils/json-context-extractor";
@@ -240,6 +240,21 @@ export default function ScriptEditorPage() {
   const isLargeScreen = useIsLargeScreen();
   const isDialogueMode = pathname?.includes('/dialogue');
   const { updateJsonData } = useAIChat();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Listen for pipeline completion to refresh script data
+  useEffect(() => {
+    const handlePipelineComplete = (e: Event) => {
+      const { step } = (e as CustomEvent).detail;
+      if (step === 'script') {
+        // Clear local draft so we fetch fresh data from server
+        removeLocal(`script_draft_${projectId}`);
+        setRefreshTrigger((prev) => prev + 1);
+      }
+    };
+    window.addEventListener('pipeline-step-complete', handlePipelineComplete);
+    return () => window.removeEventListener('pipeline-step-complete', handlePipelineComplete);
+  }, [projectId]);
 
   // 初始化时读取折叠状态，默认为展开（false）
   useEffect(() => {
@@ -316,7 +331,7 @@ export default function ScriptEditorPage() {
     return () => {
       mounted = false;
     };
-  }, [projectId, showToast]);
+  }, [projectId, showToast, refreshTrigger]);
 
   useAutosave({
     data: script,
@@ -334,29 +349,6 @@ export default function ScriptEditorPage() {
       updateJsonData(null);
     }
   }, [script, updateJsonData]);
-
-  // 监听AI修改数据事件，刷新script
-  useEffect(() => {
-    const handleDataUpdated = async (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (detail?.pageType === 'script' && projectId) {
-        try {
-          const res = await api<Script>(`/api/projects/${projectId}/script`);
-          const finalScript = ensureConsistency(res);
-          setScript(finalScript);
-          setActs(finalScript.acts);
-          showToast("数据已更新", "success");
-        } catch (err) {
-          console.error("Failed to reload script after AI update:", err);
-        }
-      }
-    };
-
-    window.addEventListener('ai-chat-data-updated', handleDataUpdated);
-    return () => {
-      window.removeEventListener('ai-chat-data-updated', handleDataUpdated);
-    };
-  }, [projectId, showToast]);
 
   const handleSceneClick = useCallback((sceneId: string) => {
     setActiveSceneId(sceneId);

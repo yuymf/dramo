@@ -196,6 +196,19 @@ export default function StoryboardPage() {
   const { jobs } = useGenerationJobs();
   const { updateJsonData } = useAIChat();
   const [storyboardData, setStoryboardData] = useState<StoryboardResponse | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Listen for pipeline completion to refresh storyboard data
+  useEffect(() => {
+    const handlePipelineComplete = (e: Event) => {
+      const { step } = (e as CustomEvent).detail;
+      if (step === 'storyboard') {
+        setRefreshTrigger((prev) => prev + 1);
+      }
+    };
+    window.addEventListener('pipeline-step-complete', handlePipelineComplete);
+    return () => window.removeEventListener('pipeline-step-complete', handlePipelineComplete);
+  }, []);
   
   // 页面初始化日志
   useEffect(() => {
@@ -311,7 +324,7 @@ export default function StoryboardPage() {
     }
 
     loadFrames();
-  }, [projectId]);
+  }, [projectId, refreshTrigger]);
 
   // 注册到AI聊天上下文：当storyboardData变化时更新JSON数据
   useEffect(() => {
@@ -333,38 +346,6 @@ export default function StoryboardPage() {
       }
     }
   }, [storyboardData, frames, projectId, updateJsonData]);
-
-  // 监听AI修改数据事件，刷新storyboard
-  useEffect(() => {
-    const handleDataUpdated = async (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (detail?.pageType === 'storyboard' && projectId) {
-        try {
-          // 重新加载分镜数据
-          const result = await getStoryboardData(projectId);
-          if (result.success && result.frames && result.frames.length > 0) {
-            setFrames(result.frames as FrameData[]);
-          }
-          // 重新加载storyboard JSON
-          const storyboardData = readJSON<StoryboardResponse | null>(
-            `storyboard_${projectId}`, 
-            null
-          );
-          if (storyboardData) {
-            setStoryboardData(storyboardData);
-          }
-          showToast("数据已更新", "success");
-        } catch (err) {
-          console.error("Failed to reload storyboard after AI update:", err);
-        }
-      }
-    };
-
-    window.addEventListener('ai-chat-data-updated', handleDataUpdated);
-    return () => {
-      window.removeEventListener('ai-chat-data-updated', handleDataUpdated);
-    };
-  }, [projectId, showToast]);
 
   // Save frame images to localStorage
   useEffect(() => {
@@ -956,100 +937,120 @@ export default function StoryboardPage() {
     <div className="flex h-screen bg-[var(--at-bg)]">
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Toolbar */}
-        <div className="border-b border-[var(--at-border)] px-6 py-3 flex items-center justify-between bg-[var(--at-surface)]">
-          <div className="flex items-center gap-4">
-            <div className="flex items-baseline gap-2">
-              <h1 className="text-xl font-bold text-[var(--at-text)] tracking-tight">分镜</h1>
-              <span className="text-xs font-medium text-[var(--at-accent)] bg-[var(--at-accent-light)] px-2 py-0.5 rounded-full">{frames.length}</span>
+        {/* Toolbar — MUJI: clean, text-based, single accent */}
+        <div
+          className="border-b flex items-center justify-between"
+          style={{
+            borderColor: 'var(--at-border-light)',
+            background: 'var(--at-surface)',
+            height: '44px',
+            minHeight: '44px',
+            paddingLeft: '20px',
+            paddingRight: '20px',
+          }}
+        >
+          {/* Left */}
+          <div className="flex items-center gap-4 shrink-0">
+            {/* Title */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold ink-display" style={{ color: 'var(--at-text)' }}>分镜</span>
+              <span className="text-[11px] tabular-nums" style={{ color: 'var(--at-text-tertiary)' }}>{frames.length}</span>
             </div>
-            <div className="w-px h-4 bg-[var(--at-border)]" />
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleRefreshReferences}
-                disabled={refreshing}
-                className="flex items-center gap-1.5 text-xs h-8 px-3 rounded-lg text-[var(--at-text-secondary)] hover:bg-[var(--at-surface-hover)] transition-colors disabled:opacity-50"
-                aria-label="刷新参考照片"
-              >
-                <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-                刷新参考照片
-              </button>
-              <button
-                onClick={handleClearReferences}
-                className="flex items-center gap-1.5 text-xs h-8 px-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-                aria-label="清空参考照片"
-              >
-                <Trash2 size={14} />
-                清空
-              </button>
-              <div className="w-px h-4 bg-[var(--at-border)]" />
-              <button
-                className="flex items-center gap-1.5 text-xs h-8 px-3 rounded-lg text-[var(--at-text-secondary)] hover:bg-[var(--at-surface-hover)] transition-colors"
-                aria-label="下载"
-              >
-                <Download size={14} />
-                Download
-              </button>
-              <button
-                className="flex items-center gap-1.5 text-xs h-8 px-3 rounded-lg text-[var(--at-text-secondary)] hover:bg-[var(--at-surface-hover)] transition-colors"
-                aria-label="演示"
-              >
-                <Monitor size={14} />
-                Present
-              </button>
-              <button
-                className="flex items-center gap-1.5 text-xs h-8 px-3 rounded-lg bg-[var(--at-accent)] text-[var(--at-text-inverse)] hover:bg-[var(--at-accent-hover)] transition-colors"
-                aria-label="分享"
-              >
-                <Share2 size={14} />
-                Share
-              </button>
-            </div>
+
+            <div className="w-px h-3.5" style={{ background: 'var(--at-border)' }} />
+
+            {/* Reference actions — text buttons only */}
+            <button
+              onClick={handleRefreshReferences}
+              disabled={refreshing}
+              className="flex items-center gap-1 text-[11px] whitespace-nowrap transition-colors disabled:opacity-40"
+              style={{ color: 'var(--at-text-secondary)' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text-secondary)'; }}
+            >
+              <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+              刷新参考
+            </button>
+            <button
+              onClick={handleClearReferences}
+              className="text-[11px] whitespace-nowrap transition-colors"
+              style={{ color: 'var(--at-text-tertiary)' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-error)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text-tertiary)'; }}
+            >
+              清空
+            </button>
+
+            <div className="w-px h-3.5" style={{ background: 'var(--at-border)' }} />
+
+            <button
+              className="flex items-center gap-1 text-[11px] whitespace-nowrap transition-colors"
+              style={{ color: 'var(--at-text-secondary)' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text-secondary)'; }}
+            >
+              <Download size={12} />
+              导出
+            </button>
+            <button
+              className="flex items-center gap-1 text-[11px] whitespace-nowrap transition-colors"
+              style={{ color: 'var(--at-text-secondary)' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text-secondary)'; }}
+            >
+              <Monitor size={12} />
+              演示
+            </button>
+
+            {/* Share — only accent CTA */}
+            <button
+              className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded whitespace-nowrap transition-all active:scale-95"
+              style={{ background: 'var(--at-accent)', color: 'white' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--at-accent-hover)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--at-accent)'; }}
+            >
+              <Share2 size={12} />
+              分享
+            </button>
           </div>
 
-          {/* Zoom Control */}
-          <div className="flex items-center gap-2">
+          {/* Right: zoom */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setZoom(Math.max(50, zoom - 10))}
-              className="p-1.5 rounded-md text-[var(--at-text-secondary)] hover:bg-[var(--at-surface-hover)] transition-colors"
-              aria-label="缩小"
+              className="w-5 h-5 flex items-center justify-center rounded transition-colors"
+              style={{ color: 'var(--at-text-tertiary)' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text-secondary)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text-tertiary)'; }}
             >
-              <Minus size={14} />
+              <Minus size={11} />
             </button>
-            <div className="relative w-32 h-2 rounded-full overflow-hidden bg-[var(--at-border)]">
+            <div className="relative w-20 h-[2px] rounded-full cursor-pointer" style={{ background: 'var(--at-border)' }}>
               <div
-                className="absolute left-0 top-0 h-full rounded-full transition-all"
-                style={{
-                  width: `${((zoom - 50) / 100) * 100}%`,
-                  background: 'var(--at-accent)',
-                  opacity: 0.6,
-                }}
+                className="absolute left-0 top-0 h-full rounded-full pointer-events-none"
+                style={{ width: `${((zoom - 50) / 100) * 100}%`, background: 'var(--at-accent)' }}
               />
               <input
-                type="range"
-                min="50"
-                max="150"
-                value={zoom}
+                type="range" min="50" max="150" value={zoom}
                 onChange={(e) => setZoom(Number(e.target.value))}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                aria-label="缩放"
+                className="absolute -inset-y-1.5 w-full opacity-0 cursor-pointer"
               />
             </div>
             <button
               onClick={() => setZoom(Math.min(150, zoom + 10))}
-              className="p-1.5 rounded-md text-[var(--at-text-secondary)] hover:bg-[var(--at-surface-hover)] transition-colors"
-              aria-label="放大"
+              className="w-5 h-5 flex items-center justify-center rounded transition-colors"
+              style={{ color: 'var(--at-text-tertiary)' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text-secondary)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--at-text-tertiary)'; }}
             >
-              <Plus size={14} />
+              <Plus size={11} />
             </button>
-            <span className="text-xs w-12 text-right font-mono text-[var(--at-text-tertiary)]">
-              {zoom}%
-            </span>
+            <span className="text-[10px] w-8 text-right tabular-nums" style={{ color: 'var(--at-text-tertiary)' }}>{zoom}%</span>
           </div>
         </div>
 
         {/* Frames Grid */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-5">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -1060,10 +1061,7 @@ export default function StoryboardPage() {
               strategy={rectSortingStrategy}
             >
               <div
-                className={cn(
-                  "grid gap-4 transition-all duration-200",
-                  "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-                )}
+                className="grid gap-3 transition-all duration-200 grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
                 style={{
                   transform: `scale(${zoom / 100})`,
                   transformOrigin: "top left",
@@ -1084,14 +1082,29 @@ export default function StoryboardPage() {
                   />
                 ))}
 
-                {/* Add Frame Card */}
+                {/* Add Frame — minimal dashed */}
                 <button
                   onClick={handleAddFrame}
-                  className="aspect-[16/10] bg-[var(--at-surface)] border border-dashed border-[var(--at-border)] rounded-xl flex flex-col items-center justify-center gap-2 hover:border-[var(--at-accent)] hover:bg-[var(--at-accent-light)] transition-colors cursor-pointer"
+                  className="aspect-[16/10] rounded-lg flex flex-col items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+                  style={{
+                    border: '1px dashed var(--at-border)',
+                    background: 'transparent',
+                    color: 'var(--at-text-tertiary)',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = 'var(--at-accent)';
+                    (e.currentTarget as HTMLElement).style.color = 'var(--at-accent)';
+                    (e.currentTarget as HTMLElement).style.background = 'var(--at-accent-light)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.borderColor = 'var(--at-border)';
+                    (e.currentTarget as HTMLElement).style.color = 'var(--at-text-tertiary)';
+                    (e.currentTarget as HTMLElement).style.background = 'transparent';
+                  }}
                   aria-label="添加分镜"
                 >
-                  <Plus className="w-8 h-8 text-[var(--at-text-tertiary)]" />
-                  <span className="text-sm font-medium text-[var(--at-text-tertiary)]">Add Frame</span>
+                  <Plus className="w-4 h-4" />
+                  <span className="text-[11px]">添加分镜</span>
                 </button>
               </div>
             </SortableContext>

@@ -401,35 +401,17 @@ export default function CharactersPage() {
     }
   }, [characters, updateJsonData]);
 
-  // 监听AI修改数据事件，刷新characters
+  // Listen for pipeline completion to refresh character data
   useEffect(() => {
-    const handleDataUpdated = async (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (detail?.pageType === 'characters' && projectId) {
-        try {
-          // 重新加载角色数据
-          const assetsResult = await getProjectAssets(projectId, { type: 'character' });
-          setCharacters(assetsResult.characters.map(c => ({
-            id: c.id,
-            characterName: c.name,
-            description: c.description,
-            alias: c.alias,
-            images: c.images,
-            createdAt: new Date().toISOString(),
-          })));
-          setRefreshTrigger((prev) => prev + 1);
-          showToast("数据已更新", "success");
-        } catch (err) {
-          console.error("Failed to reload characters after AI update:", err);
-        }
+    const handlePipelineComplete = (e: Event) => {
+      const { step } = (e as CustomEvent).detail;
+      if (step === 'characters') {
+        setRefreshTrigger((prev) => prev + 1);
       }
     };
-
-    window.addEventListener('ai-chat-data-updated', handleDataUpdated);
-    return () => {
-      window.removeEventListener('ai-chat-data-updated', handleDataUpdated);
-    };
-  }, [projectId, showToast]);
+    window.addEventListener('pipeline-step-complete', handlePipelineComplete);
+    return () => window.removeEventListener('pipeline-step-complete', handlePipelineComplete);
+  }, []);
 
   // Handle edges change - create/delete relations via backend API
   const handleEdgesChange = useCallback(async (newEdges: Edge[]) => {

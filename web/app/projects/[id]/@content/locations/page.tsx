@@ -47,6 +47,18 @@ export default function LocationsPage() {
     loadLocations();
   }, [projectId, refreshTrigger]);
 
+  // Listen for pipeline completion to refresh location data
+  useEffect(() => {
+    const handlePipelineComplete = (e: Event) => {
+      const { step } = (e as CustomEvent).detail;
+      if (step === 'locations') {
+        setRefreshTrigger((prev) => prev + 1);
+      }
+    };
+    window.addEventListener('pipeline-step-complete', handlePipelineComplete);
+    return () => window.removeEventListener('pipeline-step-complete', handlePipelineComplete);
+  }, []);
+
   // 注册到AI聊天上下文：当locations变化时更新JSON数据
   useEffect(() => {
     if (locations && locations.length > 0) {
@@ -56,36 +68,6 @@ export default function LocationsPage() {
       updateJsonData(null);
     }
   }, [locations, updateJsonData]);
-
-  // 监听AI修改数据事件，刷新locations
-  useEffect(() => {
-    const handleDataUpdated = async (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (detail?.pageType === 'locations' && projectId) {
-        try {
-          // 重新加载地点数据
-          const assetsResult = await getProjectAssets(projectId, { type: 'location' });
-          setLocations(assetsResult.locations.map(l => ({
-            id: l.id,
-            locationName: l.name,
-            description: l.description,
-            alias: l.alias,
-            images: l.images,
-            createdAt: new Date().toISOString(),
-          })));
-          setRefreshTrigger((prev) => prev + 1);
-          showToast("数据已更新", "success");
-        } catch (err) {
-          console.error("Failed to reload locations after AI update:", err);
-        }
-      }
-    };
-
-    window.addEventListener('ai-chat-data-updated', handleDataUpdated);
-    return () => {
-      window.removeEventListener('ai-chat-data-updated', handleDataUpdated);
-    };
-  }, [projectId, showToast]);
 
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)]">
