@@ -74,3 +74,4 @@ web/uploads/
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.gstack/
