@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { config } from '../config';
+import { logger } from './logger';
 
 /**
  * SSE event types used across all streaming endpoints.
@@ -119,8 +120,26 @@ export function streamSSEResponse(
 }
 
 /**
+ * AgentOS Agno workflow SSE event types.
+ * These are the events emitted by Agno workflows via SSE.
+ */
+type AgentOSEventType =
+  | 'WorkflowStarted'
+  | 'RunResponse'
+  | 'RunResponseExtraData'
+  | 'WorkflowCompleted'
+  | 'WorkflowError'
+  | string; // Other event types we may not know about
+
+/**
  * Create an async generator from an AgentOS SSE response.
  * Parses the SSE text stream from AgentOS into structured events.
+ *
+ * Maps AgentOS event types to our internal SSE event types:
+ *   - RunResponse → data (with content extraction)
+ *   - WorkflowCompleted → done
+ *   - WorkflowError → error
+ *   - WorkflowStarted → ignored
  */
 export async function* parseAgentOSSSE(
   response: Response
@@ -134,6 +153,67 @@ export async function* parseAgentOSSSE(
   const decoder = new TextDecoder();
   let buffer = '';
 
+  // Persist across chunks — NOT reset per iteration
+  let currentEvent: AgentOSEventType = 'data';
+  let dataLines: string[] = [];
+
+  function dispatchBuffer(): SSEEvent | null {
+    const rawData = dataLines.join('\n');
+    dataLines = [];
+
+    if (!rawData) {
+      currentEvent = 'data';
+      return null;
+    }
+
+    let parsedData: unknown;
+    try {
+      parsedData = JSON.parse(rawData);
+    } catch {
+      parsedData = rawData;
+    }
+
+    const eventType = currentEvent;
+    currentEvent = 'data'; // reset for next event
+
+    // Map AgentOS event types to our internal types
+    switch (eventType) {
+      case 'RunResponse': {
+        // Agno RunResponse contains the actual content
+        const data = parsedData as Record<string, unknown>;
+        const content = data?.content ?? data?.output ?? data?.text ?? '';
+        return { event: 'data', data: { content, ...data } };
+      }
+
+      case 'WorkflowCompleted': {
+        // Agno WorkflowCompleted may carry the workflow output (for non-streaming steps)
+        const data = parsedData as Record<string, unknown>;
+        const output = data?.output ?? data?.content ?? data?.result ?? '';
+        return { event: 'done', data: { output, ...data } };
+      }
+
+      case 'WorkflowError': {
+        const data = parsedData as Record<string, unknown>;
+        const message = (data?.error as string) || (data?.message as string) || 'Workflow error';
+        logger.warn({ event: eventType, data: parsedData }, 'AgentOS workflow error event');
+        return { event: 'error', data: { message, ...data } };
+      }
+
+      case 'WorkflowStarted':
+      case 'RunResponseExtraData': {
+        // Informational — skip
+        return null;
+      }
+
+      default: {
+        // Unknown event types: pass through as 'data'
+        return { event: eventType as SSEEventType, data: parsedData };
+      }
+    }
+  }
+
+  let doneEmitted = false;
+
   try {
     while (true) {
       const { done, value } = await reader.read();
@@ -143,46 +223,38 @@ export async function* parseAgentOSSSE(
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
 
-      let currentEvent = 'data';
-      let currentData = '';
-
       for (const line of lines) {
         if (line.startsWith('event:')) {
-          currentEvent = line.slice(6).trim();
+          currentEvent = line.slice(6).trim() as AgentOSEventType;
         } else if (line.startsWith('data:')) {
-          currentData = line.slice(5).trim();
-        } else if (line === '' && currentData) {
-          // Empty line = end of event
-          let parsedData: unknown;
-          try {
-            parsedData = JSON.parse(currentData);
-          } catch {
-            parsedData = currentData;
+          dataLines.push(line.slice(5).trim());
+        } else if (line === '') {
+          const event = dispatchBuffer();
+          if (event) {
+            if (event.event === 'done' || event.event === 'error') {
+              doneEmitted = true;
+            }
+            yield event;
           }
-
-          yield {
-            event: currentEvent as SSEEventType,
-            data: parsedData,
-          };
-
-          currentEvent = 'data';
-          currentData = '';
         }
       }
     }
 
-    // Process any remaining buffer
-    if (buffer.trim()) {
-      let parsedData: unknown;
-      try {
-        parsedData = JSON.parse(buffer.trim());
-      } catch {
-        parsedData = buffer.trim();
+    // Process any remaining buffered event
+    if (dataLines.length > 0) {
+      const event = dispatchBuffer();
+      if (event) {
+        if (event.event === 'done' || event.event === 'error') {
+          doneEmitted = true;
+        }
+        yield event;
       }
-      yield { event: 'data', data: parsedData };
     }
 
-    yield { event: 'done', data: { message: 'Stream complete' } };
+    // Only emit a synthetic done if AgentOS didn't send WorkflowCompleted/Error
+    if (!doneEmitted) {
+      yield { event: 'done', data: { message: 'Stream complete' } };
+    }
   } finally {
     reader.releaseLock();
   }
