@@ -1,8 +1,8 @@
 import { proxyRequest, validateRouteParam } from '@/app/api/_utils/proxy';
 
 /**
- * POST /api/chat/{projectId}/reset
- * Reset chat history — proxies to backend DELETE
+ * POST /api/chat/{projectId}/sessions/migrate-legacy
+ * Migrate orphaned messages into a "历史对话" session.
  */
 export async function POST(
   request: Request,
@@ -12,7 +12,7 @@ export async function POST(
   const error = validateRouteParam(projectId, 'projectId');
   if (error) return error;
 
-  return proxyRequest(request, `/api/chat/${projectId}/reset`, {
+  return proxyRequest(request, `/api/chat/${projectId}/sessions/migrate-legacy`, {
     requireAuth: true,
     method: 'POST',
   });

@@ -1,6 +1,3 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
 import { proxyRequest, validateRouteParam } from '@/app/api/_utils/proxy';
 
 /**

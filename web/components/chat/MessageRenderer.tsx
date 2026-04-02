@@ -2,12 +2,15 @@
 
 import { cn } from "@/lib/utils";
 import { OptionCards, AnsweredOptionCards } from "@/components/chat/OptionCards";
-import { ProgressMessage } from "@/components/chat/ProgressMessage";
-import type { ExtendedChatMessage, PipelineStep } from "@/lib/types/chat";
+import { MarkdownContent } from "@/components/chat/MarkdownContent";
+import type { ExtendedChatMessage } from "@/lib/types/chat";
+
+const BLOCK_PREVIEW_LENGTH = 50;
 
 interface MessageRendererProps {
   message: ExtendedChatMessage;
   isLatest: boolean;
+  isStreaming?: boolean;
   onOptionSelect: (messageId: string, selected: string[]) => void;
   onCustomInput: () => void;
 }
@@ -15,6 +18,7 @@ interface MessageRendererProps {
 export function MessageRenderer({
   message,
   isLatest,
+  isStreaming = false,
   onOptionSelect,
   onCustomInput,
 }: MessageRendererProps) {
@@ -32,19 +36,19 @@ export function MessageRenderer({
       >
         {/* Text content */}
         {message.content && (
-          <p
-            className="text-sm whitespace-pre-wrap"
-            style={{ lineHeight: 1.6 }}
-          >
-            {message.content}
-          </p>
-        )}
-
-        {/* Progress indicator */}
-        {message.messageType === 'progress' && message.options?.items?.[0] && (
-          <ProgressMessage
-            step={message.options.items[0].id as PipelineStep}
-          />
+          isUser ? (
+            <p
+              className="text-sm whitespace-pre-wrap"
+              style={{ lineHeight: 1.6 }}
+            >
+              {message.content}
+            </p>
+          ) : (
+            <MarkdownContent
+              content={message.content}
+              isStreaming={isStreaming && isLatest}
+            />
+          )
         )}
 
         {/* Option cards */}
@@ -74,13 +78,17 @@ export function MessageRenderer({
           )
         )}
 
-        {/* Blocks (legacy) */}
+        {/* Blocks (legacy — kept for backward compatibility with existing DB records) */}
         {message.blocks && message.blocks.length > 0 && (
           <div className="mt-2 pt-2 border-t border-[var(--at-border-light)] space-y-1">
             {message.blocks.map((block, idx) => (
-              <div key={idx} className="text-xs opacity-70">
+              <div key={`${block.label}-${idx}`} className="text-xs opacity-70">
                 <span className="font-medium">{block.label}:</span>{" "}
-                <span>{block.text.substring(0, 50)}...</span>
+                <span>
+                  {block.text.length > BLOCK_PREVIEW_LENGTH
+                    ? `${block.text.substring(0, BLOCK_PREVIEW_LENGTH)}...`
+                    : block.text}
+                </span>
               </div>
             ))}
           </div>

@@ -1,8 +1,8 @@
 import { proxyRequest, validateRouteParam } from '@/app/api/_utils/proxy';
 
 /**
- * POST /api/chat/{projectId}/reset
- * Reset chat history — proxies to backend DELETE
+ * POST /api/chat/{projectId}/messages/stream
+ * SSE streaming proxy — forwards stream from backend without buffering.
  */
 export async function POST(
   request: Request,
@@ -12,8 +12,9 @@ export async function POST(
   const error = validateRouteParam(projectId, 'projectId');
   if (error) return error;
 
-  return proxyRequest(request, `/api/chat/${projectId}/reset`, {
+  return proxyRequest(request, `/api/chat/${projectId}/messages`, {
     requireAuth: true,
     method: 'POST',
+    timeoutMs: 120000, // 2 minutes for streaming
   });
 }
