@@ -2,6 +2,7 @@ import { runImageGeneration } from '../lib/agentos-client';
 import { StorageService } from './storage.service';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/db';
+import type { AssetAdapter } from '../lib/asset-route-factory';
 
 export interface LocationImageRequest {
   locationId: string;
@@ -25,7 +26,7 @@ export interface LocationAssetData {
 /**
  * Location Asset Service - handles location image generation and location asset CRUD
  */
-export class LocationAssetService {
+export class LocationAssetService implements AssetAdapter {
   private storageService: StorageService;
 
   constructor() {
@@ -260,6 +261,66 @@ export class LocationAssetService {
     } catch (error: unknown) {
       logger.warn({ projectId, error }, 'Failed to fetch location lib items, continuing without context');
       return [];
+    }
+  }
+
+  // ── AssetAdapter implementation for createAssetRouter factory ─────────────
+
+  async listAssets(projectId: string, userId: string): Promise<unknown> {
+    return this.listLocationAssets(projectId, userId);
+  }
+
+  async createAsset(projectId: string, data: Record<string, unknown>): Promise<unknown> {
+    return this.createLocationAsset(projectId, data as unknown as LocationAssetData);
+  }
+
+  async getAsset(projectId: string, assetId: string): Promise<unknown> {
+    const asset = await prisma.locationAsset.findUnique({ where: { id: assetId } });
+    if (!asset || asset.projectId !== projectId) {
+      throw new Error('Location asset not found');
+    }
+    return asset;
+  }
+
+  async updateAsset(projectId: string, assetId: string, data: Record<string, unknown>): Promise<unknown> {
+    return this.updateLocationAsset(projectId, assetId, data);
+  }
+
+  async deleteAsset(projectId: string, assetId: string): Promise<unknown> {
+    return this.deleteLocationAsset(projectId, assetId);
+  }
+
+  async persistExtracted(projectId: string, extractedData: Record<string, unknown>): Promise<void> {
+    await prisma.locationAsset.deleteMany({ where: { projectId } });
+
+    let rawLocs = Array.isArray((extractedData as { locations?: unknown[] }).locations)
+      ? (extractedData as { locations: Record<string, unknown>[] }).locations
+      : [];
+
+    // Unwrap nested: [ { locations: [...] } ] → [...]
+    if (rawLocs.length > 0 && !rawLocs[0].name && Array.isArray((rawLocs[0] as Record<string, unknown>).locations)) {
+      rawLocs = rawLocs.flatMap((item: Record<string, unknown>) =>
+        Array.isArray(item.locations) ? (item.locations as Record<string, unknown>[]) : [item]
+      );
+    }
+
+    for (const loc of rawLocs) {
+      try {
+        await prisma.locationAsset.create({
+          data: {
+            projectId,
+            name: (loc.name as string) || '未命名场景',
+            description:
+              (loc.description as string | undefined) ||
+              (loc.atmosphere as string | undefined) ||
+              undefined,
+            alias: (loc.alias as string | undefined) || undefined,
+            images: [],
+          },
+        });
+      } catch (saveErr) {
+        logger.warn({ saveErr, projectId, locName: loc.name }, 'Failed to save extracted location');
+      }
     }
   }
 

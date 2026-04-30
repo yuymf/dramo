@@ -2,6 +2,7 @@ import { runImageGeneration } from '../lib/agentos-client';
 import { StorageService } from './storage.service';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/db';
+import type { AssetAdapter } from '../lib/asset-route-factory';
 
 export interface Character3ViewRequest {
   characterId: string;
@@ -25,7 +26,7 @@ export interface CharacterAssetData {
 /**
  * Character Asset Service - handles character 3-views and character asset CRUD
  */
-export class CharacterAssetService {
+export class CharacterAssetService implements AssetAdapter {
   private storageService: StorageService;
 
   constructor() {
@@ -268,6 +269,61 @@ export class CharacterAssetService {
     } catch (error: unknown) {
       logger.warn({ projectId, error }, 'Failed to fetch character lib items, continuing without context');
       return [];
+    }
+  }
+
+  // ── AssetAdapter implementation for createAssetRouter factory ─────────────
+
+  async listAssets(projectId: string, userId: string): Promise<unknown> {
+    return this.listCharacterAssets(projectId, userId);
+  }
+
+  async createAsset(projectId: string, data: Record<string, unknown>): Promise<unknown> {
+    return this.createCharacterAsset(projectId, data as unknown as CharacterAssetData);
+  }
+
+  async getAsset(projectId: string, assetId: string): Promise<unknown> {
+    const asset = await prisma.characterAsset.findUnique({ where: { id: assetId } });
+    if (!asset || asset.projectId !== projectId) {
+      throw new Error('Character asset not found');
+    }
+    return asset;
+  }
+
+  async updateAsset(projectId: string, assetId: string, data: Record<string, unknown>): Promise<unknown> {
+    return this.updateCharacterAsset(projectId, assetId, data);
+  }
+
+  async deleteAsset(projectId: string, assetId: string): Promise<unknown> {
+    return this.deleteCharacterAsset(projectId, assetId);
+  }
+
+  async persistExtracted(projectId: string, extractedData: Record<string, unknown>): Promise<void> {
+    // Clear existing and save newly extracted characters
+    await prisma.characterRelation.deleteMany({ where: { nodeA: { projectId } } });
+    await prisma.characterAsset.deleteMany({ where: { projectId } });
+
+    const newChars = Array.isArray((extractedData as { new_characters?: unknown[] }).new_characters)
+      ? (extractedData as { new_characters: Record<string, unknown>[] }).new_characters
+      : [];
+
+    for (const char of newChars) {
+      try {
+        await prisma.characterAsset.create({
+          data: {
+            projectId,
+            name: (char.name as string) || '未命名角色',
+            description:
+              (char.description as string | undefined) ||
+              (char.personality as string | undefined) ||
+              undefined,
+            alias: (char.alias as string | undefined) || undefined,
+            images: [],
+          },
+        });
+      } catch (saveErr) {
+        logger.warn({ saveErr, projectId, charName: char.name }, 'Failed to save extracted character');
+      }
     }
   }
 
