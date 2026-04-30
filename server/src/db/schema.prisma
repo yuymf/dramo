@@ -55,6 +55,7 @@ model Project {
   user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   scripts            Script[]
   characterRelations CharacterRelation[]
+  storyboard         Storyboard?
 
   @@index([userId])
   @@index([createdAt])
@@ -78,8 +79,9 @@ model Script {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  project  Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  versions ScriptVersion[]
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions     ScriptVersion[]
+  scriptScenes ScriptScene[]
 
   @@index([projectId])
   @@index([status])
@@ -99,6 +101,22 @@ model ScriptVersion {
 
   @@unique([scriptId, version])
   @@index([scriptId, createdAt])
+}
+
+model ScriptScene {
+  id            String   @id @default(cuid())
+  scriptId      String
+  script        Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  actIndex      Int
+  order         Int
+  title         String?
+  content       String   @db.Text
+  parentSceneId String?
+  branchLabel   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([scriptId, actIndex, order])
 }
 
 model Task {
@@ -268,7 +286,26 @@ model Storyboard {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  project Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  shots   StoryboardShot[]
+
   @@index([projectId])
+}
+
+model StoryboardShot {
+  id           String     @id @default(cuid())
+  storyboardId String
+  storyboard   Storyboard @relation(fields: [storyboardId], references: [id], onDelete: Cascade)
+  order        Int
+  imageUrl     String?
+  dialogue     String?
+  action       String?
+  cameraAngle  String?
+  generatedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([storyboardId, order])
 }
 
 // Image generation job queue
