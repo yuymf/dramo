@@ -1,3 +1,5 @@
+BEGIN;
+
 -- Migrate Character3ViewAsset (V1) → CharacterAsset (V2)
 -- V1 has: id, projectId, characterName, front, side, back (three view URLs)
 -- V2 has: id, projectId, name, description, alias, images (JSON array of {url, viewType})
@@ -32,3 +34,5 @@ SELECT
   "createdAt"
 FROM "LocationImageAsset"
 ON CONFLICT DO NOTHING;
+
+COMMIT;
