@@ -27,6 +27,14 @@ enum LLMConfigType {
   IMAGE_GEN
 }
 
+enum UsageRecordType {
+  SCRIPT_GENERATION
+  CHARACTER_EXTRACTION
+  LOCATION_EXTRACTION
+  STORYBOARD_IMPORT
+  IMAGE_GENERATION
+}
+
 model UserLLMConfig {
   id        String        @id @default(cuid())
   userId    String
@@ -353,16 +361,15 @@ model Subscription {
 }
 
 model UsageRecord {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   month     String
-  type      String
-  count     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  type      UsageRecordType
+  count     Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   @@unique([userId, month, type])
-  @@index([userId, month])
 }
 
