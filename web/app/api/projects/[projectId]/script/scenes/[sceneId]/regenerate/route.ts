@@ -12,7 +12,7 @@ export async function POST(
   const { projectId, sceneId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/script/scenes/${sceneId}/regenerate`,
+    `/api/v1/projects/${projectId}/script/scenes/${sceneId}/regenerate`,
     {
       requireAuth: true,
       timeoutMs: 180000, // 3 minutes for AI generation

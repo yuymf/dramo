@@ -43,7 +43,7 @@ export async function POST(
       'http://localhost:12321';
 
     const response = await fetch(
-      `${backendUrl}/api/projects/${projectId}/generate-image`,
+      `${backendUrl}/api/v1/projects/${projectId}/generate-image`,
       {
         method: 'POST',
         headers: {

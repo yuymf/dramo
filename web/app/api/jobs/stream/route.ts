@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const targetUrl = new URL(`${backendBaseUrl.replace(/\/$/, '')}/api/jobs/stream${request.nextUrl.search}`);
+  const targetUrl = new URL(`${backendBaseUrl.replace(/\/$/, '')}/api/v1/jobs/stream${request.nextUrl.search}`);
 
   const response = await fetch(targetUrl, {
     method: 'GET',

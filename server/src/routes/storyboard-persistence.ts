@@ -5,13 +5,13 @@ import type { AuthEnv } from '../middleware/auth';
 const storyboardPersistence = new Hono<AuthEnv>();
 const storyboardDataService = new StoryboardDataService();
 
-storyboardPersistence.get('/api/projects/:projectId/storyboard-data', async (c) => {
+storyboardPersistence.get('/projects/:projectId/storyboard-data', async (c) => {
   const projectId = c.req.param('projectId');
   const frames = await storyboardDataService.getStoryboard(projectId);
   return c.json({ success: true, frames });
 });
 
-storyboardPersistence.put('/api/projects/:projectId/storyboard-data', async (c) => {
+storyboardPersistence.put('/projects/:projectId/storyboard-data', async (c) => {
   const projectId = c.req.param('projectId');
   const { frames } = await c.req.json();
 
@@ -23,7 +23,7 @@ storyboardPersistence.put('/api/projects/:projectId/storyboard-data', async (c) 
   return c.json({ success: true, updatedAt: new Date().toISOString() });
 });
 
-storyboardPersistence.patch('/api/projects/:projectId/storyboard-data/frames/:frameId', async (c) => {
+storyboardPersistence.patch('/projects/:projectId/storyboard-data/frames/:frameId', async (c) => {
   const projectId = c.req.param('projectId');
   const frameId = c.req.param('frameId');
   const updates = await c.req.json();
@@ -32,7 +32,7 @@ storyboardPersistence.patch('/api/projects/:projectId/storyboard-data/frames/:fr
   return c.json({ success: true });
 });
 
-storyboardPersistence.delete('/api/projects/:projectId/storyboard-data', async (c) => {
+storyboardPersistence.delete('/projects/:projectId/storyboard-data', async (c) => {
   const projectId = c.req.param('projectId');
   await storyboardDataService.deleteStoryboard(projectId);
   return c.json({ success: true });

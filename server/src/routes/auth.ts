@@ -7,7 +7,7 @@ import type { AuthEnv } from '../middleware/auth';
 
 const auth = new Hono<AuthEnv>();
 
-auth.post('/api/auth/register', async (c) => {
+auth.post('/auth/register', async (c) => {
   const requestId = c.get('requestId');
   const { email, password, name } = await c.req.json();
 
@@ -44,7 +44,7 @@ auth.post('/api/auth/register', async (c) => {
   return c.json({ token, user: { id: user.id, email: user.email, name: user.name } }, 201);
 });
 
-auth.post('/api/auth/login', async (c) => {
+auth.post('/auth/login', async (c) => {
   const requestId = c.get('requestId');
   const { email, password } = await c.req.json();
 
@@ -76,7 +76,7 @@ auth.post('/api/auth/login', async (c) => {
   return c.json({ token, user: { id: user.id, email: user.email, name: user.name } });
 });
 
-auth.get('/api/auth/me', async (c) => {
+auth.get('/auth/me', async (c) => {
   const requestId = c.get('requestId');
   const user = c.get('user');
 

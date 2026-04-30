@@ -8,7 +8,7 @@ export async function PATCH(
   const { projectId, relationId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/characters/relations/${relationId}`,
+    `/api/v1/projects/${projectId}/characters/relations/${relationId}`,
     {
       requireAuth: true,
     }
@@ -22,7 +22,7 @@ export async function DELETE(
   const { projectId, relationId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/characters/relations/${relationId}`,
+    `/api/v1/projects/${projectId}/characters/relations/${relationId}`,
     {
       requireAuth: true,
     }

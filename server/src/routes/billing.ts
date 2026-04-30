@@ -10,21 +10,21 @@ const billing = new Hono<AuthEnv>();
 const billingService = new BillingService();
 
 // GET /api/billing/subscription — current user's subscription
-billing.get('/api/billing/subscription', async (c) => {
+billing.get('/billing/subscription', async (c) => {
   const userId = c.get('user').userId;
   const result = await billingService.getSubscription(userId);
   return c.json(result);
 });
 
 // GET /api/billing/usage — current user's usage stats
-billing.get('/api/billing/usage', async (c) => {
+billing.get('/billing/usage', async (c) => {
   const userId = c.get('user').userId;
   const result = await billingService.getUsage(userId);
   return c.json(result);
 });
 
 // POST /api/billing/checkout-session — create Stripe Checkout
-billing.post('/api/billing/checkout-session', async (c) => {
+billing.post('/billing/checkout-session', async (c) => {
   const userId = c.get('user').userId;
   const email = c.get('user').email;
   const { planId, interval } = await c.req.json();
@@ -34,14 +34,14 @@ billing.post('/api/billing/checkout-session', async (c) => {
 });
 
 // POST /api/billing/portal-session — create Stripe Customer Portal
-billing.post('/api/billing/portal-session', async (c) => {
+billing.post('/billing/portal-session', async (c) => {
   const userId = c.get('user').userId;
   const result = await billingService.createPortalSession(userId);
   return c.json(result);
 });
 
 // POST /api/billing/webhook — Stripe webhook (public, no auth)
-billing.post('/api/billing/webhook', async (c) => {
+billing.post('/billing/webhook', async (c) => {
   const signature = c.req.header('stripe-signature');
   const requestId = c.get('requestId');
 

@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}`, {
     requireAuth: true,
   });
 }
@@ -24,7 +24,7 @@ export async function PATCH(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}`, {
     requireAuth: true,
   });
 }

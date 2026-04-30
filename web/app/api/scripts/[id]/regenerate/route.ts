@@ -6,7 +6,7 @@ import { ensureContract } from '../../../_utils/openapi-guard';
  * Regenerate specific scene content with optional new parameters
  */
 export async function POST(request: Request) {
-  ensureContract('/api/scripts/{id}/regenerate', 'POST');
+  ensureContract('/api/v1/scripts/{id}/regenerate', 'POST');
   
   const url = new URL(request.url);
   const scriptId = url.pathname.split('/').slice(-2)[0]; // extract {id} from path

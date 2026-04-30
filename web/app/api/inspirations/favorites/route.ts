@@ -6,7 +6,7 @@ import { ensureContract } from '../../_utils/openapi-guard';
  * Fetch user's favorited inspirations (mock implementation)
  */
 export async function GET() {
-  ensureContract('/api/inspirations/favorites', 'GET');
+  ensureContract('/api/v1/inspirations/favorites', 'GET');
 
   // Mock: return empty favorites (client should read from localStorage)
   return NextResponse.json({

@@ -20,10 +20,10 @@ export type AuthEnv = {
 };
 
 const PUBLIC_PATHS = [
-  '/api/health',
-  '/api/auth/login',
-  '/api/auth/register',
-  '/api/billing/webhook',
+  '/api/v1/health',
+  '/api/v1/auth/login',
+  '/api/v1/auth/register',
+  '/api/v1/billing/webhook',
 ];
 
 function isPublicPath(pathname: string): boolean {

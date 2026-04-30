@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { authMiddleware, type AuthEnv } from './middleware/auth';
 import { errorHandler } from './middleware/error-handler';
+import { config } from './config';
 
 // Route modules
 import { health } from './routes/health';
@@ -28,30 +29,47 @@ import { llmConfigs } from './routes/llm-config';
 const app = new Hono<AuthEnv>();
 
 // --- Global middleware ---
-app.use('*', cors({ origin: '*', credentials: true }));
+app.use('*', cors({
+  origin: config.corsAllowedOrigins,
+  credentials: true,
+}));
+
+// --- Legacy /api/* → /api/v1/* redirect (301 permanent) ---
+// Must run BEFORE auth middleware so unauthenticated redirects work
+app.use('/api/*', async (c, next) => {
+  const path = new URL(c.req.url).pathname;
+  if (!path.startsWith('/api/v1')) {
+    const newPath = path.replace(/^\/api\//, '/api/v1/');
+    const newUrl = new URL(c.req.url);
+    newUrl.pathname = newPath;
+    return c.redirect(newUrl.toString(), 301);
+  }
+  return next();
+});
+
 app.use('*', authMiddleware);
 
-// --- Routes ---
-app.route('/', health);
-app.route('/', auth);
-app.route('/', projects);
-app.route('/', scripts);
-app.route('/', tasks);
-app.route('/', inspirations);
-app.route('/', chat);
-app.route('/', chatSessions);
-app.route('/', assets);
-app.route('/', polish);
-app.route('/', characters);
-app.route('/', locations);
-app.route('/', storyboard);
-app.route('/', storyboardPersistence);
-app.route('/', aiProviders);
-app.route('/', relations);
-app.route('/', uploads);
-app.route('/', generationJobs);
-app.route('/', billing);
-app.route('/', llmConfigs);
+// --- Routes (all mounted under /api/v1) ---
+app.route('/api/v1', health);
+app.route('/api/v1', auth);
+app.route('/api/v1', projects);
+app.route('/api/v1', scripts);
+app.route('/api/v1', tasks);
+app.route('/api/v1', inspirations);
+app.route('/api/v1', chat);
+app.route('/api/v1', chatSessions);
+app.route('/api/v1', assets);
+app.route('/api/v1', polish);
+app.route('/api/v1', characters);
+app.route('/api/v1', locations);
+app.route('/api/v1', storyboard);
+app.route('/api/v1', storyboardPersistence);
+app.route('/api/v1', aiProviders);
+app.route('/api/v1', relations);
+app.route('/api/v1', uploads);
+app.route('/api/v1', generationJobs);
+app.route('/api/v1', billing);
+app.route('/api/v1', llmConfigs);
 
 // --- Error handler ---
 app.onError(errorHandler);

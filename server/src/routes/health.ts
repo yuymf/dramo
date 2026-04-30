@@ -5,7 +5,7 @@ import { checkAgentOSHealth } from '../lib/agentos-client';
 
 const health = new Hono<AuthEnv>();
 
-health.get('/api/health', async (c) => {
+health.get('/health', async (c) => {
   return c.json({
     ok: true,
     version: config.version,
@@ -13,7 +13,7 @@ health.get('/api/health', async (c) => {
   });
 });
 
-health.get('/api/health/deep', async (c) => {
+health.get('/health/deep', async (c) => {
   const agentosOk = await checkAgentOSHealth();
 
   return c.json({

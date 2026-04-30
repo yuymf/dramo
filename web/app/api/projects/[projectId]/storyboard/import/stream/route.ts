@@ -45,7 +45,7 @@ export async function POST(
     process.env.BACKEND_API_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
     'http://localhost:12321';
-  const streamUrl = `${backendUrl}/api/projects/${projectId}/storyboard/import/stream`;
+  const streamUrl = `${backendUrl}/api/v1/projects/${projectId}/storyboard/import/stream`;
   
   try {
     console.log(`[POST /api/projects/${projectId}/storyboard/import/stream] Streaming from backend...`, {

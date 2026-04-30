@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/storyboard-data`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}/storyboard-data`, {
     requireAuth: true,
   });
 }
@@ -16,7 +16,7 @@ export async function PUT(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/storyboard-data`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}/storyboard-data`, {
     requireAuth: true,
   });
 }
@@ -26,7 +26,7 @@ export async function DELETE(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/storyboard-data`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}/storyboard-data`, {
     requireAuth: true,
   });
 }

@@ -6,7 +6,7 @@ import { ensureContract } from '../../_utils/openapi-guard';
  * Toggle favorite status of an inspiration (mock implementation)
  */
 export async function POST(request: Request) {
-  ensureContract('/api/inspirations/favorite', 'POST');
+  ensureContract('/api/v1/inspirations/favorite', 'POST');
 
   const body = await request.json().catch(() => ({}));
   const { inspirationId } = body;

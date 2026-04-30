@@ -12,7 +12,7 @@ export async function POST(
   const error = validateRouteParam(projectId, 'projectId');
   if (error) return error;
 
-  return proxyRequest(request, `/api/chat/${projectId}/reset`, {
+  return proxyRequest(request, `/api/v1/chat/${projectId}/reset`, {
     requireAuth: true,
     method: 'POST',
   });

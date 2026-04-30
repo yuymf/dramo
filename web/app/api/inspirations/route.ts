@@ -6,7 +6,7 @@ import { ensureContract } from '../_utils/openapi-guard';
  * Fetch inspiration suggestions related to current script/scene
  */
 export async function GET(request: Request) {
-  ensureContract('/api/inspirations', 'GET');
+  ensureContract('/api/v1/inspirations', 'GET');
 
   const url = new URL(request.url);
   const projectId = url.searchParams.get('projectId');

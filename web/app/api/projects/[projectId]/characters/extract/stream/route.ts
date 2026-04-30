@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/characters/extract/stream`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}/characters/extract/stream`, {
     requireAuth: true,
     appendQuery: true,
   });

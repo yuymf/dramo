@@ -8,7 +8,7 @@ export async function GET(
   const { projectId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/storyboard/frames/images`,
+    `/api/v1/projects/${projectId}/storyboard/frames/images`,
     {
       requireAuth: true,
     }

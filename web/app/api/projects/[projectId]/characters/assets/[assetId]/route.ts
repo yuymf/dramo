@@ -8,7 +8,7 @@ export async function PUT(
   const { projectId, assetId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/characters/assets/${assetId}`,
+    `/api/v1/projects/${projectId}/characters/assets/${assetId}`,
     {
       requireAuth: true,
     }
@@ -22,7 +22,7 @@ export async function DELETE(
   const { projectId, assetId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/characters/assets/${assetId}`,
+    `/api/v1/projects/${projectId}/characters/assets/${assetId}`,
     {
       requireAuth: true,
     }

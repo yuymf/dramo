@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/uploads/image`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}/uploads/image`, {
     requireAuth: true,
   });
 }

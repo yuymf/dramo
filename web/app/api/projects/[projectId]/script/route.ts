@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/script`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}/script`, {
     requireAuth: true,
   });
 }
@@ -16,7 +16,7 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/script`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}/script`, {
     requireAuth: true,
     timeoutMs: 180000, // 3 minutes for AI generation
   });

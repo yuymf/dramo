@@ -8,7 +8,7 @@ export async function GET(
   const { projectId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/characters/relations`,
+    `/api/v1/projects/${projectId}/characters/relations`,
     {
       requireAuth: true,
     }
@@ -22,7 +22,7 @@ export async function POST(
   const { projectId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/characters/relations`,
+    `/api/v1/projects/${projectId}/characters/relations`,
     {
       requireAuth: true,
     }

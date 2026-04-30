@@ -6,7 +6,7 @@ export async function PATCH(
   { params }: { params: Promise<{ projectId: string; frameId: string }> }
 ) {
   const { projectId, frameId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/storyboard-data/frames/${frameId}`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}/storyboard-data/frames/${frameId}`, {
     requireAuth: true,
   });
 }

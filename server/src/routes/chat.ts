@@ -96,7 +96,7 @@ async function validateSessionId(sessionId: string | undefined | null, projectId
   return !!session;
 }
 
-chat.get('/api/chat/:projectId/messages', async (c) => {
+chat.get('/chat/:projectId/messages', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const sessionId = c.req.query('sessionId');
@@ -122,7 +122,7 @@ chat.get('/api/chat/:projectId/messages', async (c) => {
 /**
  * Send message — supports SSE streaming via `stream: true` in request body.
  */
-chat.post('/api/chat/:projectId/messages', async (c) => {
+chat.post('/chat/:projectId/messages', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');
@@ -374,7 +374,7 @@ chat.post('/api/chat/:projectId/messages', async (c) => {
   }
 });
 
-chat.post('/api/chat/:projectId/reset', async (c) => {
+chat.post('/chat/:projectId/reset', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const body = await c.req.json().catch(() => ({})) as Record<string, unknown>;

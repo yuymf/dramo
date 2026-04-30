@@ -9,7 +9,7 @@ import { LLMConfigService } from '../services/llm-config.service';
 const polish = new Hono<AuthEnv>();
 const llmConfigService = new LLMConfigService();
 
-polish.get('/api/projects/:projectId/polish/stream', async (c) => {
+polish.get('/projects/:projectId/polish/stream', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const text = c.req.query('text');
@@ -41,7 +41,7 @@ polish.get('/api/projects/:projectId/polish/stream', async (c) => {
   return streamSSEResponse(c, generateSSE());
 });
 
-polish.post('/api/projects/:projectId/polish', async (c) => {
+polish.post('/projects/:projectId/polish', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');

@@ -13,7 +13,7 @@ const LEGACY_SESSION_TITLE = '历史对话';
  * Migrate orphaned messages (no sessionId) into a "历史对话" session.
  * Registered BEFORE the :sessionId routes to avoid path shadowing.
  */
-chatSessions.post('/api/chat/:projectId/sessions/migrate-legacy', async (c) => {
+chatSessions.post('/chat/:projectId/sessions/migrate-legacy', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');
@@ -51,7 +51,7 @@ chatSessions.post('/api/chat/:projectId/sessions/migrate-legacy', async (c) => {
 /**
  * GET /api/chat/:projectId/sessions — List all sessions for a project
  */
-chatSessions.get('/api/chat/:projectId/sessions', async (c) => {
+chatSessions.get('/chat/:projectId/sessions', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
 
@@ -86,7 +86,7 @@ chatSessions.get('/api/chat/:projectId/sessions', async (c) => {
 /**
  * POST /api/chat/:projectId/sessions — Create a new session
  */
-chatSessions.post('/api/chat/:projectId/sessions', async (c) => {
+chatSessions.post('/chat/:projectId/sessions', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const body = await c.req.json<{ title?: string }>().catch(() => ({} as { title?: string }));
@@ -109,7 +109,7 @@ chatSessions.post('/api/chat/:projectId/sessions', async (c) => {
 /**
  * PATCH /api/chat/:projectId/sessions/:sessionId — Rename a session
  */
-chatSessions.patch('/api/chat/:projectId/sessions/:sessionId', async (c) => {
+chatSessions.patch('/chat/:projectId/sessions/:sessionId', async (c) => {
   const projectId = c.req.param('projectId');
   const sessionId = c.req.param('sessionId');
   const userId = c.get('user').userId;
@@ -148,7 +148,7 @@ chatSessions.patch('/api/chat/:projectId/sessions/:sessionId', async (c) => {
 /**
  * DELETE /api/chat/:projectId/sessions/:sessionId — Delete a session and its messages
  */
-chatSessions.delete('/api/chat/:projectId/sessions/:sessionId', async (c) => {
+chatSessions.delete('/chat/:projectId/sessions/:sessionId', async (c) => {
   const projectId = c.req.param('projectId');
   const sessionId = c.req.param('sessionId');
   const userId = c.get('user').userId;

@@ -6,7 +6,7 @@ import type { AuthEnv } from '../middleware/auth';
 const uploads = new Hono<AuthEnv>();
 const storageService = new StorageService();
 
-uploads.post('/api/projects/:projectId/uploads/image', async (c) => {
+uploads.post('/projects/:projectId/uploads/image', async (c) => {
   const projectId = c.req.param('projectId');
   const { base64Data } = await c.req.json();
 
@@ -19,7 +19,7 @@ uploads.post('/api/projects/:projectId/uploads/image', async (c) => {
   return c.json({ success: true, url });
 });
 
-uploads.post('/api/projects/:projectId/uploads/image-v2', async (c) => {
+uploads.post('/projects/:projectId/uploads/image-v2', async (c) => {
   const projectId = c.req.param('projectId');
   const { base64Data } = await c.req.json();
 

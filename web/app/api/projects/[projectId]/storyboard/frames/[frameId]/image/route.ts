@@ -8,7 +8,7 @@ export async function PUT(
   const { projectId, frameId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/storyboard/frames/${frameId}/image`,
+    `/api/v1/projects/${projectId}/storyboard/frames/${frameId}/image`,
     {
       requireAuth: true,
     }
@@ -22,7 +22,7 @@ export async function DELETE(
   const { projectId, frameId } = await params;
   return proxyRequest(
     request,
-    `/api/projects/${projectId}/storyboard/frames/${frameId}/image`,
+    `/api/v1/projects/${projectId}/storyboard/frames/${frameId}/image`,
     {
       requireAuth: true,
     }

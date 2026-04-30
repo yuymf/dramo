@@ -7,7 +7,7 @@ const relations = new Hono<AuthEnv>();
 const relationService = new RelationService();
 const projectService = new ProjectService();
 
-relations.get('/api/projects/:projectId/characters/relations', async (c) => {
+relations.get('/projects/:projectId/characters/relations', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');
@@ -22,7 +22,7 @@ relations.get('/api/projects/:projectId/characters/relations', async (c) => {
   }
 });
 
-relations.post('/api/projects/:projectId/characters/relations', async (c) => {
+relations.post('/projects/:projectId/characters/relations', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');
@@ -50,7 +50,7 @@ relations.post('/api/projects/:projectId/characters/relations', async (c) => {
   }
 });
 
-relations.patch('/api/projects/:projectId/characters/relations/:relationId', async (c) => {
+relations.patch('/projects/:projectId/characters/relations/:relationId', async (c) => {
   const projectId = c.req.param('projectId');
   const relationId = c.req.param('relationId');
   const userId = c.get('user').userId;
@@ -70,7 +70,7 @@ relations.patch('/api/projects/:projectId/characters/relations/:relationId', asy
   }
 });
 
-relations.delete('/api/projects/:projectId/characters/relations/:relationId', async (c) => {
+relations.delete('/projects/:projectId/characters/relations/:relationId', async (c) => {
   const projectId = c.req.param('projectId');
   const relationId = c.req.param('relationId');
   const userId = c.get('user').userId;
@@ -89,7 +89,7 @@ relations.delete('/api/projects/:projectId/characters/relations/:relationId', as
   }
 });
 
-relations.post('/api/projects/:projectId/characters/relations/cleanup', async (c) => {
+relations.post('/projects/:projectId/characters/relations/cleanup', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');

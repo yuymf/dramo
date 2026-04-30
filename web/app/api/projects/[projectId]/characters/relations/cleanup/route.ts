@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/characters/relations/cleanup`, {
+  return proxyRequest(request, `/api/v1/projects/${projectId}/characters/relations/cleanup`, {
     requireAuth: true,
   });
 }

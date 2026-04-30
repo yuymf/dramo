@@ -51,6 +51,12 @@ export const config = {
 
   // Frontend URL (for Checkout redirect URLs)
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:12323',
+
+  // CORS — explicit whitelist replaces wildcard '*'
+  corsAllowedOrigins: [
+    process.env.FRONTEND_URL || 'http://localhost:12323',
+    process.env.BACKEND_API_URL || 'http://localhost:12321',
+  ].filter(Boolean) as string[],
 };
 
 /** Validate critical config on startup — fail fast in production */

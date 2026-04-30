@@ -9,7 +9,7 @@ export async function POST(
   const error = validateRouteParam(jobId, "jobId");
   if (error) return error;
 
-  return proxyRequest(request, `/api/jobs/${jobId}/retry`, {
+  return proxyRequest(request, `/api/v1/jobs/${jobId}/retry`, {
     requireAuth: true,
   });
 }

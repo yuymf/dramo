@@ -8,7 +8,7 @@ import type { PolishRequest, PolishResponse } from '@/lib/models';
  * 支持操作：adjust_style（改变风格）、simplify（简化）、expand（扩写）、rewrite（重写）
  */
 export async function POST(request: Request) {
-  ensureContract('/api/polish', 'POST');
+  ensureContract('/api/v1/polish', 'POST');
 
   const body: PolishRequest = await request.json().catch(() => ({
     text: '',

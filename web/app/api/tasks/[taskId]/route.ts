@@ -14,7 +14,7 @@ export async function GET(
   const validationError = validateRouteParam(taskId, "taskId");
   if (validationError) return validationError;
 
-  return proxyRequest(request, `/api/tasks/${taskId}`, {
+  return proxyRequest(request, `/api/v1/tasks/${taskId}`, {
     requireAuth: true,
   });
 }
