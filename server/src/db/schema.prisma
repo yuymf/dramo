@@ -205,29 +205,6 @@ model PipelineRun {
   @@index([projectId])
 }
 
-model Character3ViewAsset {
-  id            String   @id @default(cuid())
-  projectId     String
-  characterName String
-  front         String
-  side          String
-  back          String
-  createdAt     DateTime @default(now())
-
-  @@index([projectId])
-}
-
-model LocationImageAsset {
-  id           String   @id @default(cuid())
-  projectId    String
-  locationName String
-  image        String
-  createdAt    DateTime @default(now())
-
-  @@index([projectId])
-}
-
-// V2 multi-image assets
 model CharacterAsset {
   id          String   @id @default(cuid())
   projectId   String
