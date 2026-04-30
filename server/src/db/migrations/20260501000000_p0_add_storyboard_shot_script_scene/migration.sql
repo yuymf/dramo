@@ -1,7 +1,11 @@
 -- AddRelation: Project -> Storyboard (1:1 back-reference, no DDL needed — FK lives on Storyboard)
 
 -- AddRelation: Storyboard -> Project (adds FK constraint on Storyboard.projectId)
-ALTER TABLE "Storyboard" ADD CONSTRAINT "Storyboard_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+DO $$ BEGIN
+  ALTER TABLE "Storyboard" ADD CONSTRAINT "Storyboard_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
 
 -- CreateTable: StoryboardShot
 CREATE TABLE "StoryboardShot" (
