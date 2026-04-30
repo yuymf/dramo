@@ -16,9 +16,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects     Project[]
-  subscription Subscription?
-  llmConfigs   UserLLMConfig[]
+  projects      Project[]
+  subscription  Subscription?
+  llmConfigs    UserLLMConfig[]
+  usageRecords  UsageRecord[]
 }
 
 enum LLMConfigType {
@@ -349,5 +350,19 @@ model Subscription {
 
   @@index([stripeCustomerId])
   @@index([stripeSubscriptionId])
+}
+
+model UsageRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month     String
+  type      String
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, month, type])
+  @@index([userId, month])
 }
 
