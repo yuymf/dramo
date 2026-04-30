@@ -5,6 +5,7 @@ import { stripe } from '../lib/stripe';
 import { config } from '../config';
 import { AppException, ErrorCode } from '../lib/errors';
 import { logger } from '../lib/logger';
+import { getPlanLimits } from '../config/plan-limits';
 
 interface SubscriptionResponse {
   readonly planId: string;
@@ -28,12 +29,6 @@ const DEFAULT_SUBSCRIPTION: SubscriptionResponse = {
   cancelAtPeriodEnd: false,
 };
 
-const PLAN_LIMITS: Record<string, { projects: number | null; characters: number | null; aiGenerations: number | null }> = {
-  free: { projects: 1, characters: 5, aiGenerations: 10 },
-  pro: { projects: null, characters: null, aiGenerations: null },
-  enterprise: { projects: null, characters: null, aiGenerations: null },
-};
-
 export class BillingService {
   // ─── Queries ───────────────────────────────────────────────
 
@@ -53,7 +48,7 @@ export class BillingService {
   async getUsage(userId: string): Promise<UsageResponse> {
     const sub = await prisma.subscription.findUnique({ where: { userId } });
     const planId = sub?.planId ?? 'free';
-    const limits = PLAN_LIMITS[planId] ?? PLAN_LIMITS.free;
+    const limits = getPlanLimits(planId);
 
     // Count projects
     const projectCount = await prisma.project.count({ where: { userId } });
@@ -69,8 +64,12 @@ export class BillingService {
         })
       : 0;
 
-    // AI generations: TODO — hardcode 0 until UsageRecord table exists
-    const aiUsed = 0;
+    // AI generations: query UsageRecord for the current month
+    const currentMonth = new Date().toISOString().slice(0, 7); // "2026-04"
+    const usageRecord = await prisma.usageRecord.findUnique({
+      where: { userId_month_type: { userId, month: currentMonth, type: 'IMAGE_GENERATION' } },
+    });
+    const aiUsed = usageRecord?.count ?? 0;
 
     // Compute reset time (next midnight UTC)
     const now = new Date();
@@ -349,9 +348,5 @@ export class BillingService {
     }
     logger.warn({ priceId }, '[BillingService] Unknown price ID, defaulting to free');
     return 'free';
-  }
-
-  getPlanLimits(planId: string): { projects: number | null; characters: number | null; aiGenerations: number | null } {
-    return PLAN_LIMITS[planId] ?? PLAN_LIMITS.free;
   }
 }
