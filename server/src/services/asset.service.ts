@@ -100,10 +100,11 @@ export class AssetService {
                 logger.info(`[AssetService] Converting legacy base64 image in character asset ${asset.id}`);
                 try {
                   // Upload to storage and get real URL
-                  const { url, path } = await this.storageService.uploadImageFromBase64Detailed(
+                  const { url, path } = await this.storageService.uploadImageFromBase64(
                     projectId,
-                    img.url
-                  );
+                    img.url,
+                    { detailed: true }
+                  ) as { url: string; path: string };
                   return {
                     ...img,
                     url,
@@ -219,10 +220,11 @@ export class AssetService {
                 logger.info(`[AssetService] Converting legacy base64 image in location asset ${asset.id}`);
                 try {
                   // Upload to storage and get real URL
-                  const { url, path } = await this.storageService.uploadImageFromBase64Detailed(
+                  const { url, path } = await this.storageService.uploadImageFromBase64(
                     projectId,
-                    img.url
-                  );
+                    img.url,
+                    { detailed: true }
+                  ) as { url: string; path: string };
                   return {
                     ...img,
                     url,
@@ -315,7 +317,7 @@ export class AssetService {
 
       // Upload all images to storage
       const uploadedUrls = await Promise.all(
-        result.images.map((img) => this.storageService.uploadImageFromUrl(projectId, img.url))
+        result.images.map((img) => this.storageService.uploadImageFromUrl(projectId, img.url) as Promise<string>)
       );
 
       const images = uploadedUrls.map((url, idx) => ({
@@ -377,10 +379,11 @@ export class AssetService {
           if (img.url.startsWith('data:image/')) {
             logger.info('[AssetService] Converting base64 to storage URL for character asset');
             // 上传到存储并获取 URL 和 path
-            const { url, path } = await this.storageService.uploadImageFromBase64Detailed(
+            const { url, path } = await this.storageService.uploadImageFromBase64(
               projectId,
-              img.url
-            );
+              img.url,
+              { detailed: true }
+            ) as { url: string; path: string };
             return {
               ...img,
               url,
@@ -434,10 +437,11 @@ export class AssetService {
           if (img.url.startsWith('data:image/')) {
             logger.info('[AssetService] Converting base64 to storage URL for location asset');
             // 上传到存储并获取 URL 和 path
-            const { url, path } = await this.storageService.uploadImageFromBase64Detailed(
+            const { url, path } = await this.storageService.uploadImageFromBase64(
               projectId,
-              img.url
-            );
+              img.url,
+              { detailed: true }
+            ) as { url: string; path: string };
             return {
               ...img,
               url,

@@ -27,7 +27,7 @@ uploads.post('/api/projects/:projectId/uploads/image-v2', async (c) => {
     return c.json({ error: { code: 'INVALID_INPUT', message: 'base64Data is required' } }, 400);
   }
 
-  const result = await storageService.uploadImageFromBase64Detailed(projectId, base64Data);
+  const result = await storageService.uploadImageFromBase64(projectId, base64Data, { detailed: true }) as { url: string; path: string };
   logger.info({ projectId, url: result.url, path: result.path }, 'Image uploaded (v2)');
   return c.json({ success: true, url: result.url, path: result.path });
 });

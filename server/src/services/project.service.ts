@@ -1,6 +1,7 @@
 import { prisma } from '../lib/db';
 import { AppException, ErrorCode } from '../lib/errors';
 import { BillingService } from './billing.service';
+import { getPlanLimits } from '../config/plan-limits';
 
 export class ProjectService {
   async listProjects(userId: string, page = 1, limit = 20, search?: string) {
@@ -62,7 +63,7 @@ export class ProjectService {
     // Check plan limit
     const billingService = new BillingService();
     const sub = await billingService.getSubscription(userId);
-    const limits = billingService.getPlanLimits(sub.planId);
+    const limits = getPlanLimits(sub.planId);
 
     if (limits.projects !== null) {
       const currentCount = await prisma.project.count({ where: { userId } });
