@@ -185,6 +185,10 @@ export function useStreamingChat({
               options: payload.assistantMessage.options,
               clarificationComplete: payload.assistantMessage.clarificationComplete,
             });
+          } else {
+            // No assistantMessage in non-SSE response — unblock UI
+            streamDoneFired = true;
+            setState((prev) => ({ ...prev, isStreaming: false }));
           }
           return;
         }

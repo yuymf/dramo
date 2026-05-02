@@ -13,6 +13,7 @@ interface MessageRendererProps {
   isStreaming?: boolean;
   onOptionSelect: (messageId: string, selected: string[]) => void;
   onCustomInput: () => void;
+  onConfirmScript?: () => void;
 }
 
 export function MessageRenderer({
@@ -21,6 +22,7 @@ export function MessageRenderer({
   isStreaming = false,
   onOptionSelect,
   onCustomInput,
+  onConfirmScript,
 }: MessageRendererProps) {
   const isUser = message.role === 'user';
 
@@ -92,6 +94,16 @@ export function MessageRenderer({
               </div>
             ))}
           </div>
+        )}
+
+        {/* Confirm-script gate: shown only when pipeline is paused for review */}
+        {message.messageType === 'confirm_script' && onConfirmScript && (
+          <button
+            onClick={onConfirmScript}
+            className="mt-3 w-full rounded-lg px-4 py-2 text-sm font-medium bg-[var(--at-accent)] text-[var(--at-text-inverse)] hover:opacity-90 active:opacity-80 transition-opacity"
+          >
+            🚀 确认台本，继续生成角色 & 分镜
+          </button>
         )}
 
         {/* Timestamp */}

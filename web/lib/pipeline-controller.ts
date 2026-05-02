@@ -38,6 +38,11 @@ export interface PipelineCallbacks {
   onTabSwitch: (tab: string) => void;
   onError: (step: PipelineStep, error: string) => void;
   onDone: () => void;
+  /**
+   * Called after `script` step completes. The pipeline suspends until the
+   * returned Promise resolves. Reject (or abort signal) to cancel the run.
+   */
+  onConfirmRequired?: (step: 'script') => Promise<void>;
 }
 
 /**
@@ -59,6 +64,7 @@ export function runPipeline(
 
   (async () => {
     let currentScriptId = scriptId;
+    let scriptText = '';
 
     for (const step of GENERATION_STEPS) {
       if (controller.signal.aborted) break;
@@ -71,7 +77,7 @@ export function runPipeline(
       callbacks.onTabSwitch(config.tab);
 
       try {
-        const body = buildStepBody(step, requirements, currentScriptId);
+        const body = buildStepBody(step, requirements, currentScriptId, scriptText);
 
         const result = await executeSSEStep(
           config.endpoint(projectId),
@@ -80,9 +86,12 @@ export function runPipeline(
           (chunk) => callbacks.onChunk(step, chunk)
         );
 
-        // Capture script ID for downstream steps
-        if (step === 'script' && result?.id) {
-          currentScriptId = result.id as string;
+        // Capture script ID and text for downstream steps
+        if (step === 'script' && result) {
+          if (result.id) {
+            currentScriptId = result.id as string;
+          }
+          scriptText = extractScriptText(result);
         }
 
         store.updateTaskStatus(step, 'completed');
@@ -92,6 +101,21 @@ export function runPipeline(
         window.dispatchEvent(
           new CustomEvent('pipeline-step-complete', { detail: { step, tab: config.tab } })
         );
+
+        // After script is done, pause and wait for user confirmation before
+        // proceeding to characters / locations / storyboard.
+        if (step === 'script' && callbacks.onConfirmRequired) {
+          store.setPipelineStatus('waiting_confirm');
+          try {
+            await callbacks.onConfirmRequired('script');
+          } catch {
+            // User cancelled or component unmounted — abort the run
+            store.setPipelineStatus('paused');
+            return;
+          }
+          store.setPipelineStatus('running');
+          if (controller.signal.aborted) break;
+        }
       } catch (err) {
         if (controller.signal.aborted) {
           store.updateTaskStatus(step, 'paused');
@@ -116,7 +140,8 @@ export function runPipeline(
 function buildStepBody(
   step: Exclude<PipelineStep, 'clarification'>,
   requirements: StructuredRequirements,
-  scriptId: string | null
+  scriptId: string | null,
+  scriptText: string
 ): Record<string, unknown> {
   switch (step) {
     case 'script':
@@ -132,20 +157,84 @@ function buildStepBody(
         hot_stuffs: requirements.hotStuffs,
       };
     case 'characters':
-      return { scriptId };
+      return { scriptId, text: scriptText };
     case 'locations':
-      return { scriptId };
+      return { scriptId, text: scriptText };
     case 'storyboard':
-      return { scriptId, stream: true };
+      return { scriptId, text: scriptText, stream: true };
     default:
       return {};
   }
 }
 
 /**
+ * Extracts plain text from the script result object.
+ * Script has scenes[] → blocks[] → text (may contain HTML).
+ * Also handles the content[] format used by the Script model.
+ * Strips HTML tags to produce clean text for downstream extraction.
+ */
+function extractScriptText(result: Record<string, unknown>): string {
+  // AgentOS may wrap in { content: "json string" }
+  let data = result;
+  if (typeof result.content === 'string') {
+    try {
+      data = JSON.parse(result.content) as Record<string, unknown>;
+    } catch {
+      // content is not JSON, use result as-is
+    }
+  }
+
+  const scenes = data.scenes as Array<{
+    title?: string;
+    blocks?: Array<{ text?: string }>;
+    content?: Array<{ label?: string; text?: string }>;
+  }> | undefined;
+
+  if (!scenes || !Array.isArray(scenes)) {
+    return '';
+  }
+
+  const parts: string[] = [];
+
+  for (const scene of scenes) {
+    if (scene.title) {
+      parts.push(scene.title);
+    }
+    // Try blocks first (DB format), then content (model format)
+    const items = scene.blocks || scene.content || [];
+    if (Array.isArray(items)) {
+      for (const block of items) {
+        if (block.text) {
+          parts.push(stripHtml(block.text));
+        }
+      }
+    }
+  }
+
+  return parts.join('\n\n');
+}
+
+/** Removes HTML tags and decodes common entities. */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+/**
  * Executes an SSE-streaming API call.
  * Calls onChunk for each data event.
  * Returns the final parsed result when done.
+ *
+ * Special case: if the response is 202 Accepted with a `taskId`, polls
+ * GET /api/tasks/:taskId until the task reaches a terminal state, then
+ * returns the task result. This handles async endpoints like storyboard/import.
  */
 async function executeSSEStep(
   endpoint: string,
@@ -165,6 +254,14 @@ async function executeSSEStep(
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`API error ${response.status}: ${text}`);
+  }
+
+  // Async mode: server returns 202 + taskId, poll until done
+  if (response.status === 202) {
+    const json = await response.json() as { taskId?: string };
+    if (json.taskId) {
+      return pollTask(json.taskId, signal, onChunk);
+    }
   }
 
   const contentType = response.headers.get('content-type') || '';
@@ -204,4 +301,51 @@ async function executeSSEStep(
   const result = await response.json();
   onChunk(result);
   return result as Record<string, unknown>;
+}
+
+/** Poll GET /api/tasks/:taskId until completed/failed, return task result. */
+async function pollTask(
+  taskId: string,
+  signal: AbortSignal,
+  onChunk: (data: unknown) => void,
+  intervalMs = 3000,
+  timeoutMs = 600_000,
+): Promise<Record<string, unknown> | null> {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    if (signal.aborted) return null;
+
+    await new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, intervalMs);
+      signal.addEventListener('abort', () => { clearTimeout(t); resolve(); }, { once: true });
+    });
+
+    if (signal.aborted) return null;
+
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      credentials: 'include',
+      signal,
+    });
+
+    if (!res.ok) continue;
+
+    const task = await res.json() as {
+      status: string;
+      result?: Record<string, unknown>;
+      error?: { message?: string };
+    };
+
+    onChunk({ taskId, status: task.status });
+
+    if (task.status === 'completed') {
+      return task.result ?? null;
+    }
+    if (task.status === 'failed') {
+      throw new Error(task.error?.message ?? 'Task failed');
+    }
+    // still processing / queued — keep polling
+  }
+
+  throw new Error(`Task ${taskId} timed out after ${timeoutMs / 1000}s`);
 }
