@@ -32,42 +32,20 @@ export function remove(k: string) {
   } catch {}
 }
 
-// Favorites management
-export const FAVORITES_KEY = 'inspirations_favorites';
+// REMOVED: als:favorites:* — now stored in DB
+// export const FAVORITES_KEY = 'inspirations_favorites';
+// export function addFavorite(...) { ... }
+// export function removeFavorite(...) { ... }
+// export function getFavorites() { ... }
 
-export function addFavorite(inspirationId: string, text: string, category: string) {
-  const favorites = readJSON<Array<{ id: string; text: string; category: string; favoritedAt: string }>>(
-    FAVORITES_KEY,
-    []
-  );
-  if (favorites.find((f) => f.id === inspirationId)) return; // Already favorited
-  favorites.push({
-    id: inspirationId,
-    text,
-    category,
-    favoritedAt: new Date().toISOString(),
-  });
-  saveJSON(FAVORITES_KEY, favorites);
-}
+// Shims retained for backward compatibility with existing call sites — no-ops
+export const FAVORITES_KEY = 'inspirations_favorites'; // deprecated
+export function addFavorite(_inspirationId: string, _text: string, _category: string) { /* REMOVED: now stored in DB */ }
+export function removeFavorite(_inspirationId: string) { /* REMOVED: now stored in DB */ }
+export function getFavorites(): Array<{ id: string; text: string; category: string; favoritedAt: string }> { return []; /* REMOVED: now stored in DB */ }
 
-export function removeFavorite(inspirationId: string) {
-  const favorites = readJSON<Array<{ id: string; text: string; category: string; favoritedAt: string }>>(
-    FAVORITES_KEY,
-    []
-  );
-  const updated = favorites.filter((f) => f.id !== inspirationId);
-  saveJSON(FAVORITES_KEY, updated);
-}
-
-export function getFavorites() {
-  return readJSON<Array<{ id: string; text: string; category: string; favoritedAt: string }>>(
-    FAVORITES_KEY,
-    []
-  );
-}
-
-// Version management
-export const VERSIONS_KEY_PREFIX = 'script_versions_';
+// REMOVED: als:versions:* — now stored in DB
+export const VERSIONS_KEY_PREFIX = 'script_versions_'; // deprecated
 
 export interface ScriptVersion {
   id: string;
@@ -78,34 +56,19 @@ export interface ScriptVersion {
   snapshot: unknown; // Full script snapshot
 }
 
-export function saveVersion(scriptId: string, snapshot: unknown, description?: string) {
-  const versions = readJSON<ScriptVersion[]>(`${VERSIONS_KEY_PREFIX}${scriptId}`, []);
-  const newVersion: ScriptVersion = {
-    id: `v_${Date.now()}`,
-    scriptId,
-    versionNumber: versions.length + 1,
-    description,
-    createdAt: new Date().toISOString(),
-    snapshot,
-  };
-  versions.push(newVersion);
-  saveJSON(`${VERSIONS_KEY_PREFIX}${scriptId}`, versions);
-  return newVersion;
+// Shims retained for backward compatibility with existing call sites — no-ops
+export function saveVersion(_scriptId: string, _snapshot: unknown, _description?: string): ScriptVersion {
+  /* REMOVED: now stored in DB */
+  return { id: `v_noop_${Date.now()}`, scriptId: _scriptId, versionNumber: 0, createdAt: new Date().toISOString(), snapshot: _snapshot };
 }
 
-export function getVersions(scriptId: string) {
-  return readJSON<ScriptVersion[]>(`${VERSIONS_KEY_PREFIX}${scriptId}`, []);
-}
+export function getVersions(_scriptId: string): ScriptVersion[] { return []; /* REMOVED: now stored in DB */ }
 
-export function deleteVersion(scriptId: string, versionId: string) {
-  const versions = getVersions(scriptId);
-  const updated = versions.filter((v) => v.id !== versionId);
-  saveJSON(`${VERSIONS_KEY_PREFIX}${scriptId}`, updated);
-}
+export function deleteVersion(_scriptId: string, _versionId: string) { /* REMOVED: now stored in DB */ }
 
-// Project assets management
-export const CHARACTER_ASSETS_KEY_PREFIX = 'character_assets_';
-export const LOCATION_ASSETS_KEY_PREFIX = 'location_assets_';
+// REMOVED: als:characterAssets:* + als:locationAssets:* — now stored in DB
+export const CHARACTER_ASSETS_KEY_PREFIX = 'character_assets_'; // deprecated
+export const LOCATION_ASSETS_KEY_PREFIX = 'location_assets_'; // deprecated
 export const GENERATED_ASSETS_KEY_PREFIX = 'generated_assets_';
 export const RELATION_GRAPH_KEY_PREFIX = 'relation_graph_';
 
@@ -141,57 +104,19 @@ export interface LocationImageAssetLocal {
   createdAt: string;
 }
 
-export function getProjectCharacterAssets(projectId: string) {
-  return readJSON<CharacterImageAssetLocal[]>(`${CHARACTER_ASSETS_KEY_PREFIX}${projectId}`, []);
-}
+// Shims retained for backward compatibility — no-ops (REMOVED: now stored in DB)
+export function getProjectCharacterAssets(_projectId: string): CharacterImageAssetLocal[] { return []; }
+export function setProjectCharacterAssets(_projectId: string, _assets: CharacterImageAssetLocal[]) { /* REMOVED: now stored in DB */ }
+export function addProjectCharacterAsset(_projectId: string, _asset: CharacterImageAssetLocal) { /* REMOVED: now stored in DB */ }
+export function deleteProjectCharacterAsset(_projectId: string, _assetId: string) { /* REMOVED: now stored in DB */ }
+export function updateProjectCharacterAsset(_projectId: string, _asset: CharacterImageAssetLocal) { /* REMOVED: now stored in DB */ }
 
-export function setProjectCharacterAssets(projectId: string, assets: CharacterImageAssetLocal[]) {
-  saveJSON(`${CHARACTER_ASSETS_KEY_PREFIX}${projectId}`, assets);
-}
-
-export function addProjectCharacterAsset(projectId: string, asset: CharacterImageAssetLocal) {
-  const assets = getProjectCharacterAssets(projectId);
-  assets.unshift(asset); // Add to beginning
-  setProjectCharacterAssets(projectId, assets);
-}
-
-export function deleteProjectCharacterAsset(projectId: string, assetId: string) {
-  const assets = getProjectCharacterAssets(projectId);
-  const updated = assets.filter((a) => a.id !== assetId);
-  setProjectCharacterAssets(projectId, updated);
-}
-
-export function updateProjectCharacterAsset(projectId: string, asset: CharacterImageAssetLocal) {
-  const assets = getProjectCharacterAssets(projectId);
-  const updated = assets.map((a) => (a.id === asset.id ? asset : a));
-  setProjectCharacterAssets(projectId, updated);
-}
-
-export function getProjectLocationAssets(projectId: string) {
-  return readJSON<LocationImageAssetLocal[]>(`${LOCATION_ASSETS_KEY_PREFIX}${projectId}`, []);
-}
-
-export function setProjectLocationAssets(projectId: string, assets: LocationImageAssetLocal[]) {
-  saveJSON(`${LOCATION_ASSETS_KEY_PREFIX}${projectId}`, assets);
-}
-
-export function addProjectLocationAsset(projectId: string, asset: LocationImageAssetLocal) {
-  const assets = getProjectLocationAssets(projectId);
-  assets.unshift(asset);
-  setProjectLocationAssets(projectId, assets);
-}
-
-export function deleteProjectLocationAsset(projectId: string, assetId: string) {
-  const assets = getProjectLocationAssets(projectId);
-  const updated = assets.filter((a) => a.id !== assetId);
-  setProjectLocationAssets(projectId, updated);
-}
-
-export function updateProjectLocationAsset(projectId: string, asset: LocationImageAssetLocal) {
-  const assets = getProjectLocationAssets(projectId);
-  const updated = assets.map((a) => (a.id === asset.id ? asset : a));
-  setProjectLocationAssets(projectId, updated);
-}
+// Shims retained for backward compatibility — no-ops (REMOVED: now stored in DB)
+export function getProjectLocationAssets(_projectId: string): LocationImageAssetLocal[] { return []; }
+export function setProjectLocationAssets(_projectId: string, _assets: LocationImageAssetLocal[]) { /* REMOVED: now stored in DB */ }
+export function addProjectLocationAsset(_projectId: string, _asset: LocationImageAssetLocal) { /* REMOVED: now stored in DB */ }
+export function deleteProjectLocationAsset(_projectId: string, _assetId: string) { /* REMOVED: now stored in DB */ }
+export function updateProjectLocationAsset(_projectId: string, _asset: LocationImageAssetLocal) { /* REMOVED: now stored in DB */ }
 
 // Generated assets management (for storyboard generation results)
 export interface GeneratedAssetLocal {
