@@ -6,7 +6,8 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
-import type { GenerationJob } from '../types/generation-job';
+import useSWR from 'swr';
+import type { GenerationJob, ListJobsResponse } from '../types/generation-job';
 import { listJobs } from '../api/jobs';
 
 interface GenerationJobsContextValue {
@@ -42,8 +43,64 @@ export function GenerationJobsProvider({ children }: { children: ReactNode }) {
     [jobs]
   );
 
+  /**
+   * 将服务端返回的任务列表合并到本地 Map 状态，并清理过期条目。
+   * 同时被 SWR onSuccess 回调和 refreshJobs 手动刷新共用。
+   */
+  const mergeJobsFromServer = useCallback((data: ListJobsResponse) => {
+    setJobs(prev => {
+      const newMap = new Map(prev);
+
+      // Update with fresh data from server
+      data.jobs.forEach(job => {
+        newMap.set(job.id, job);
+      });
+
+      // Remove active jobs that are no longer returned by the server
+      const activeJobIds = new Set(data.jobs.map(j => j.id));
+      for (const [id, job] of newMap) {
+        if (!activeJobIds.has(id) && (job.status === 'queued' || job.status === 'running')) {
+          // Job was active locally but not returned by server — remove it
+          newMap.delete(id);
+        }
+        // Also clean up terminal jobs older than 5 minutes
+        if (
+          (job.status === 'succeeded' || job.status === 'failed' || job.status === 'canceled') &&
+          job.updatedAt &&
+          Date.now() - new Date(job.updatedAt).getTime() > 5 * 60 * 1000
+        ) {
+          newMap.delete(id);
+        }
+      }
+
+      return newMap;
+    });
+  }, []);
+
+  // SWR key: only poll when authenticated
+  const swrKey = authStatus === 'authenticated'
+    ? '/api/jobs?status=queued&status=running&limit=100'
+    : null;
+
+  // SWR handles initial load and background polling.
+  // Polling is active (every 3 s) only while there are queued/running jobs;
+  // otherwise polling stops until the next focus/reconnect revalidation.
+  useSWR<ListJobsResponse>(
+    swrKey,
+    () => listJobs({ status: ['queued', 'running'], limit: 100 }),
+    {
+      refreshInterval: (data) => {
+        const hasPending = data?.jobs?.some(
+          j => j.status === 'queued' || j.status === 'running'
+        );
+        return hasPending ? 3000 : 0;
+      },
+      onSuccess: mergeJobsFromServer,
+      revalidateOnFocus: false,
+    }
+  );
+
   const updateJob = useCallback((jobId: string, updates: Partial<GenerationJob>) => {
-    
     setJobs(prev => {
       const newMap = new Map(prev);
       const existing = newMap.get(jobId);
@@ -55,7 +112,6 @@ export function GenerationJobsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addJob = useCallback((job: GenerationJob) => {
-    
     setJobs(prev => {
       const newMap = new Map(prev);
       newMap.set(job.id, job);
@@ -78,49 +134,22 @@ export function GenerationJobsProvider({ children }: { children: ReactNode }) {
   const refreshJobs = useCallback(async (immediate = false) => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefreshTimeRef.current;
-    
+
     // 如果不是立即刷新且距离上次刷新时间小于5秒，则跳过
     if (!immediate && timeSinceLastRefresh < 5000) {
       return;
     }
-    
+
     lastRefreshTimeRef.current = now;
-    
+
     try {
       // 获取进行中和排队中的任务
       const response = await listJobs({
         status: ['queued', 'running'],
         limit: 100,
       });
-      
-      setJobs(prev => {
-        const newMap = new Map(prev);
 
-        // Update with fresh data from server
-        response.jobs.forEach(job => {
-          newMap.set(job.id, job);
-        });
-
-        // Remove jobs that are no longer active (completed/failed/cancelled)
-        // Keep only jobs that are in the server response or that are terminal
-        const activeJobIds = new Set(response.jobs.map(j => j.id));
-        for (const [id, job] of newMap) {
-          if (!activeJobIds.has(id) && (job.status === 'queued' || job.status === 'running')) {
-            // Job was active locally but not returned by server — mark as completed
-            newMap.delete(id);
-          }
-          // Also clean up terminal jobs older than 5 minutes
-          if (
-            (job.status === 'succeeded' || job.status === 'failed' || job.status === 'canceled') &&
-            job.updatedAt &&
-            Date.now() - new Date(job.updatedAt).getTime() > 5 * 60 * 1000
-          ) {
-            newMap.delete(id);
-          }
-        }
-
-        return newMap;
-      });
+      mergeJobsFromServer(response);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -143,24 +172,16 @@ export function GenerationJobsProvider({ children }: { children: ReactNode }) {
       console.error('[GenerationJobs] Failed to refresh jobs:', error);
       retryCountRef.current = 0;
     }
-  }, []);
+  }, [mergeJobsFromServer]);
 
-  // 初始加载 & session 就绪时立即刷新
+  // Clean up any pending retry timeouts on unmount
   useEffect(() => {
-    // 只有 session 已认证才发请求，避免 session 未就绪时出现 401
-    if (authStatus !== 'authenticated') return;
-
-    const timer = setTimeout(() => {
-      refreshJobs(true);
-    }, 500);
-
     return () => {
-      clearTimeout(timer);
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
     };
-  }, [refreshJobs, authStatus]);
+  }, []);
 
   const value: GenerationJobsContextValue = {
     jobs,
@@ -186,4 +207,3 @@ export function useGenerationJobs() {
   }
   return context;
 }
-
