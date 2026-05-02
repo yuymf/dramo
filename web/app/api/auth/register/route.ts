@@ -1,8 +1,5 @@
-import { NextRequest } from "next/server";
-import { proxyRequest } from "@/app/api/_utils/proxy";
+import { createProxyRoute } from '../../_utils/route-factory';
 
-export async function POST(request: NextRequest) {
-  return proxyRequest(request, "/api/v1/auth/register", {
-    requireAuth: false,
-  });
-}
+export const { POST } = createProxyRoute('/api/v1/auth/register', ['POST'], {
+  requireAuth: false,
+});

@@ -1,31 +1,6 @@
-import { NextRequest } from "next/server";
-import { proxyRequest } from "@/app/api/_utils/proxy";
+import { createProxyRoute } from '../../../../../_utils/route-factory';
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string; relationId: string }> }
-) {
-  const { projectId, relationId } = await params;
-  return proxyRequest(
-    request,
-    `/api/v1/projects/${projectId}/characters/relations/${relationId}`,
-    {
-      requireAuth: true,
-    }
-  );
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string; relationId: string }> }
-) {
-  const { projectId, relationId } = await params;
-  return proxyRequest(
-    request,
-    `/api/v1/projects/${projectId}/characters/relations/${relationId}`,
-    {
-      requireAuth: true,
-    }
-  );
-}
-
+export const { PATCH, DELETE } = createProxyRoute(
+  '/api/v1/projects/:projectId/characters/relations/:relationId',
+  ['PATCH', 'DELETE']
+);

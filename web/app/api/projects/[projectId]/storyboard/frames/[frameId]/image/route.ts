@@ -1,31 +1,6 @@
-import { NextRequest } from "next/server";
-import { proxyRequest } from "@/app/api/_utils/proxy";
+import { createProxyRoute } from '../../../../../../_utils/route-factory';
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string; frameId: string }> }
-) {
-  const { projectId, frameId } = await params;
-  return proxyRequest(
-    request,
-    `/api/v1/projects/${projectId}/storyboard/frames/${frameId}/image`,
-    {
-      requireAuth: true,
-    }
-  );
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string; frameId: string }> }
-) {
-  const { projectId, frameId } = await params;
-  return proxyRequest(
-    request,
-    `/api/v1/projects/${projectId}/storyboard/frames/${frameId}/image`,
-    {
-      requireAuth: true,
-    }
-  );
-}
-
+export const { PUT, DELETE } = createProxyRoute(
+  '/api/v1/projects/:projectId/storyboard/frames/:frameId/image',
+  ['PUT', 'DELETE']
+);

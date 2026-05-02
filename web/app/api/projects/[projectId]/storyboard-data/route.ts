@@ -1,32 +1,6 @@
-import { NextRequest } from "next/server";
-import { proxyRequest } from "@/app/api/_utils/proxy";
+import { createProxyRoute } from '../../../_utils/route-factory';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
-) {
-  const { projectId } = await params;
-  return proxyRequest(request, `/api/v1/projects/${projectId}/storyboard-data`, {
-    requireAuth: true,
-  });
-}
-
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
-) {
-  const { projectId } = await params;
-  return proxyRequest(request, `/api/v1/projects/${projectId}/storyboard-data`, {
-    requireAuth: true,
-  });
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
-) {
-  const { projectId } = await params;
-  return proxyRequest(request, `/api/v1/projects/${projectId}/storyboard-data`, {
-    requireAuth: true,
-  });
-}
+export const { GET, PUT, DELETE } = createProxyRoute(
+  '/api/v1/projects/:projectId/storyboard-data',
+  ['GET', 'PUT', 'DELETE']
+);

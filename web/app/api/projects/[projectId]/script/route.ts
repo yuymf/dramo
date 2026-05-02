@@ -1,24 +1,9 @@
-import { NextRequest } from "next/server";
-import { proxyRequest } from "@/app/api/_utils/proxy";
+import { createProxyRoute } from '../../../_utils/route-factory';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
-) {
-  const { projectId } = await params;
-  return proxyRequest(request, `/api/v1/projects/${projectId}/script`, {
-    requireAuth: true,
-  });
-}
+// GET: fetch script (no timeout)
+export const { GET } = createProxyRoute('/api/v1/projects/:projectId/script', ['GET']);
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
-) {
-  const { projectId } = await params;
-  return proxyRequest(request, `/api/v1/projects/${projectId}/script`, {
-    requireAuth: true,
-    timeoutMs: 180000, // 3 minutes for AI generation
-  });
-}
-
+// POST: generate script with AI (3-minute timeout for long-running generation)
+export const { POST } = createProxyRoute('/api/v1/projects/:projectId/script', ['POST'], {
+  timeoutMs: 180000,
+});
