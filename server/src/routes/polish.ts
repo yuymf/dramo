@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { startWorkflowRun } from '../lib/agentos-client';
-import { streamSSEResponse, parseAgentOSSSE } from '../lib/sse';
-import type { SSEEvent } from '../lib/sse';
+import { createAgentOSStream } from '../lib/sse';
 import { logger } from '../lib/logger';
 import type { AuthEnv } from '../middleware/auth';
 import { LLMConfigService } from '../services/llm-config.service';
@@ -20,25 +19,11 @@ polish.get('/projects/:projectId/polish/stream', async (c) => {
 
   const llmHeaders = await llmConfigService.getLLMHeaders(userId, 'TEXT_LLM');
 
-  async function* generateSSE(): AsyncGenerator<SSEEvent, void, unknown> {
-    try {
-      yield { event: 'progress', data: { percent: 5, message: 'Starting script polishing...' } };
-
-      const response = await startWorkflowRun('polishworkflow', {
-        projectId,
-        text,
-      }, { stream: true, llmHeaders });
-
-      for await (const event of parseAgentOSSSE(response)) {
-        yield event;
-      }
-    } catch (err) {
-      logger.error({ err, projectId }, 'Polish SSE failed');
-      yield { event: 'error', data: { message: '优化剧本失败' } };
-    }
-  }
-
-  return streamSSEResponse(c, generateSSE());
+  return createAgentOSStream(c, {
+    endpoint: 'polishworkflow',
+    payload: { projectId, text },
+    llmHeaders,
+  });
 });
 
 polish.post('/projects/:projectId/polish', async (c) => {

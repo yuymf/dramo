@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { config } from '../config';
 import { logger } from './logger';
+import { startWorkflowRun } from './agentos-client';
 
 /**
  * SSE event types used across all streaming endpoints.
@@ -270,4 +271,53 @@ export function streamSSEError(c: Context, code: string, message: string) {
       data: JSON.stringify({ code, message }),
     });
   });
+}
+
+// ─── Unified AgentOS stream wrapper ───────────────────────────────────────────
+
+export interface AgentOSStreamOptions {
+  /** AgentOS workflow name, e.g. 'chatworkflow' */
+  endpoint: string;
+  /** Payload forwarded to AgentOS */
+  payload: Record<string, unknown>;
+  /** LLM headers for AgentOS (from LLMConfigService.getLLMHeaders) */
+  llmHeaders?: Record<string, string>;
+  /** Called for each SSE event received from AgentOS */
+  onEvent?: (event: SSEEvent) => Promise<void>;
+  /** Called with the final WorkflowCompleted payload */
+  onComplete?: (result: unknown) => Promise<void>;
+}
+
+/**
+ * Unified entry point: start an AgentOS workflow, pipe SSE to client.
+ * Replaces scattered streamSSEResponse + parseAgentOSSSE call patterns.
+ */
+export async function createAgentOSStream(
+  c: Context,
+  opts: AgentOSStreamOptions
+): Promise<Response> {
+  if (!opts?.endpoint) throw new TypeError('createAgentOSStream: endpoint is required');
+  if (!opts?.payload) throw new TypeError('createAgentOSStream: payload is required');
+
+  async function* generateSSE(): AsyncGenerator<SSEEvent, void, unknown> {
+    try {
+      const response = await startWorkflowRun(
+        opts.endpoint,
+        opts.payload,
+        { stream: true, llmHeaders: opts.llmHeaders }
+      );
+      for await (const event of parseAgentOSSSE(response)) {
+        if (opts.onEvent) await opts.onEvent(event);
+        if (event.event === 'done' && opts.onComplete) {
+          await opts.onComplete((event.data as Record<string, unknown>)?.output);
+        }
+        yield event;
+      }
+    } catch (err) {
+      logger.error({ err, endpoint: opts.endpoint }, 'AgentOS stream failed');
+      yield { event: 'error', data: { message: 'Workflow failed' } };
+    }
+  }
+
+  return streamSSEResponse(c, generateSSE());
 }
