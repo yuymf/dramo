@@ -25,6 +25,7 @@ import { uploads } from './routes/uploads';
 import { generationJobs } from './routes/generation-jobs';
 import { billing } from './routes/billing';
 import { llmConfigs } from './routes/llm-config';
+import { director } from './routes/director';
 
 const app = new Hono<AuthEnv>();
 
@@ -70,6 +71,7 @@ app.route('/api/v1', uploads);
 app.route('/api/v1', generationJobs);
 app.route('/api/v1', billing);
 app.route('/api/v1', llmConfigs);
+app.route('/api/v1', director);
 
 // --- Error handler ---
 app.onError(errorHandler);
