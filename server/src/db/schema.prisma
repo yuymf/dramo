@@ -16,23 +16,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects      Project[]
-  subscription  Subscription?
-  llmConfigs    UserLLMConfig[]
-  usageRecords  UsageRecord[]
+  projects    Project[]
+  llmConfigs  UserLLMConfig[]
 }
 
 enum LLMConfigType {
   TEXT_LLM
   IMAGE_GEN
-}
-
-enum UsageRecordType {
-  SCRIPT_GENERATION
-  CHARACTER_EXTRACTION
-  LOCATION_EXTRACTION
-  STORYBOARD_IMPORT
-  IMAGE_GENERATION
 }
 
 model UserLLMConfig {
@@ -316,37 +306,4 @@ model GenerationJob {
   @@index([projectId])
 }
 
-// Stripe subscription billing
-model Subscription {
-  id                   String    @id @default(cuid())
-  userId               String    @unique
-  stripeCustomerId     String    @unique
-  stripeSubscriptionId String?   @unique
-  planId               String    @default("free")
-  status               String    @default("active")
-  billingInterval      String?
-  currentPeriodStart   DateTime?
-  currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean   @default(false)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([stripeCustomerId])
-  @@index([stripeSubscriptionId])
-}
-
-model UsageRecord {
-  id        String          @id @default(cuid())
-  userId    String
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  month     String
-  type      UsageRecordType
-  count     Int             @default(0)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-
-  @@unique([userId, month, type])
-}
 
