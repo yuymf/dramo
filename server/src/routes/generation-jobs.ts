@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { GenerationJobService } from '../services/generation-job.service';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const generationJobs = new Hono<AuthEnv>();
 const jobService = new GenerationJobService();

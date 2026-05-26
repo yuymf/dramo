@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { ScriptService } from '../services/script.service';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { LLMConfigService } from '../services/llm-config.service';
 
 const scripts = new Hono<AuthEnv>();

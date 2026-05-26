@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { ProjectService } from '../services/project.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const projects = new Hono<AuthEnv>();
 const projectService = new ProjectService();

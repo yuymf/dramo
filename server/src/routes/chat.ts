@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { prisma } from '../lib/db';
 import { streamSSEResponse } from '../lib/sse';
 import { AppException, ErrorCode } from '../lib/errors';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { ChatService } from '../services/chat.service';
 
 const chat = new Hono<AuthEnv>();

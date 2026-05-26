@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { InspirationService } from '../services/inspiration.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { LLMConfigService } from '../services/llm-config.service';
 
 const inspirations = new Hono<AuthEnv>();

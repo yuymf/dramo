@@ -1,7 +1,7 @@
 import type { ErrorHandler } from 'hono';
 import { logger } from '../lib/logger';
 import { AppException } from '../lib/errors';
-import type { AuthEnv } from './auth';
+import type { AuthEnv } from './default-user';
 
 /**
  * Unified error handler for Hono.

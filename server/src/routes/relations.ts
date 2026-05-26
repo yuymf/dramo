@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { RelationService } from '../services/relation.service';
 import { ProjectService } from '../services/project.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const relations = new Hono<AuthEnv>();
 const relationService = new RelationService();

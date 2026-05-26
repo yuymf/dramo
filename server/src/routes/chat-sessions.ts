@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { prisma } from '../lib/db';
 import { AppException, ErrorCode } from '../lib/errors';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const chatSessions = new Hono<AuthEnv>();
 

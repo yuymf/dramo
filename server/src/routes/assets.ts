@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { CharacterAssetService } from '../services/character-asset.service';
 import { LocationAssetService } from '../services/location-asset.service';
 import { AssetService } from '../services/asset.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { LLMConfigService } from '../services/llm-config.service';
 
 const assets = new Hono<AuthEnv>();

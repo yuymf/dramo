@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createAgentOSStream } from '../lib/sse';
 import { LLMConfigService } from '../services/llm-config.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const director = new Hono<AuthEnv>();
 const llmConfigService = new LLMConfigService();

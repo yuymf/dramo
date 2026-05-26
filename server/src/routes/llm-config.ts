@@ -4,7 +4,7 @@ import { validateBaseUrl, validateResolvedIPs } from '../lib/url-validator';
 import { sanitizeHeaderValue } from '../lib/crypto';
 import { AppException, ErrorCode } from '../lib/errors';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const llmConfigs = new Hono<AuthEnv>();
 const llmConfigService = new LLMConfigService();

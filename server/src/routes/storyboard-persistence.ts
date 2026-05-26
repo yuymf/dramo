@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { StoryboardDataService } from '../services/storyboard-data.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const storyboardPersistence = new Hono<AuthEnv>();
 const storyboardDataService = new StoryboardDataService();

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { getAgentOS, postAgentOS } from '../lib/agentos-client';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const aiProviders = new Hono<AuthEnv>();
 

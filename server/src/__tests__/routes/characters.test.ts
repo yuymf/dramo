@@ -16,8 +16,8 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
-jest.mock('../../middleware/auth', () => ({
-  authMiddleware: async (c: unknown, next: () => Promise<void>) => {
+jest.mock('../../middleware/default-user', () => ({
+  defaultUserMiddleware: async (c: unknown, next: () => Promise<void>) => {
     (c as { set: (k: string, v: unknown) => void }).set('user', { userId: 'u1' });
     return next();
   },

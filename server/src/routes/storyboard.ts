@@ -6,7 +6,7 @@ import { AssetService } from '../services/asset.service';
 import { TaskService } from '../services/task.service';
 import { startWorkflowRun } from '../lib/agentos-client';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { LLMConfigService } from '../services/llm-config.service';
 import { AppException, ErrorCode } from '../lib/errors';
 import { prisma } from '../lib/db';

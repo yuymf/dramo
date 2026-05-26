@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { streamSSEResponse, parseAgentOSSSE } from './sse';
 import type { SSEEvent } from './sse';
 import { LLMConfigService } from '../services/llm-config.service';

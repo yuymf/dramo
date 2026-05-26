@@ -1,12 +1,10 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { authMiddleware, type AuthEnv } from './middleware/auth';
+import { defaultUserMiddleware, type AuthEnv } from './middleware/default-user';
 import { errorHandler } from './middleware/error-handler';
-import { config } from './config';
 
 // Route modules
 import { health } from './routes/health';
-import { auth } from './routes/auth';
 import { projects } from './routes/projects';
 import { scripts } from './routes/scripts';
 import { tasks } from './routes/tasks';
@@ -23,7 +21,6 @@ import { aiProviders } from './routes/ai-providers';
 import { relations } from './routes/relations';
 import { uploads } from './routes/uploads';
 import { generationJobs } from './routes/generation-jobs';
-import { billing } from './routes/billing';
 import { llmConfigs } from './routes/llm-config';
 import { director } from './routes/director';
 
@@ -31,12 +28,10 @@ const app = new Hono<AuthEnv>();
 
 // --- Global middleware ---
 app.use('*', cors({
-  origin: config.corsAllowedOrigins,
-  credentials: true,
+  origin: '*',
 }));
 
 // --- Legacy /api/* → /api/v1/* redirect (301 permanent) ---
-// Must run BEFORE auth middleware so unauthenticated redirects work
 app.use('/api/*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   if (!path.startsWith('/api/v1')) {
@@ -48,11 +43,10 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-app.use('*', authMiddleware);
+app.use('*', defaultUserMiddleware);
 
 // --- Routes (all mounted under /api/v1) ---
 app.route('/api/v1', health);
-app.route('/api/v1', auth);
 app.route('/api/v1', projects);
 app.route('/api/v1', scripts);
 app.route('/api/v1', tasks);
@@ -69,7 +63,6 @@ app.route('/api/v1', aiProviders);
 app.route('/api/v1', relations);
 app.route('/api/v1', uploads);
 app.route('/api/v1', generationJobs);
-app.route('/api/v1', billing);
 app.route('/api/v1', llmConfigs);
 app.route('/api/v1', director);
 

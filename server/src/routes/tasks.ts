@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { TaskService } from '../services/task.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const tasks = new Hono<AuthEnv>();
 const taskService = new TaskService();

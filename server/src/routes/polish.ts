@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { startWorkflowRun } from '../lib/agentos-client';
 import { createAgentOSStream } from '../lib/sse';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { LLMConfigService } from '../services/llm-config.service';
 
 const polish = new Hono<AuthEnv>();

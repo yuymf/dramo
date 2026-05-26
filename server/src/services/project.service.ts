@@ -1,7 +1,5 @@
 import { prisma } from '../lib/db';
 import { AppException, ErrorCode } from '../lib/errors';
-import { BillingService } from './billing.service';
-import { getPlanLimits } from '../config/plan-limits';
 
 export class ProjectService {
   async listProjects(userId: string, page = 1, limit = 20, search?: string) {
@@ -60,21 +58,6 @@ export class ProjectService {
   }
 
   async createProject(userId: string, data: { name: string; description?: string }) {
-    // Check plan limit
-    const billingService = new BillingService();
-    const sub = await billingService.getSubscription(userId);
-    const limits = getPlanLimits(sub.planId);
-
-    if (limits.projects !== null) {
-      const currentCount = await prisma.project.count({ where: { userId } });
-      if (currentCount >= limits.projects) {
-        throw new AppException(
-          ErrorCode.PLAN_LIMIT_EXCEEDED,
-          `已达到${sub.planId === 'free' ? '免费版' : '当前计划'}项目数量上限（${limits.projects}个）`,
-        );
-      }
-    }
-
     const project = await prisma.project.create({
       data: {
         ...data,
