@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
 
 const backendBaseUrl =
   process.env.BACKEND_API_URL ||
@@ -10,27 +8,11 @@ const backendBaseUrl =
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.backendToken) {
-    return NextResponse.json(
-      {
-        error: {
-          code: 'UNAUTHORIZED',
-          message: '未认证，请先登录',
-        },
-      },
-      { status: 401 }
-    );
-  }
-
   const targetUrl = new URL(`${backendBaseUrl.replace(/\/$/, '')}/api/v1/jobs/stream${request.nextUrl.search}`);
 
   const response = await fetch(targetUrl, {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${session.backendToken}`,
-    },
+    headers: {},
     cache: 'no-store',
   });
 

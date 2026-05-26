@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import type { LocationImageAssetV2 } from '@/lib/models';
-import { authOptions } from '@/lib/auth/options';
 
 /**
  * POST /api/projects/{projectId}/locations/generate-image
@@ -12,19 +10,6 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  const session = await getServerSession(authOptions);
-
-  if (!session?.backendToken) {
-    return NextResponse.json(
-      {
-        error: {
-          message: '未认证，请重新登录',
-          code: 'UNAUTHORIZED',
-        },
-      },
-      { status: 401 }
-    );
-  }
 
   const body = await request.json();
 
@@ -48,7 +33,6 @@ export async function POST(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.backendToken}`,
         },
         body: JSON.stringify({
           name: body.name,

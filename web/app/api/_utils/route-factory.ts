@@ -60,13 +60,12 @@ export function createProxyRoute(
   methods: HttpMethod[],
   options: ProxyRouteOptions = {}
 ): Record<HttpMethod, RouteHandler> {
-  const { requireAuth = true, appendQuery, timeoutMs } = options;
+  const { appendQuery, timeoutMs } = options;
 
   const handler: RouteHandler = async (req, ctx) => {
     const params = await ctx.params;
     const resolvedPath = interpolatePath(backendPath, params);
     return proxyRequest(req, resolvedPath, {
-      requireAuth,
       ...(appendQuery !== undefined && { appendQuery }),
       ...(timeoutMs !== undefined && { timeoutMs }),
     });

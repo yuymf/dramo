@@ -1,7 +1,4 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import type { Session } from "next-auth";
-import { authOptions } from "@/lib/auth/options";
 
 const backendBaseUrl =
   process.env.BACKEND_API_URL ??
@@ -62,33 +59,6 @@ interface ProxyOptions {
   body?: BodyInit | Record<string, unknown> | null;
   appendQuery?: boolean;
   timeoutMs?: number;
-}
-
-async function ensureSession(
-  requireAuth: boolean | undefined
-): Promise<Session | null> {
-  const session = await getServerSession(authOptions);
-
-  if (requireAuth && !session?.backendToken) {
-    throw new NextResponse(
-      JSON.stringify({
-        error: {
-          code: "UNAUTHORIZED",
-          message: "未认证，请先登录",
-          retryable: false,
-        },
-      }),
-      {
-        status: 401,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      }
-    );
-  }
-
-  return session;
 }
 
 async function resolveRequestBody(
@@ -165,22 +135,8 @@ export async function proxyRequest(
     );
   }
 
-  let session: Session | null = null;
-  try {
-    session = await ensureSession(options.requireAuth);
-  } catch (response) {
-    if (response instanceof NextResponse) {
-      return response;
-    }
-    throw response;
-  }
-
   const method = options.method ?? request.method;
   const headers = new Headers(options.headers ?? {});
-
-  if (session?.backendToken && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${session.backendToken}`);
-  }
 
   if (!headers.has("Content-Type")) {
     const incomingContentType = request.headers.get("content-type");

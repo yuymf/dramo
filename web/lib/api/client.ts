@@ -156,17 +156,6 @@ export async function api<T>(
       if (errorCode) apiError.code = errorCode;
       if (retryable !== undefined) apiError.retryable = retryable;
 
-      // Trigger upgrade dialog for plan limit errors
-      if (errorCode === 'PLAN_LIMIT_EXCEEDED') {
-        try {
-          const { getUpgradeDialogCallback } = await import('@/components/billing/SubscriptionProvider');
-          const showUpgrade = getUpgradeDialogCallback();
-          if (showUpgrade) showUpgrade();
-        } catch {
-          // SubscriptionProvider not mounted — ignore
-        }
-      }
-
       throw apiError;
     }
     

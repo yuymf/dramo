@@ -5,7 +5,6 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
 import type { GenerationJob, ListJobsResponse } from '../types/generation-job';
 import { listJobs } from '../api/jobs';
@@ -23,7 +22,6 @@ interface GenerationJobsContextValue {
 const GenerationJobsContext = createContext<GenerationJobsContextValue | null>(null);
 
 export function GenerationJobsProvider({ children }: { children: ReactNode }) {
-  const { status: authStatus } = useSession();
   const [jobs, setJobs] = useState<Map<string, GenerationJob>>(new Map());
   const refreshTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
   const lastRefreshTimeRef = React.useRef<number>(0);
@@ -77,10 +75,8 @@ export function GenerationJobsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // SWR key: only poll when authenticated
-  const swrKey = authStatus === 'authenticated'
-    ? '/api/jobs?status=queued&status=running&limit=100'
-    : null;
+  // SWR key: always poll for active jobs
+  const swrKey = '/api/jobs?status=queued&status=running&limit=100';
 
   // SWR handles initial load and background polling.
   // Polling is active (every 3 s) only while there are queued/running jobs;

@@ -5,20 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Menu, X } from "lucide-react";
-import { useSession } from "next-auth/react";
 
 export function SiteHeader() {
   const router = useRouter();
-  const { status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleGetStarted = () => {
-    const redirectUrl = "/projects";
-    if (status === "authenticated") {
-      router.push(redirectUrl);
-    } else {
-      router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
-    }
+    router.push("/projects");
   };
 
   const navItems = [

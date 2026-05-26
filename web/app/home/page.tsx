@@ -1,6 +1,3 @@
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth/options";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { CreativeInput } from "@/components/home/CreativeInput";
 import { QuickActions } from "@/components/home/QuickActions";
@@ -11,13 +8,7 @@ export const metadata = {
   description: "你的AI创作伙伴",
 };
 
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    redirect("/login?redirect=/home");
-  }
-
+export default function HomePage() {
   return (
     <div className="min-h-screen flex rice-paper-bg">
       <AppSidebar />
@@ -26,7 +17,7 @@ export default async function HomePage() {
         {/* Hero creative section */}
         <div className="px-8 lg:px-20 pt-20 pb-12">
           <div className="max-w-5xl mx-auto">
-            <CreativeInput userName={session.user?.name || session.user?.email} />
+            <CreativeInput userName={undefined} />
             <QuickActions />
           </div>
         </div>
