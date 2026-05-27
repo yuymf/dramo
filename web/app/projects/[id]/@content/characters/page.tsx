@@ -19,7 +19,7 @@ import {
 import { listRelations, createRelation, deleteRelation } from "@/lib/api/relations";
 import { getProjectAssets } from "@/lib/utils/exporter";
 import { useToast } from "@/components/ui/Toast";
-import { ChevronLeft, ChevronRight, Loader2, Network, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Network } from "lucide-react";
 import { useAIChat } from "@/app/ai-chat-provider";
 import { extractCharactersJson } from "@/lib/utils/json-context-extractor";
 

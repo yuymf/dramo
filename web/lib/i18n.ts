@@ -77,10 +77,6 @@ export const translations = {
     insert: "插入",
     favorite: "收藏",
     loading: "加载中...",
-    
-    // 用户信息
-    userProfile: "用户设置",
-    logout: "退出登录",
   },
   en: {
     // Common
@@ -154,10 +150,6 @@ export const translations = {
     insert: "Insert",
     favorite: "Favorite",
     loading: "Loading...",
-    
-    // User Info
-    userProfile: "User Settings",
-    logout: "Logout",
   },
 } as const;
 

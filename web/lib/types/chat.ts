@@ -1,4 +1,4 @@
-import type { ContentType, ScriptStyle, ScriptGoal } from '@/lib/models';
+import type { ContentType } from '@/lib/models';
 
 /** A single option card shown in the chat */
 export interface OptionCard {

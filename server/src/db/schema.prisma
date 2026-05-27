@@ -12,7 +12,6 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
-  password  String?  // 密码哈希（使用bcrypt）
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

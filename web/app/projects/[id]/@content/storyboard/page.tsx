@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Download, Monitor, Share2, Plus, RefreshCw, Trash2, Minus } from "lucide-react";
+import { Loader2, Download, Monitor, Share2, Plus, RefreshCw, Minus } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -27,7 +27,6 @@ import { useToast } from "@/components/ui/Toast";
 import { readJSON, saveJSON, addProjectGeneratedAsset, type GeneratedAssetLocal } from "@/lib/storage/local";
 import { api, getStoryboardData, saveStoryboardData } from "@/lib/api/client";
 import { getProjectAssets } from "@/lib/utils/exporter";
-import { cn } from "@/lib/utils";
 import type { ImageItem, StoryboardResponse } from "@/lib/models";
 import { useGenerationJobs } from "@/lib/hooks/useGenerationJobs";
 import { useAIChat } from "@/app/ai-chat-provider";

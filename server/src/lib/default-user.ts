@@ -12,7 +12,6 @@ export async function ensureDefaultUser(prisma: PrismaClient): Promise<void> {
       id: DEFAULT_USER_ID,
       email: DEFAULT_USER_EMAIL,
       name: DEFAULT_USER_NAME,
-      password: '',
     },
     update: {},
   });

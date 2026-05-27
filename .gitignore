@@ -33,10 +33,16 @@ yarn-error.log*
 *.swp
 *.swo
 *~
-.playwright-mcp
-.specify
-.cursor
-.superpowers
+
+# AI / Agent tooling
+.claude/
+.codex/
+.cursor/
+.superpowers/
+.specify/
+.playwright-mcp/
+.gstack/
+docs/superpowers/
 
 # OS
 .DS_Store
@@ -46,25 +52,27 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
+blob-report/
 
 # Prisma
 *.db
 *.db-journal
 
+# Python
+*.pyc
+__pycache__/
+.venv/
+
 # Misc
 .turbo/
 .cache/
-.vercel
-.pypa
-*.pyc
-__pycache__/
+.vercel/
 
 # Uploads
 server/uploads/
 web/uploads/
-
-# Vercel
-.vercel
 
 # Package managers
 /.pnp
@@ -74,4 +82,3 @@ web/uploads/
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-.gstack/

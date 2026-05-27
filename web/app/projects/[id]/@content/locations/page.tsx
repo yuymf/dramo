@@ -11,7 +11,6 @@ import { useAIChat } from "@/app/ai-chat-provider";
 import { extractLocationsJson } from "@/lib/utils/json-context-extractor";
 import { getProjectAssets } from "@/lib/utils/exporter";
 import type { LocationImageAssetV2 } from "@/lib/models";
-import { useToast } from "@/components/ui/Toast";
 import { MapPin } from "lucide-react";
 
 export default function LocationsPage() {
@@ -20,7 +19,6 @@ export default function LocationsPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [locations, setLocations] = useState<LocationImageAssetV2[]>([]);
   const { updateJsonData } = useAIChat();
-  const { showToast } = useToast();
 
   const handleRefresh = () => {
     setRefreshTrigger((prev) => prev + 1);

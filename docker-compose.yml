@@ -28,6 +28,7 @@ services:
       NODE_ENV: production
       PORT: 12321
       DATABASE_URL: postgresql://dramo:${DB_PASSWORD:-dramo_secret}@postgres:5432/dramo
+      DIRECT_URL: postgresql://dramo:${DB_PASSWORD:-dramo_secret}@postgres:5432/dramo
       STORAGE_DRIVER: local
       STORAGE_LOCAL_DIR: /app/uploads
       STORAGE_BASE_URL: ${PUBLIC_URL:-http://localhost}/uploads
@@ -40,8 +41,9 @@ services:
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:12321/api/v1/health"]
       interval: 10s
-      timeout: 3s
-      retries: 3
+      timeout: 5s
+      start_period: 30s
+      retries: 5
     networks:
       - dramo-network
 
