@@ -1,121 +1,103 @@
 services:
-  # Nginx Reverse Proxy (唯一对外暴露端口)
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dramo
+      POSTGRES_USER: dramo
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dramo_secret}
     volumes:
-      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dramo -d dramo"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - dramo-network
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
     depends_on:
-      web:
+      postgres:
         condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 12321
+      DATABASE_URL: postgresql://dramo:${DB_PASSWORD:-dramo_secret}@postgres:5432/dramo
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: /app/uploads
+      STORAGE_BASE_URL: ${PUBLIC_URL:-http://localhost}/uploads
+      AGENTOS_BASE_URL: http://agentos:12322
+      AGENTOS_SECURITY_KEY: ${AGENTOS_KEY:-default_agentos_key}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      FRONTEND_URL: ${PUBLIC_URL:-http://localhost}
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:12321/api/v1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - dramo-network
+
+  agentos:
+    build:
+      context: ./agentos
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
       api:
         condition: service_healthy
-    restart: unless-stopped
+    environment:
+      PORT: 12322
+      AGENTOS_SECURITY_KEY: ${AGENTOS_KEY:-default_agentos_key}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:12322/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - dramo-network
 
-  # Frontend (Next.js standalone)
   web:
     build:
       context: ./web
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
-    environment:
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - BACKEND_API_URL=http://api:12321
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+        NEXT_PUBLIC_API_URL: /api
     restart: unless-stopped
-
-  # AgentOS Service (Python AI)
-  agentos:
-    build: ./agentos
-    environment:
-      PORT: 12322
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      AI_PROVIDER: ${AI_PROVIDER:-openai}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_API_BASE: ${OPENAI_API_BASE:-}
-      OPENAI_MODEL_ID: ${OPENAI_MODEL_ID:-gpt-4-turbo-preview}
-      HUNYUAN_OPENAPI_URL: ${HUNYUAN_OPENAPI_URL:-}
-      HUNYUAN_OPENAPI_KEY: ${HUNYUAN_OPENAPI_KEY:-}
-      HUNYUAN_MODEL_ID: ${HUNYUAN_MODEL_ID:-hunyuan-turbos-latest}
-      ARK_API_KEY: ${ARK_API_KEY}
-      AGENTOS_SECURITY_KEY: ${AGENTOS_SECURITY_KEY:-}
-      LLM_TIMEOUT_LONG_SECONDS: ${LLM_TIMEOUT_LONG_SECONDS:-180}
-      DETAIL_REFINER_TIMEOUT_SECONDS: ${DETAIL_REFINER_TIMEOUT_SECONDS:-200}
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:12322/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  # API Service (Hono)
-  api:
-    build: ./server
-    environment:
-      NODE_ENV: ${NODE_ENV:-production}
-      PORT: 12321
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      DATABASE_URL: ${DATABASE_URL}
-      DIRECT_URL: ${DIRECT_URL:-}
-      AGENTOS_BASE_URL: http://agentos:12322
-      AGENTOS_SECURITY_KEY: ${AGENTOS_SECURITY_KEY:-}
-      JWT_SECRET: ${JWT_SECRET}
-      STORAGE_DRIVER: ${STORAGE_DRIVER:-supabase}
-      STORAGE_LOCAL_DIR: /app/uploads
-      STORAGE_BASE_URL: ${STORAGE_BASE_URL:-http://localhost:12321/uploads}
-      SUPABASE_URL: ${SUPABASE_URL:-}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
-      SUPABASE_BUCKET: ${SUPABASE_BUCKET:-images}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-      STRIPE_PRICE_PRO_MONTHLY: ${STRIPE_PRICE_PRO_MONTHLY:-}
-      STRIPE_PRICE_PRO_YEARLY: ${STRIPE_PRICE_PRO_YEARLY:-}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
-      AI_PROVIDER: ${AI_PROVIDER:-openai}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_API_BASE: ${OPENAI_API_BASE:-}
-      OPENAI_MODEL_ID: ${OPENAI_MODEL_ID:-}
-    volumes:
-      - api_uploads:/app/uploads
     depends_on:
-      agentos:
+      api:
         condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:12321/api/health')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  # Optional: Local PostgreSQL (use profile localpg)
-  postgres:
-    image: postgres:15-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-story_agent}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      NEXT_PUBLIC_API_URL: /api
+      BACKEND_API_URL: http://api:12321
+    networks:
+      - dramo-network
+
+  nginx:
+    image: nginx:alpine
     restart: unless-stopped
-    profiles:
-      - localpg
+    ports:
+      - "${PORT:-80}:80"
+    depends_on:
+      - web
+      - api
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - uploads:/var/www/uploads:ro
+    networks:
+      - dramo-network
 
 volumes:
   postgres_data:
-  api_uploads:
+  uploads:
 
 networks:
-  default:
-    name: dramo-network
+  dramo-network:
+    driver: bridge

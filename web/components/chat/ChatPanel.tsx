@@ -37,6 +37,9 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sessionTitledRef = useRef<Set<string>>(new Set());
+  // Holds the resolve/reject pair for the script-confirm Promise
+  const confirmResolveRef = useRef<(() => void) | null>(null);
+  const confirmRejectRef = useRef<(() => void) | null>(null);
   const { showToast } = useToast();
   const { currentPageType, currentJsonData } = useAIChat();
   const pipelineStatus = usePipelineStore((s) => s.pipelineStatus);
@@ -115,6 +118,22 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, doneMsg]);
+      },
+      onConfirmRequired: (_step) => {
+        return new Promise<void>((resolve, reject) => {
+          confirmResolveRef.current = resolve;
+          confirmRejectRef.current = reject;
+
+          // Inject a special confirm-script message into the chat
+          const confirmMsg: ExtendedChatMessage = {
+            id: `confirm_script_${Date.now()}`,
+            role: 'assistant',
+            content: '台本已生成！请在左侧查看并确认内容，然后点击「确认台本，继续生成」来提取角色、场景并生成分镜。',
+            messageType: 'confirm_script',
+            createdAt: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, confirmMsg]);
+        });
       },
     });
 
@@ -336,6 +355,10 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
       } finally {
         setLoading(false);
       }
+    } finally {
+      // Safety net: ensure loading is always cleared even if streaming
+      // consumed the error internally without propagating it
+      setLoading(false);
     }
   }, [input, loading, currentPageType, currentJsonData, pipelineStatus, projectId, showToast, handleClarificationComplete, sendStreamingMessage, activeSessionId, messages.length, autoTitleSession]);
 
@@ -410,6 +433,21 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
 
   const handleCustomInput = useCallback(() => {
     inputRef.current?.focus();
+  }, []);
+
+  /** Resolve the confirm-script gate so the pipeline can proceed. */
+  const handleConfirmScript = useCallback(() => {
+    confirmResolveRef.current?.();
+    confirmResolveRef.current = null;
+    confirmRejectRef.current = null;
+    // Replace the confirm message with a plain "confirmed" note
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.messageType === 'confirm_script'
+          ? { ...m, messageType: 'progress' as const, content: '已确认台本，开始提取角色与场景…' }
+          : m
+      )
+    );
   }, []);
 
   const handleReset = useCallback(async () => {
@@ -596,6 +634,7 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
                     isStreaming={isStreaming && msg.id === STREAMING_MESSAGE_ID}
                     onOptionSelect={handleOptionSelect}
                     onCustomInput={handleCustomInput}
+                    onConfirmScript={handleConfirmScript}
                   />
                 ))}
 

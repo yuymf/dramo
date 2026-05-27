@@ -257,14 +257,7 @@ class ImageGenerationService:
     ) -> str:
         """多图融合生成单图"""
         logger.info(f"merge_images: {len(image_urls)} images, {prompt[:50]}...")
-        
-        # 详细调试日志
-        logger.info(f"[DEBUG] Image URLs to merge:")
-        for idx, url in enumerate(image_urls):
-            logger.info(f"  [{idx}] {url}")
-        
-        logger.info(f"[DEBUG] Request params: size={size}, watermark={watermark}")
-        
+
         try:
             response = self.client.images.generate(
                 model=self.model,
@@ -277,46 +270,18 @@ class ImageGenerationService:
                     "sequential_image_generation": "disabled",
                 },
             )
-            
-            logger.info(f"[DEBUG] API request completed, processing response...")
-            logger.info(f"[DEBUG] Response type: {type(response)}")
-            logger.info(f"[DEBUG] Response has 'data' attr: {hasattr(response, 'data')}")
-            
-            # 检查响应数据
-            if not hasattr(response, 'data'):
-                logger.error(f"[ERROR] Response has no 'data' attribute!")
-                logger.error(f"[ERROR] Response object: {response}")
-                raise ValueError("API response missing 'data' field")
-            
-            if not response.data:
-                logger.error(f"[ERROR] Response.data is empty!")
-                logger.error(f"[ERROR] Response.data: {response.data}")
-                raise ValueError("API returned empty data")
-            
-            logger.info(f"[DEBUG] merge_images succeeded, got {len(response.data)} images")
-            
-            if len(response.data) == 0:
-                logger.error(f"[ERROR] No images in response.data!")
-                raise ValueError("API returned 0 images")
-            
-            logger.info(f"[DEBUG] First image URL: {response.data[0].url[:100]}...")
+
+            if not hasattr(response, 'data') or not response.data:
+                raise ValueError("API response missing or empty 'data' field")
+
             return response.data[0].url
-            
+
         except Exception as e:
-            # 捕获详细错误
-            logger.error(f"[ERROR] merge_images failed!")
-            logger.error(f"[ERROR] Exception type: {type(e).__name__}")
-            logger.error(f"[ERROR] Exception message: {str(e)}")
-            logger.error(f"[ERROR] Prompt: {prompt[:100]}")
-            logger.error(f"[ERROR] URLs that failed:")
-            for idx, url in enumerate(image_urls):
-                logger.error(f"  [{idx}] {url}")
-            
-            # 尝试获取更多错误信息
-            if hasattr(e, 'response'):
-                logger.error(f"[ERROR] Response status: {e.response.status_code if hasattr(e.response, 'status_code') else 'N/A'}")
-                logger.error(f"[ERROR] Response body: {e.response.text if hasattr(e.response, 'text') else 'N/A'}")
-            
+            logger.error(
+                "merge_images failed",
+                exc_info=True,
+                extra={"prompt_preview": prompt[:100]},
+            )
             raise
     
     # ========== 组图生成方法 ==========
@@ -456,13 +421,18 @@ class ImageGenerationService:
                     }
 
 
-# 全局实例
-_image_service = None
+# Thread-safe singleton with double-checked locking
+import threading as _threading
 
-def get_image_service() -> ImageGenerationService:
-    """获取图像生成服务单例"""
+_image_service: 'ImageGenerationService | None' = None
+_image_service_lock = _threading.Lock()
+
+def get_image_service() -> 'ImageGenerationService':
+    """获取图像生成服务单例（线程安全）"""
     global _image_service
     if _image_service is None:
-        _image_service = ImageGenerationService()
+        with _image_service_lock:
+            if _image_service is None:
+                _image_service = ImageGenerationService()
     return _image_service
 

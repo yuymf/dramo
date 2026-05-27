@@ -1,14 +1,14 @@
 import { Hono } from 'hono';
 import { ScriptService } from '../services/script.service';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { LLMConfigService } from '../services/llm-config.service';
 
 const scripts = new Hono<AuthEnv>();
 const scriptService = new ScriptService();
 const llmConfigService = new LLMConfigService();
 
-scripts.get('/api/projects/:projectId/script', async (c) => {
+scripts.get('/projects/:projectId/script', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');
@@ -23,7 +23,7 @@ scripts.get('/api/projects/:projectId/script', async (c) => {
 /**
  * Script generation — synchronous via AgentOS (no BullMQ).
  */
-scripts.post('/api/projects/:projectId/script', async (c) => {
+scripts.post('/projects/:projectId/script', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const body = await c.req.json();
@@ -38,7 +38,7 @@ scripts.post('/api/projects/:projectId/script', async (c) => {
   }
 });
 
-scripts.patch('/api/projects/:projectId/script/content', async (c) => {
+scripts.patch('/projects/:projectId/script/content', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const { scenes, acts } = await c.req.json();
@@ -47,7 +47,7 @@ scripts.patch('/api/projects/:projectId/script/content', async (c) => {
   return c.json(script);
 });
 
-scripts.post('/api/projects/:projectId/script/scenes/:sceneId/regenerate', async (c) => {
+scripts.post('/projects/:projectId/script/scenes/:sceneId/regenerate', async (c) => {
   const projectId = c.req.param('projectId');
   const sceneId = c.req.param('sceneId');
   const userId = c.get('user').userId;
@@ -63,7 +63,7 @@ scripts.post('/api/projects/:projectId/script/scenes/:sceneId/regenerate', async
   }
 });
 
-scripts.get('/api/projects/:projectId/script/versions', async (c) => {
+scripts.get('/projects/:projectId/script/versions', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
 
@@ -71,7 +71,7 @@ scripts.get('/api/projects/:projectId/script/versions', async (c) => {
   return c.json(versions);
 });
 
-scripts.post('/api/projects/:projectId/script/versions/:versionId/revert', async (c) => {
+scripts.post('/projects/:projectId/script/versions/:versionId/revert', async (c) => {
   const projectId = c.req.param('projectId');
   const versionId = c.req.param('versionId');
   const userId = c.get('user').userId;

@@ -4,7 +4,7 @@ import { validateBaseUrl, validateResolvedIPs } from '../lib/url-validator';
 import { sanitizeHeaderValue } from '../lib/crypto';
 import { AppException, ErrorCode } from '../lib/errors';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const llmConfigs = new Hono<AuthEnv>();
 const llmConfigService = new LLMConfigService();
@@ -34,14 +34,14 @@ function checkVerifyRateLimit(userId: string): void {
 }
 
 /** GET /api/llm-configs — list all configs for current user */
-llmConfigs.get('/api/llm-configs', async (c) => {
+llmConfigs.get('/llm-configs', async (c) => {
   const userId = c.get('user').userId;
   const result = await llmConfigService.listConfigs(userId);
   return c.json(result);
 });
 
 /** POST /api/llm-configs — create a new config */
-llmConfigs.post('/api/llm-configs', async (c) => {
+llmConfigs.post('/llm-configs', async (c) => {
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');
   const body = await c.req.json();
@@ -112,7 +112,7 @@ llmConfigs.post('/api/llm-configs', async (c) => {
 });
 
 /** PUT /api/llm-configs/:id — update a config */
-llmConfigs.put('/api/llm-configs/:id', async (c) => {
+llmConfigs.put('/llm-configs/:id', async (c) => {
   const userId = c.get('user').userId;
   const id = c.req.param('id');
   const body = await c.req.json();
@@ -155,7 +155,7 @@ llmConfigs.put('/api/llm-configs/:id', async (c) => {
 });
 
 /** DELETE /api/llm-configs/:id */
-llmConfigs.delete('/api/llm-configs/:id', async (c) => {
+llmConfigs.delete('/llm-configs/:id', async (c) => {
   const userId = c.get('user').userId;
   const id = c.req.param('id');
   await llmConfigService.deleteConfig(id, userId);
@@ -163,7 +163,7 @@ llmConfigs.delete('/api/llm-configs/:id', async (c) => {
 });
 
 /** POST /api/llm-configs/:id/set-default */
-llmConfigs.post('/api/llm-configs/:id/set-default', async (c) => {
+llmConfigs.post('/llm-configs/:id/set-default', async (c) => {
   const userId = c.get('user').userId;
   const id = c.req.param('id');
   await llmConfigService.setDefault(id, userId);
@@ -171,7 +171,7 @@ llmConfigs.post('/api/llm-configs/:id/set-default', async (c) => {
 });
 
 /** POST /api/llm-configs/verify — test if a key is valid */
-llmConfigs.post('/api/llm-configs/verify', async (c) => {
+llmConfigs.post('/llm-configs/verify', async (c) => {
   const userId = c.get('user').userId;
 
   checkVerifyRateLimit(userId);

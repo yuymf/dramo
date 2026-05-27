@@ -3,12 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { LogOut, Home } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { Home } from "lucide-react";
 
 export function ProjectsPageHeader() {
-  const { status } = useSession();
-
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 py-4">
@@ -39,21 +36,9 @@ export function ProjectsPageHeader() {
                 <span className="hidden sm:inline">首页</span>
               </Button>
             </Link>
-            {status === "authenticated" && (
-              <Button 
-                onClick={() => signOut({ callbackUrl: "/" })}
-                variant="outline" 
-                size="sm" 
-                className="gap-2 text-slate-700"
-              >
-                <LogOut size={16} />
-                <span className="hidden sm:inline">登出</span>
-              </Button>
-            )}
           </div>
         </div>
       </div>
     </header>
   );
 }
-

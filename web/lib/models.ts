@@ -256,9 +256,6 @@ export interface StoryboardResponse {
   scenes: StoryboardScene[];
 }
 
-// Billing types (re-export for convenience)
-export type { PlanId, SubscriptionStatus, BillingInterval, Subscription, Usage } from '@/lib/billing/types';
-
 // Re-export extended chat types
 export type {
   OptionCard,

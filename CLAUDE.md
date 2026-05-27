@@ -2,17 +2,13 @@
 
 ## 项目概览
 
-Dramo 是一个全栈 AI 驱动的直播台本生成工具，采用 Monorepo 架构。三层服务协作：
+Dramo 是一个全栈 AI 驱动的直播台本生成工具，采用 Monorepo 架构，单服务器一键部署。三层服务协作：
 
 1. **Web 前端** (Next.js 15, React 19, Tailwind CSS v4) — 端口 12323
 2. **Server 后端** (Hono v4, Prisma 5, PostgreSQL) — 端口 12321
 3. **AgentOS AI 服务** (FastAPI + Agno 多智能体框架) — 端口 12322
 
-> 详细文档按需查阅:
-> - [API 接口参考](docs/api-reference.md) — 全部 70+ 端点
-> - [数据库模型](docs/database-schema.md) — 17 张表、约束、关系图
-> - [架构与设计模式](docs/architecture.md) — 数据流、SSE、异步任务、AgentOS 工作流
-> - [环境变量与部署](docs/env-and-deploy.md) — 环境配置、3 种部署方案、运维
+> **部署模式**: 纯工具型单用户应用，无登录/无计费，`docker compose up -d` 一键启动。
 
 ## 目录结构
 
@@ -35,8 +31,8 @@ dramo/
 │   ├── services/           #   图片生成 (Seedream/ARK)
 │   └── prompts/            #   Markdown 提示词模板
 ├── deploy/                 # 部署脚本 (setup, update, logs, nginx)
-├── docker-compose.yml      # 多服务编排
-└── switch-env.sh           # 环境切换 (debug/prod)
+├── docker-compose.yml      # 5 容器编排 (postgres, api, agentos, web, nginx)
+└── .env.example            # 环境变量模板
 ```
 
 ## 技术栈
@@ -44,20 +40,34 @@ dramo/
 | 层级 | 技术 |
 |------|------|
 | **前端** | Next.js 15, React 19, TypeScript strict, Tailwind CSS v4, Radix/shadcn, TipTap, @dnd-kit, @xyflow/react |
-| **后端** | Hono v4, Prisma 5, PostgreSQL (Supabase), pino, JWT, AES-256-GCM |
+| **后端** | Hono v4, Prisma 5, PostgreSQL (本地), pino, AES-256-GCM |
 | **AI** | FastAPI + Agno, OpenAI / Hunyuan / ARK, Seedream / Doubao |
-| **基建** | Docker, Nginx, Stripe, Playwright, NextAuth v4 |
+| **基建** | Docker Compose, Nginx, Playwright |
 
 ## 开发
 
 ```bash
 npm install                # 安装所有依赖
-./switch-env.sh debug      # 切换到本地开发环境
 npm run dev                # 一键启动 web + server + agentos
 
 npm run dev:web            # 仅前端 (:12323)
 npm run dev:server         # 仅后端 (:12321)
 npm run dev:agentos        # 仅 AgentOS (:12322)
+```
+
+## 部署（一键）
+
+```bash
+git clone <repo-url> && cd dramo
+./deploy/setup-dramo.sh    # 自动安装 Docker、生成密钥、启动所有服务
+# 访问 http://localhost
+```
+
+或手动：
+```bash
+cp .env.example .env
+# 编辑 .env 填入 ENCRYPTION_KEY (openssl rand -hex 32)
+docker compose up -d --build
 ```
 
 ## 代码规范
@@ -80,13 +90,14 @@ npm run prisma:studio     # 打开数据库浏览器
 
 核心模型: `User` → `Project` → `Script`/`CharacterAsset`/`LocationAsset`/`Storyboard`/`ChatMessage`/`GenerationJob`
 
+> 认证已移除。后端使用默认用户中间件，所有请求自动关联 `default-local-user`。
+
 ## API 概览
 
 完整接口: [API 接口参考](docs/api-reference.md)
 
 | 模块 | 端点数 | 关键能力 |
 |------|--------|---------|
-| 认证 | 3 | 注册、登录 (JWT) |
 | 项目 | 5 | CRUD |
 | 台本 | 6 | 生成、编辑、版本、回退 |
 | 角色 | 7+5 | 提取 (SSE)、资产 CRUD、关系图 |
@@ -95,7 +106,6 @@ npm run prisma:studio     # 打开数据库浏览器
 | 对话 | 3 | 消息、AI 流式回复 |
 | 图片/任务 | 6 | 生成队列、SSE 轮询、重试 |
 | LLM 配置 | 5 | CRUD、加密存储 |
-| 计费 | 5 | Stripe 订阅 |
 
 **关键模式**: 统一错误信封 `{error: {code, message, retryable}, requestId}` · SSE 55s 超时 + 心跳 + 自动重连 · 异步任务 (202 + taskId + 轮询)
 
@@ -108,19 +118,23 @@ npm run prisma:studio     # 打开数据库浏览器
 - **AgentOS 工作流**: 分镜 (4 阶段并行)、台本生成、角色/场景提取、润色
 - **图片生成**: 智能模式选择 (text_to_image / image_to_image / merge 等)
 
-## 部署
-
-详见 [环境变量与部署](docs/env-and-deploy.md)
+## 部署详情
 
 ```bash
-# 本地 Docker
-docker compose up -d
-docker compose --profile localpg up -d      # 含本地 PostgreSQL
+# 一键部署 (VPS 或本地)
+./deploy/setup-dramo.sh
 
-# 环境切换
-./switch-env.sh debug   # 开发
-./switch-env.sh prod    # 生产
+# 手动 Docker
+cp .env.example .env && docker compose up -d --build
+
+# 查看日志
+./deploy/logs.sh [service] [-f]
+
+# 更新
+./deploy/update.sh
 ```
+
+环境变量参考: `.env.example`
 
 ## 测试
 
@@ -132,12 +146,14 @@ cd agentos && python -m pytest    # Python 测试
 
 ## 注意事项
 
-- 环境变量在根目录 `.env.debug` / `.env.production` 统一管理，由 `switch-env.sh` 分发
-- `server/.env` 供后端和 AgentOS 使用; `web/.env.local` 供前端使用
+- 环境变量通过根目录 `.env` 管理（参考 `.env.example`）
+- `server/.env` 由开发时手动创建；生产环境通过 Docker Compose environment 注入
 - AgentOS 的 `env_loader.py` 从 `../server/.env` 读取环境变量
 - Node.js 20+ 必需
+- 无需外部数据库 — 本地 PostgreSQL 容器自动启动
+- 存储使用本地文件系统 (`/app/uploads` volume)
+- 无认证 — 默认用户自动注入，所有接口无需 token
 
 ## 测试账号
 
-- 邮箱: `demo@example.com`
-- 密码: `demo123456`
+本地工具模式，无需登录。默认用户 `local@dramo.tool` 自动使用。

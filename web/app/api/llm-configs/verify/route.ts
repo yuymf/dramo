@@ -1,6 +1,3 @@
-import { NextRequest } from 'next/server';
-import { proxyRequest } from '@/app/api/_utils/proxy';
+import { createProxyRoute } from '../../_utils/route-factory';
 
-export async function POST(request: NextRequest) {
-  return proxyRequest(request, '/api/llm-configs/verify', { requireAuth: true });
-}
+export const { POST } = createProxyRoute('/api/v1/llm-configs/verify', ['POST']);

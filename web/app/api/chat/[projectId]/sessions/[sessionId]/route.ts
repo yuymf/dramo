@@ -12,7 +12,7 @@ export async function PATCH(
   const error = validateRouteParam(projectId, 'projectId') || validateRouteParam(sessionId, 'sessionId');
   if (error) return error;
 
-  return proxyRequest(request, `/api/chat/${projectId}/sessions/${sessionId}`, {
+  return proxyRequest(request, `/api/v1/chat/${projectId}/sessions/${sessionId}`, {
     requireAuth: true,
     method: 'PATCH',
   });
@@ -26,7 +26,7 @@ export async function DELETE(
   const error = validateRouteParam(projectId, 'projectId') || validateRouteParam(sessionId, 'sessionId');
   if (error) return error;
 
-  return proxyRequest(request, `/api/chat/${projectId}/sessions/${sessionId}`, {
+  return proxyRequest(request, `/api/v1/chat/${projectId}/sessions/${sessionId}`, {
     requireAuth: true,
     method: 'DELETE',
   });

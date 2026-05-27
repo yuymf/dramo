@@ -84,7 +84,7 @@ export async function startWorkflowRun(
     const duration = Date.now() - startTime;
 
     if (err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
-      logger.error({ duration, url }, 'AgentOS workflow timeout');
+      logger.error({ duration, url, timeoutMs }, 'AgentOS workflow timeout');
       throw new Error('AGENTOS_TIMEOUT');
     }
 

@@ -1,14 +1,8 @@
-import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { LLMConfigManager } from '@/components/settings/LLMConfigManager';
 import { Settings, Sparkles } from 'lucide-react';
 
-export default async function SettingsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect('/login');
-
+export default function SettingsPage() {
   return (
     <div className="flex min-h-screen rice-paper-bg">
       <AppSidebar />

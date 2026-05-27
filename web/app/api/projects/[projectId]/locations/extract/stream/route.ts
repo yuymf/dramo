@@ -1,13 +1,7 @@
-import { NextRequest } from "next/server";
-import { proxyRequest } from "@/app/api/_utils/proxy";
+import { createProxyRoute } from '../../../../../_utils/route-factory';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
-) {
-  const { projectId } = await params;
-  return proxyRequest(request, `/api/projects/${projectId}/locations/extract/stream`, {
-    requireAuth: true,
-    appendQuery: true,
-  });
-}
+export const { GET } = createProxyRoute(
+  '/api/v1/projects/:projectId/locations/extract/stream',
+  ['GET'],
+  { appendQuery: true }
+);

@@ -2,12 +2,12 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { GenerationJobService } from '../services/generation-job.service';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const generationJobs = new Hono<AuthEnv>();
 const jobService = new GenerationJobService();
 
-generationJobs.post('/api/images/generations', async (c) => {
+generationJobs.post('/images/generations', async (c) => {
   const userId = c.get('user').userId;
   const body = await c.req.json();
 
@@ -30,7 +30,7 @@ generationJobs.post('/api/images/generations', async (c) => {
   }
 });
 
-generationJobs.get('/api/jobs', async (c) => {
+generationJobs.get('/jobs', async (c) => {
   const userId = c.get('user').userId;
   const query = c.req.query();
 
@@ -57,7 +57,7 @@ generationJobs.get('/api/jobs', async (c) => {
  * SSE endpoint for real-time job updates.
  * Polls DB for status changes since serverless can't hold EventEmitter state.
  */
-generationJobs.get('/api/jobs/stream', async (c) => {
+generationJobs.get('/jobs/stream', async (c) => {
   const userId = c.get('user')?.userId;
 
   if (!userId) {
@@ -123,7 +123,7 @@ generationJobs.get('/api/jobs/stream', async (c) => {
   });
 });
 
-generationJobs.get('/api/jobs/:id', async (c) => {
+generationJobs.get('/jobs/:id', async (c) => {
   const userId = c.get('user').userId;
   const id = c.req.param('id');
 
@@ -139,7 +139,7 @@ generationJobs.get('/api/jobs/:id', async (c) => {
   }
 });
 
-generationJobs.post('/api/jobs/:id/cancel', async (c) => {
+generationJobs.post('/jobs/:id/cancel', async (c) => {
   const userId = c.get('user').userId;
   const id = c.req.param('id');
 
@@ -154,7 +154,7 @@ generationJobs.post('/api/jobs/:id/cancel', async (c) => {
   }
 });
 
-generationJobs.post('/api/jobs/:id/retry', async (c) => {
+generationJobs.post('/jobs/:id/retry', async (c) => {
   const userId = c.get('user').userId;
   const id = c.req.param('id');
 

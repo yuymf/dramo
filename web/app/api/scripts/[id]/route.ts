@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureContract } from '../../_utils/openapi-guard';
 
 export async function GET(request: Request) {
-  ensureContract('/api/scripts/{id}', 'GET');
+  ensureContract('/api/v1/scripts/{id}', 'GET');
   const url = new URL(request.url);
   const id = url.pathname.split('/').pop() || 'script_mock';
   const now = new Date().toISOString();

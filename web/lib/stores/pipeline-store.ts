@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { PipelineTask, PipelineStep, PipelineTaskStatus, StructuredRequirements } from '@/lib/types/chat';
 
-type PipelineStatus = 'idle' | 'clarifying' | 'running' | 'paused' | 'done';
+type PipelineStatus = 'idle' | 'clarifying' | 'running' | 'waiting_confirm' | 'paused' | 'done';
 
 interface PipelineState {
   tasks: PipelineTask[];

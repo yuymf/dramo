@@ -7,7 +7,7 @@ import { logger } from './logger';
  * In serverless (Vercel), each cold start creates a new client.
  * We use a global reference to reuse across warm invocations.
  *
- * Important: Use Supabase connection pooler (port 6543) in production
+ * Important: Use a connection pooler (e.g. PgBouncer) in production
  * to avoid exhausting direct connections.
  */
 const globalForPrisma = globalThis as unknown as {

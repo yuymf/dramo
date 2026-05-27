@@ -1,8 +1,3 @@
-import { NextRequest } from "next/server";
-import { proxyRequest } from "@/app/api/_utils/proxy";
+import { createProxyRoute } from '../../_utils/route-factory';
 
-export async function GET(request: NextRequest) {
-  return proxyRequest(request, "/api/ai/providers", {
-    requireAuth: true,
-  });
-}
+export const { GET } = createProxyRoute('/api/v1/ai/providers', ['GET']);

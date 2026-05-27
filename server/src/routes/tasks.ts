@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { TaskService } from '../services/task.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const tasks = new Hono<AuthEnv>();
 const taskService = new TaskService();
 
-tasks.get('/api/tasks/:taskId', async (c) => {
+tasks.get('/tasks/:taskId', async (c) => {
   const taskId = c.req.param('taskId');
   const userId = c.get('user').userId;
 

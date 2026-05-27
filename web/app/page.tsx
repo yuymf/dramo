@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 import { FeatureCard } from "@/components/landing/FeatureCard";
@@ -9,15 +8,9 @@ import { ArrowRight, Sparkles, PenTool, Clapperboard } from "lucide-react";
 
 export default function LandingPage() {
   const router = useRouter();
-  const { status } = useSession();
 
   const handleGetStarted = () => {
-    const redirectUrl = "/projects";
-    if (status === "authenticated") {
-      router.push(redirectUrl);
-    } else {
-      router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
-    }
+    router.push("/projects");
   };
 
   return (

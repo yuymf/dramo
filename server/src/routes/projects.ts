@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { ProjectService } from '../services/project.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 
 const projects = new Hono<AuthEnv>();
 const projectService = new ProjectService();
 
-projects.get('/api/projects', async (c) => {
+projects.get('/projects', async (c) => {
   const { page = '1', limit = '20', search } = c.req.query();
   const userId = c.get('user').userId;
 
@@ -16,7 +16,7 @@ projects.get('/api/projects', async (c) => {
   return c.json(result);
 });
 
-projects.post('/api/projects', async (c) => {
+projects.post('/projects', async (c) => {
   const { name, description } = await c.req.json();
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');
@@ -29,7 +29,7 @@ projects.post('/api/projects', async (c) => {
   return c.json(project, 201);
 });
 
-projects.get('/api/projects/:id', async (c) => {
+projects.get('/projects/:id', async (c) => {
   const id = c.req.param('id');
   const userId = c.get('user').userId;
 
@@ -37,7 +37,7 @@ projects.get('/api/projects/:id', async (c) => {
   return c.json(project);
 });
 
-projects.put('/api/projects/:id', async (c) => {
+projects.put('/projects/:id', async (c) => {
   const id = c.req.param('id');
   const { name, description } = await c.req.json();
   const userId = c.get('user').userId;
@@ -46,7 +46,7 @@ projects.put('/api/projects/:id', async (c) => {
   return c.json(project);
 });
 
-projects.patch('/api/projects/:id', async (c) => {
+projects.patch('/projects/:id', async (c) => {
   const id = c.req.param('id');
   const { name, description } = await c.req.json();
   const userId = c.get('user').userId;
@@ -55,7 +55,7 @@ projects.patch('/api/projects/:id', async (c) => {
   return c.json(project);
 });
 
-projects.delete('/api/projects/:id', async (c) => {
+projects.delete('/projects/:id', async (c) => {
   const id = c.req.param('id');
   const userId = c.get('user').userId;
 

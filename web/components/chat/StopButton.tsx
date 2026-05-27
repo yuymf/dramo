@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 export function StopButton() {
   const { pipelineStatus, abortController } = usePipelineStore();
-  const isRunning = pipelineStatus === 'running' || pipelineStatus === 'clarifying';
+  const isRunning = pipelineStatus === 'running';
 
   if (!isRunning) return null;
 

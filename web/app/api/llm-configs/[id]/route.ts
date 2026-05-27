@@ -8,7 +8,7 @@ export async function PUT(
   const { id } = await params;
   const invalid = validateRouteParam(id, 'id');
   if (invalid) return invalid;
-  return proxyRequest(request, `/api/llm-configs/${id}`, { requireAuth: true });
+  return proxyRequest(request, `/api/v1/llm-configs/${id}`, { requireAuth: true });
 }
 
 export async function DELETE(
@@ -18,5 +18,5 @@ export async function DELETE(
   const { id } = await params;
   const invalid = validateRouteParam(id, 'id');
   if (invalid) return invalid;
-  return proxyRequest(request, `/api/llm-configs/${id}`, { requireAuth: true });
+  return proxyRequest(request, `/api/v1/llm-configs/${id}`, { requireAuth: true });
 }

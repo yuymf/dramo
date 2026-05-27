@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { InspirationService } from '../services/inspiration.service';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { LLMConfigService } from '../services/llm-config.service';
 
 const inspirations = new Hono<AuthEnv>();
 const inspirationService = new InspirationService();
 const llmConfigService = new LLMConfigService();
 
-inspirations.get('/api/inspirations/:projectId', async (c) => {
+inspirations.get('/inspirations/:projectId', async (c) => {
   const projectId = c.req.param('projectId');
   const category = c.req.query('category');
   const userId = c.get('user').userId;
@@ -15,7 +15,7 @@ inspirations.get('/api/inspirations/:projectId', async (c) => {
   return c.json(await inspirationService.getInspirations(projectId, userId, category));
 });
 
-inspirations.post('/api/inspirations/:projectId/recommend', async (c) => {
+inspirations.post('/inspirations/:projectId/recommend', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const body = await c.req.json();
@@ -28,7 +28,7 @@ inspirations.post('/api/inspirations/:projectId/recommend', async (c) => {
   }, llmHeaders));
 });
 
-inspirations.post('/api/inspirations/favorite', async (c) => {
+inspirations.post('/inspirations/favorite', async (c) => {
   const { inspirationId } = await c.req.json();
   const userId = c.get('user').userId;
   const requestId = c.get('requestId');
@@ -40,7 +40,7 @@ inspirations.post('/api/inspirations/favorite', async (c) => {
   return c.json(await inspirationService.toggleFavorite(inspirationId, userId));
 });
 
-inspirations.get('/api/inspirations/favorites', async (c) => {
+inspirations.get('/inspirations/favorites', async (c) => {
   const userId = c.get('user').userId;
   return c.json(await inspirationService.getFavorites(userId));
 });

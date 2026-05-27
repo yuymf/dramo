@@ -12,7 +12,7 @@ export async function POST(
   const error = validateRouteParam(projectId, 'projectId');
   if (error) return error;
 
-  return proxyRequest(request, `/api/chat/${projectId}/messages`, {
+  return proxyRequest(request, `/api/v1/chat/${projectId}/messages`, {
     requireAuth: true,
     method: 'POST',
     timeoutMs: 120000, // 2 minutes for streaming

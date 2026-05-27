@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import type { AuthEnv } from '../middleware/auth';
+import type { AuthEnv } from '../middleware/default-user';
 import { config } from '../config';
 import { checkAgentOSHealth } from '../lib/agentos-client';
 
 const health = new Hono<AuthEnv>();
 
-health.get('/api/health', async (c) => {
+health.get('/health', async (c) => {
   return c.json({
     ok: true,
     version: config.version,
@@ -13,7 +13,7 @@ health.get('/api/health', async (c) => {
   });
 });
 
-health.get('/api/health/deep', async (c) => {
+health.get('/health/deep', async (c) => {
   const agentosOk = await checkAgentOSHealth();
 
   return c.json({

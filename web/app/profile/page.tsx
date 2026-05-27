@@ -1,23 +1,14 @@
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth/options";
 import { AppSidebar } from "@/components/layout/AppSidebar";
-import { Mail, User, Calendar, BookOpen, Pen, LogOut } from "lucide-react";
+import { Mail, User, Calendar, BookOpen, Pen } from "lucide-react";
 
 export const metadata = {
   title: "个人资料 - DRAMO",
   description: "用户个人资料页面",
 };
 
-export default async function ProfilePage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    redirect("/login?redirect=/profile");
-  }
-
-  const userName = session.user?.name || "创作者";
-  const userEmail = session.user?.email || "未设置";
+export default function ProfilePage() {
+  const userName = "创作者";
+  const userEmail = "未设置";
   const initial = userName.charAt(0).toUpperCase();
 
   return (
@@ -236,18 +227,6 @@ export default async function ProfilePage() {
             </div>
           </div>
 
-          {/* Logout */}
-          <div className="ink-reveal ink-reveal-4">
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a
-              href="/api/auth/signout"
-              className="inline-flex items-center gap-2 text-sm ink-ui transition-colors hover:text-[var(--persimmon)]"
-              style={{ color: "var(--ink-light)" }}
-            >
-              <LogOut className="w-4 h-4" strokeWidth={1.5} />
-              退出登录
-            </a>
-          </div>
         </div>
       </main>
     </div>

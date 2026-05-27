@@ -16,9 +16,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects     Project[]
-  subscription Subscription?
-  llmConfigs   UserLLMConfig[]
+  projects    Project[]
+  llmConfigs  UserLLMConfig[]
 }
 
 enum LLMConfigType {
@@ -55,6 +54,7 @@ model Project {
   user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   scripts            Script[]
   characterRelations CharacterRelation[]
+  storyboard         Storyboard?
 
   @@index([userId])
   @@index([createdAt])
@@ -78,8 +78,9 @@ model Script {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  project  Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  versions ScriptVersion[]
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions     ScriptVersion[]
+  scriptScenes ScriptScene[]
 
   @@index([projectId])
   @@index([status])
@@ -99,6 +100,22 @@ model ScriptVersion {
 
   @@unique([scriptId, version])
   @@index([scriptId, createdAt])
+}
+
+model ScriptScene {
+  id            String   @id @default(cuid())
+  scriptId      String
+  script        Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  actIndex      Int
+  order         Int
+  title         String?
+  content       String   @db.Text
+  parentSceneId String?  // self-ref FK deferred to P1; enforced at app layer  // self-ref FK deferred to P1; enforced at app layer
+  branchLabel   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([scriptId, actIndex, order])
 }
 
 model Task {
@@ -178,29 +195,6 @@ model PipelineRun {
   @@index([projectId])
 }
 
-model Character3ViewAsset {
-  id            String   @id @default(cuid())
-  projectId     String
-  characterName String
-  front         String
-  side          String
-  back          String
-  createdAt     DateTime @default(now())
-
-  @@index([projectId])
-}
-
-model LocationImageAsset {
-  id           String   @id @default(cuid())
-  projectId    String
-  locationName String
-  image        String
-  createdAt    DateTime @default(now())
-
-  @@index([projectId])
-}
-
-// V2 multi-image assets
 model CharacterAsset {
   id          String   @id @default(cuid())
   projectId   String
@@ -268,7 +262,26 @@ model Storyboard {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  project Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  shots   StoryboardShot[]
+
   @@index([projectId])
+}
+
+model StoryboardShot {
+  id           String     @id @default(cuid())
+  storyboardId String
+  storyboard   Storyboard @relation(fields: [storyboardId], references: [id], onDelete: Cascade)
+  order        Int
+  imageUrl     String?
+  dialogue     String?  @db.Text
+  action       String?  @db.Text
+  cameraAngle  String?
+  generatedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([storyboardId, order])
 }
 
 // Image generation job queue
@@ -293,24 +306,4 @@ model GenerationJob {
   @@index([projectId])
 }
 
-// Stripe subscription billing
-model Subscription {
-  id                   String    @id @default(cuid())
-  userId               String    @unique
-  stripeCustomerId     String    @unique
-  stripeSubscriptionId String?   @unique
-  planId               String    @default("free")
-  status               String    @default("active")
-  billingInterval      String?
-  currentPeriodStart   DateTime?
-  currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean   @default(false)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([stripeCustomerId])
-  @@index([stripeSubscriptionId])
-}
 
