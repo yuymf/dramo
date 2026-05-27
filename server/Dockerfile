@@ -6,11 +6,11 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json ./
 COPY tsconfig.json ./
 
 # Install dependencies
-RUN npm ci --only=production=false
+RUN npm install
 
 # Copy source code
 COPY src ./src
@@ -31,8 +31,8 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 # Install production dependencies only
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+COPY package.json ./
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy Prisma schema and generate client
 COPY src/db/schema.prisma ./src/db/schema.prisma
