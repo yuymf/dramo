@@ -6,7 +6,6 @@ type RouteContext = { params: Promise<Record<string, string>> };
 type RouteHandler = (req: NextRequest, ctx: RouteContext) => Promise<Response>;
 
 interface ProxyRouteOptions {
-  requireAuth?: boolean;
   appendQuery?: boolean;
   timeoutMs?: number;
 }
@@ -43,17 +42,12 @@ function interpolatePath(
  *
  * @param backendPath  Backend path template, e.g. '/api/v1/projects/:projectId'
  * @param methods      HTTP methods to expose, e.g. ['GET', 'PATCH']
- * @param options      Optional ProxyOptions overrides (defaults: requireAuth=true)
+ * @param options      Optional proxy overrides (appendQuery, timeoutMs)
  *
  * @example
  * // app/api/projects/[projectId]/route.ts
  * import { createProxyRoute } from '../../_utils/route-factory';
  * export const { GET, PATCH } = createProxyRoute('/api/v1/projects/:projectId', ['GET', 'PATCH']);
- *
- * @example
- * // app/api/auth/register/route.ts  (no auth required)
- * import { createProxyRoute } from '../_utils/route-factory';
- * export const { POST } = createProxyRoute('/api/v1/auth/register', ['POST'], { requireAuth: false });
  */
 export function createProxyRoute(
   backendPath: string,

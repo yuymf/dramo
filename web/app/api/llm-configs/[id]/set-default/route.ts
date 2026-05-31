@@ -8,5 +8,5 @@ export async function POST(
   const { id } = await params;
   const invalid = validateRouteParam(id, 'id');
   if (invalid) return invalid;
-  return proxyRequest(request, `/api/v1/llm-configs/${id}/set-default`, { requireAuth: true });
+  return proxyRequest(request, `/api/v1/llm-configs/${id}/set-default`);
 }

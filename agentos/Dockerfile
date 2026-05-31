@@ -19,9 +19,9 @@ COPY tests/ ./tests/
 # Expose port
 EXPOSE 12322
 
-# Health check
+# Health check — matches /health route in app.py (also reachable via /api/health)
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=10s \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:12322/api/health')"
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:12322/health')"
 
 # Run with uvicorn directly (bypasses __main__ block which has reload=True)
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "12322"]

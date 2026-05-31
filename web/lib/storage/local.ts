@@ -32,19 +32,15 @@ export function remove(k: string) {
   } catch {}
 }
 
-// REMOVED: als:favorites:* — now stored in DB
-// export const FAVORITES_KEY = 'inspirations_favorites';
-// export function addFavorite(...) { ... }
-// export function removeFavorite(...) { ... }
-// export function getFavorites() { ... }
-
-// Shims retained for backward compatibility with existing call sites — no-ops
+// Legacy favorites API — kept as no-op shims for backward compatibility.
+// Favorites now live in the DB (`Inspiration.isFavorite`).
 export const FAVORITES_KEY = 'inspirations_favorites'; // deprecated
-export function addFavorite(_inspirationId: string, _text: string, _category: string) { /* REMOVED: now stored in DB */ }
-export function removeFavorite(_inspirationId: string) { /* REMOVED: now stored in DB */ }
-export function getFavorites(): Array<{ id: string; text: string; category: string; favoritedAt: string }> { return []; /* REMOVED: now stored in DB */ }
+export function addFavorite(_inspirationId: string, _text: string, _category: string) { /* moved to DB */ }
+export function removeFavorite(_inspirationId: string) { /* moved to DB */ }
+export function getFavorites(): Array<{ id: string; text: string; category: string; favoritedAt: string }> { return []; }
 
-// REMOVED: als:versions:* — now stored in DB
+// Legacy script versions API — kept as no-op shims for backward compatibility.
+// Versions now live in the DB (`ScriptVersion`).
 export const VERSIONS_KEY_PREFIX = 'script_versions_'; // deprecated
 
 export interface ScriptVersion {
@@ -56,17 +52,16 @@ export interface ScriptVersion {
   snapshot: unknown; // Full script snapshot
 }
 
-// Shims retained for backward compatibility with existing call sites — no-ops
+// Shims retained for backward compatibility — no-ops (now in DB)
 export function saveVersion(_scriptId: string, _snapshot: unknown, _description?: string): ScriptVersion {
-  /* REMOVED: now stored in DB */
   return { id: `v_noop_${Date.now()}`, scriptId: _scriptId, versionNumber: 0, createdAt: new Date().toISOString(), snapshot: _snapshot };
 }
 
-export function getVersions(_scriptId: string): ScriptVersion[] { return []; /* REMOVED: now stored in DB */ }
+export function getVersions(_scriptId: string): ScriptVersion[] { return []; }
 
-export function deleteVersion(_scriptId: string, _versionId: string) { /* REMOVED: now stored in DB */ }
+export function deleteVersion(_scriptId: string, _versionId: string) { /* moved to DB */ }
 
-// REMOVED: als:characterAssets:* + als:locationAssets:* — now stored in DB
+// Legacy character/location asset keys — kept as no-op shims; data is now in DB.
 export const CHARACTER_ASSETS_KEY_PREFIX = 'character_assets_'; // deprecated
 export const LOCATION_ASSETS_KEY_PREFIX = 'location_assets_'; // deprecated
 export const GENERATED_ASSETS_KEY_PREFIX = 'generated_assets_';
@@ -104,19 +99,19 @@ export interface LocationImageAssetLocal {
   createdAt: string;
 }
 
-// Shims retained for backward compatibility — no-ops (REMOVED: now stored in DB)
+// Shims retained for backward compatibility — no-ops (now in DB)
 export function getProjectCharacterAssets(_projectId: string): CharacterImageAssetLocal[] { return []; }
-export function setProjectCharacterAssets(_projectId: string, _assets: CharacterImageAssetLocal[]) { /* REMOVED: now stored in DB */ }
-export function addProjectCharacterAsset(_projectId: string, _asset: CharacterImageAssetLocal) { /* REMOVED: now stored in DB */ }
-export function deleteProjectCharacterAsset(_projectId: string, _assetId: string) { /* REMOVED: now stored in DB */ }
-export function updateProjectCharacterAsset(_projectId: string, _asset: CharacterImageAssetLocal) { /* REMOVED: now stored in DB */ }
+export function setProjectCharacterAssets(_projectId: string, _assets: CharacterImageAssetLocal[]) { /* moved to DB */ }
+export function addProjectCharacterAsset(_projectId: string, _asset: CharacterImageAssetLocal) { /* moved to DB */ }
+export function deleteProjectCharacterAsset(_projectId: string, _assetId: string) { /* moved to DB */ }
+export function updateProjectCharacterAsset(_projectId: string, _asset: CharacterImageAssetLocal) { /* moved to DB */ }
 
-// Shims retained for backward compatibility — no-ops (REMOVED: now stored in DB)
+// Shims retained for backward compatibility — no-ops (now in DB)
 export function getProjectLocationAssets(_projectId: string): LocationImageAssetLocal[] { return []; }
-export function setProjectLocationAssets(_projectId: string, _assets: LocationImageAssetLocal[]) { /* REMOVED: now stored in DB */ }
-export function addProjectLocationAsset(_projectId: string, _asset: LocationImageAssetLocal) { /* REMOVED: now stored in DB */ }
-export function deleteProjectLocationAsset(_projectId: string, _assetId: string) { /* REMOVED: now stored in DB */ }
-export function updateProjectLocationAsset(_projectId: string, _asset: LocationImageAssetLocal) { /* REMOVED: now stored in DB */ }
+export function setProjectLocationAssets(_projectId: string, _assets: LocationImageAssetLocal[]) { /* moved to DB */ }
+export function addProjectLocationAsset(_projectId: string, _asset: LocationImageAssetLocal) { /* moved to DB */ }
+export function deleteProjectLocationAsset(_projectId: string, _assetId: string) { /* moved to DB */ }
+export function updateProjectLocationAsset(_projectId: string, _asset: LocationImageAssetLocal) { /* moved to DB */ }
 
 // Generated assets management (for storyboard generation results)
 export interface GeneratedAssetLocal {

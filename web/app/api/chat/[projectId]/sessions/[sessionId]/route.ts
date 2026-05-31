@@ -13,7 +13,6 @@ export async function PATCH(
   if (error) return error;
 
   return proxyRequest(request, `/api/v1/chat/${projectId}/sessions/${sessionId}`, {
-    requireAuth: true,
     method: 'PATCH',
   });
 }
@@ -27,7 +26,6 @@ export async function DELETE(
   if (error) return error;
 
   return proxyRequest(request, `/api/v1/chat/${projectId}/sessions/${sessionId}`, {
-    requireAuth: true,
     method: 'DELETE',
   });
 }

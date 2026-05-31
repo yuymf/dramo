@@ -242,7 +242,7 @@ async function executeSSEStep(
   signal: AbortSignal,
   onChunk: (data: unknown) => void
 ): Promise<Record<string, unknown> | null> {
-  // Relative path routes through Next.js API proxy, which injects Bearer token.
+  // Relative path routes through Next.js API Route, which proxies to the Hono backend.
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

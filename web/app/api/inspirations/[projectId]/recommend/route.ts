@@ -13,7 +13,5 @@ export async function POST(
   const error = validateRouteParam(projectId, "projectId");
   if (error) return error;
 
-  return proxyRequest(request, `/api/v1/inspirations/${projectId}/recommend`, {
-    requireAuth: true,
-  });
+  return proxyRequest(request, `/api/v1/inspirations/${projectId}/recommend`);
 }

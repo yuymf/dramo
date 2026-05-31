@@ -9,7 +9,5 @@ export async function GET(
   const error = validateRouteParam(jobId, "jobId");
   if (error) return error;
 
-  return proxyRequest(request, `/api/v1/jobs/${jobId}`, {
-    requireAuth: true,
-  });
+  return proxyRequest(request, `/api/v1/jobs/${jobId}`);
 }

@@ -12,9 +12,7 @@ export async function GET(
   const error = validateRouteParam(projectId, 'projectId');
   if (error) return error;
 
-  return proxyRequest(request, `/api/v1/chat/${projectId}/sessions`, {
-    requireAuth: true,
-  });
+  return proxyRequest(request, `/api/v1/chat/${projectId}/sessions`);
 }
 
 export async function POST(
@@ -26,7 +24,6 @@ export async function POST(
   if (error) return error;
 
   return proxyRequest(request, `/api/v1/chat/${projectId}/sessions`, {
-    requireAuth: true,
     method: 'POST',
   });
 }

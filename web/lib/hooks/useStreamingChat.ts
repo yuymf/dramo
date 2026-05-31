@@ -143,7 +143,7 @@ export function useStreamingChat({
         };
 
         const response = await fetch(
-          `${STREAM_API_PATH}/${projectId}/messages/stream`,
+          `${STREAM_API_PATH}/${projectId}/messages`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

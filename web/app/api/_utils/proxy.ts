@@ -52,7 +52,6 @@ function resolveBackendUrl(targetPath: string, request: Request, appendIncomingQ
 }
 
 interface ProxyOptions {
-  requireAuth?: boolean;
   method?: string;
   headers?: Record<string, string>;
   cache?: RequestCache;

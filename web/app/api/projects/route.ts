@@ -4,14 +4,10 @@ import { proxyRequest } from "@/app/api/_utils/proxy";
 
 export async function GET(request: NextRequest) {
   ensureContract("/api/v1/projects", "GET");
-  return proxyRequest(request, "/api/v1/projects", {
-    requireAuth: true,
-  });
+  return proxyRequest(request, "/api/v1/projects");
 }
 
 export async function POST(request: NextRequest) {
   ensureContract("/api/v1/projects", "POST");
-  return proxyRequest(request, "/api/v1/projects", {
-    requireAuth: true,
-  });
+  return proxyRequest(request, "/api/v1/projects");
 }

@@ -31,14 +31,13 @@ app.use('*', cors({
   origin: '*',
 }));
 
-// --- Legacy /api/* → /api/v1/* redirect (301 permanent) ---
+// --- Legacy /api/* → /api/v1/* redirect (308 preserves HTTP method) ---
 app.use('/api/*', async (c, next) => {
   const path = new URL(c.req.url).pathname;
   if (!path.startsWith('/api/v1')) {
     const newPath = path.replace(/^\/api\//, '/api/v1/');
-    const newUrl = new URL(c.req.url);
-    newUrl.pathname = newPath;
-    return c.redirect(newUrl.toString(), 301);
+    const search = new URL(c.req.url).search;
+    return c.redirect(`${newPath}${search}`, 308);
   }
   return next();
 });

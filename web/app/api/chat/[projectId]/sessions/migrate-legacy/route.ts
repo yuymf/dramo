@@ -13,7 +13,6 @@ export async function POST(
   if (error) return error;
 
   return proxyRequest(request, `/api/v1/chat/${projectId}/sessions/migrate-legacy`, {
-    requireAuth: true,
     method: 'POST',
   });
 }

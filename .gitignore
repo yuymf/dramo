@@ -42,7 +42,14 @@ yarn-error.log*
 .specify/
 .playwright-mcp/
 .gstack/
-docs/superpowers/
+**/docs/superpowers/
+
+# Planning-with-files temporary artifacts (per-module scratch files)
+**/findings.md
+**/progress.md
+**/task_plan.md
+**/START_HERE.md
+**/QUICKSTART.md
 
 # OS
 .DS_Store

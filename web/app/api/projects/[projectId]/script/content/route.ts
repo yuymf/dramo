@@ -13,7 +13,5 @@ export async function PATCH(
   const error = validateRouteParam(projectId, "projectId");
   if (error) return error;
 
-  return proxyRequest(request, `/api/v1/projects/${projectId}/script/content`, {
-    requireAuth: true,
-  });
+  return proxyRequest(request, `/api/v1/projects/${projectId}/script/content`);
 }

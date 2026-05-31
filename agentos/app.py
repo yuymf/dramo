@@ -33,7 +33,7 @@ from workflows.script_workflow import ScriptWorkflow
 from workflows.clarification_workflow import ClarificationWorkflow
 
 # Import image generation service
-from services.image_service import get_image_service, ImageGenerationService
+from services.image_service import ImageGenerationService
 
 # Import config
 from config import get_ai_provider, set_ai_provider, get_available_providers, get_provider_config
@@ -63,8 +63,20 @@ custom_app = FastAPI(
     version="1.0.0"
 )
 
-# Get image generation service
-image_service = get_image_service()
+# Note: image_service singleton is not used — endpoints create per-request instances
+# with user-provided LLM config. Removed eager initialization to avoid startup crash
+# when ARK_API_KEY is not configured.
+
+# ============ Health Endpoints ============
+# Both `/health` (used by docker-compose healthcheck) and `/api/health`
+# (used by Dockerfile HEALTHCHECK and nginx upstream probes) point to the
+# same handler. Keep this trivial — must not depend on LLM config.
+
+@custom_app.get("/health")
+@custom_app.get("/api/health")
+async def health_check():
+    """Liveness probe — returns 200 if the process is up."""
+    return {"status": "ok", "service": "agentos"}
 
 # ============ Request/Response Models ============
 

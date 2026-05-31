@@ -18,7 +18,6 @@ export async function POST(
     request,
     `/api/v1/projects/${projectId}/storyboard/import`,
     {
-      requireAuth: true,
       // Backend returns 202 + taskId immediately, no long timeout needed
     }
   );

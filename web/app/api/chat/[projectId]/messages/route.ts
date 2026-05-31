@@ -12,9 +12,7 @@ export async function GET(
   const error = validateRouteParam(projectId, "projectId");
   if (error) return error;
 
-  return proxyRequest(request, `/api/v1/chat/${projectId}/messages`, {
-    requireAuth: true,
-  });
+  return proxyRequest(request, `/api/v1/chat/${projectId}/messages`);
 }
 
 /**
@@ -29,9 +27,8 @@ export async function POST(
   const error = validateRouteParam(projectId, "projectId");
   if (error) return error;
 
-  // Use proxyRequest for consistent auth handling
+  // Proxy to backend; allow up to 60s for AI generation.
   return proxyRequest(request, `/api/v1/chat/${projectId}/messages`, {
-    requireAuth: true,
     method: 'POST',
     timeoutMs: 60000, // 60s for AI generation
   });
