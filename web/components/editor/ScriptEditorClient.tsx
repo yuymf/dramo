@@ -164,7 +164,7 @@ function ensureConsistency(raw: Script): Script {
     if (Array.isArray(scene.content) && (scene.content as unknown[]).length > 0) {
       const legacyContent = (scene.content as Block[]).map((block) => ({
         id: block.id,
-        label: block.label || '정文',
+        label: block.label || '正文',
         text: block.text || '',
       }));
       return {
@@ -266,7 +266,7 @@ export function ScriptEditorClient() {
   const [regenerating, setRegenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [inspirationPanelCollapsed, setInspirationPanelCollapsed] = useState(false);
+  const [inspirationPanelCollapsed, setInspirationPanelCollapsed] = useState(true);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const { showToast } = useToast();
 
@@ -328,7 +328,7 @@ export function ScriptEditorClient() {
 
   // 初始化时读取折叠状态，默认为展开（false）
   useEffect(() => {
-    const savedCollapsed = readJSON<boolean>('inspirationPanelCollapsed', false);
+    const savedCollapsed = readJSON<boolean>('inspirationPanelCollapsed', true);
     setInspirationPanelCollapsed(savedCollapsed);
   }, []);
 
@@ -1126,30 +1126,28 @@ export function ScriptEditorClient() {
           />
 
           <div className={cn(
-            "grid grid-cols-1 md:grid-cols-[300px_1fr] h-[calc(100vh-135px)]",
-            isLargeScreen && !inspirationPanelCollapsed && "lg:grid-cols-[300px_1fr_320px]",
-            isLargeScreen && showHistoryPanel && "lg:grid-cols-[300px_1fr_400px]"
+            "grid grid-cols-1 md:grid-cols-[240px_minmax(320px,1fr)] h-[calc(100vh-135px)] min-w-0",
+            isLargeScreen && !inspirationPanelCollapsed && "lg:grid-cols-[220px_minmax(320px,1fr)_minmax(200px,280px)]",
+            isLargeScreen && showHistoryPanel && "lg:grid-cols-[220px_minmax(320px,1fr)_minmax(240px,360px)]"
           )}>
             <aside aria-label="Scene list" className="hidden md:block border-r border-[var(--at-border)] overflow-hidden sticky top-0 z-10 p-2 md:p-4 pb-0 bg-[var(--at-surface)]">
               <div className="flex items-baseline gap-2 pb-3 border-b border-[var(--at-border-light)] mb-3">
                 <h1 className="text-sm font-semibold text-[var(--at-text)]">场景列表</h1>
                 <span className="text-xs font-medium text-[var(--at-accent)] bg-[var(--at-accent-light)] px-2 py-0.5 rounded-full">{currentActScenes.length}</span>
               </div>
-              {currentActScenes.length > 0 && (
-                <SceneList
-                  key={activeActId}
-                  scenes={currentActScenes}
-                  activeSceneId={activeSceneId}
-                  scrollToSceneId={scrollToSceneId}
-                  onSceneClick={handleSceneClick}
-                  onReorder={handleSceneReorder}
-                  onAddScene={handleAddScene}
-                  onDeleteScene={handleDeleteScene}
-                  onEditSceneTitle={handleEditSceneTitle}
-                />
-              )}
+              <SceneList
+                key={activeActId}
+                scenes={currentActScenes}
+                activeSceneId={activeSceneId}
+                scrollToSceneId={scrollToSceneId}
+                onSceneClick={handleSceneClick}
+                onReorder={handleSceneReorder}
+                onAddScene={handleAddScene}
+                onDeleteScene={handleDeleteScene}
+                onEditSceneTitle={handleEditSceneTitle}
+              />
             </aside>
-          <main aria-label="Script editor" className="border-r border-[var(--at-border)] overflow-y-auto relative bg-[var(--at-surface)]">
+          <main aria-label="Script editor" className="min-w-0 border-r border-[var(--at-border)] overflow-y-auto relative bg-[var(--at-surface)]">
         {isDialogueMode ? (
           // 对话式画布模式
           <div className="h-full flex flex-col">

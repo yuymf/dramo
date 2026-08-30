@@ -38,7 +38,7 @@ export function QuickActions({ onActionClick }: QuickActionsProps) {
     setLoading(action.id);
     try {
       const project = await createProject(action.label);
-      router.push(`/projects/${project.id}`);
+      router.push(`/projects/${project.id}/scripts`);
       showToast(`已创建${action.label}项目`, "success");
     } catch (err) {
       showToast(err instanceof Error ? err.message : "创建项目失败", "error");
