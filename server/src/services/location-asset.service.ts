@@ -305,7 +305,7 @@ export class LocationAssetService implements AssetAdapter {
       throw new Error('No locations extracted');
     }
 
-    await prisma.$transaction(async (tx: typeof prisma) => {
+    await prisma.$transaction(async (tx) => {
       await tx.locationAsset.deleteMany({ where: { projectId } });
 
       for (const loc of rawLocs) {

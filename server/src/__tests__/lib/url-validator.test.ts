@@ -8,8 +8,12 @@ describe('url-validator', () => {
       expect(() => validateBaseUrl('https://api.deepseek.com/v1')).not.toThrow();
     });
 
-    it('should reject HTTP URLs', () => {
-      expect(() => validateBaseUrl('http://api.openai.com/v1')).toThrow(/HTTPS/);
+    it('should accept HTTP URLs for local/custom providers', () => {
+      expect(() => validateBaseUrl('http://api.openai.com/v1')).not.toThrow();
+    });
+
+    it('should reject non-http schemes', () => {
+      expect(() => validateBaseUrl('ftp://files.example.com')).toThrow(/HTTP/);
     });
 
     it('should reject invalid URLs', () => {

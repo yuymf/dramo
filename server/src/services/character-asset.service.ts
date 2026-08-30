@@ -306,7 +306,7 @@ export class CharacterAssetService implements AssetAdapter {
       throw new Error('No characters extracted');
     }
 
-    await prisma.$transaction(async (tx: typeof prisma) => {
+    await prisma.$transaction(async (tx) => {
       await tx.characterRelation.deleteMany({ where: { nodeA: { projectId } } });
       await tx.characterAsset.deleteMany({ where: { projectId } });
 
