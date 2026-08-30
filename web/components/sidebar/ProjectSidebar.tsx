@@ -76,14 +76,20 @@ export function ProjectSidebar({ locale = "zh", currentProjectId, projectName, a
             className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-stone-200 bg-white/50 text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-orange-400/50 focus:bg-white focus:ring-1 focus:ring-orange-200/50 transition-all"
           />
         </div>
-        <button className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-stone-600 rounded-lg hover:bg-stone-100/50 hover:text-stone-900 transition-all duration-200 group">
+        <Link
+          href="/projects"
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-stone-600 rounded-lg hover:bg-stone-100/50 hover:text-stone-900 transition-all duration-200 group"
+        >
           <FolderOpen size={14} className="group-hover:scale-110 transition-transform" />
           <span>{t("allProject")}</span>
-        </button>
-        <button className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-stone-600 rounded-lg hover:bg-stone-100/50 hover:text-stone-900 transition-all duration-200 group">
+        </Link>
+        <Link
+          href="/projects"
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-stone-600 rounded-lg hover:bg-stone-100/50 hover:text-stone-900 transition-all duration-200 group"
+        >
           <Plus size={14} className="group-hover:scale-110 transition-transform" />
           <span>{t("newProject")}</span>
-        </button>
+        </Link>
       </div>
 
       {/* Project Name + Nav */}
