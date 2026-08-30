@@ -268,12 +268,4 @@ storyboard.put('/projects/:projectId/storyboard/frames/:frameId/image', async (c
   return c.json({ success: true });
 });
 
-storyboard.delete('/projects/:projectId/storyboard/frames/:frameId/image', async (c) => {
-  const projectId = c.req.param('projectId');
-  const frameId = c.req.param('frameId');
-
-  await storyboardService.deleteFrameImage(projectId, frameId);
-  return c.json({ success: true });
-});
-
 export { storyboard };

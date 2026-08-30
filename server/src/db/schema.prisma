@@ -77,9 +77,8 @@ model Script {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  versions     ScriptVersion[]
-  scriptScenes ScriptScene[]
+  project  Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versions ScriptVersion[]
 
   @@index([projectId])
   @@index([status])
@@ -99,22 +98,6 @@ model ScriptVersion {
 
   @@unique([scriptId, version])
   @@index([scriptId, createdAt])
-}
-
-model ScriptScene {
-  id            String   @id @default(cuid())
-  scriptId      String
-  script        Script   @relation(fields: [scriptId], references: [id], onDelete: Cascade)
-  actIndex      Int
-  order         Int
-  title         String?
-  content       String   @db.Text
-  parentSceneId String?  // self-ref FK deferred to P1; enforced at app layer  // self-ref FK deferred to P1; enforced at app layer
-  branchLabel   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([scriptId, actIndex, order])
 }
 
 model Task {
@@ -179,19 +162,6 @@ model ChatMessage {
 
   @@index([projectId, createdAt])
   @@index([sessionId, createdAt])
-}
-
-model PipelineRun {
-  id           String   @id @default(cuid())
-  projectId    String
-  status       String   @default("running") // running | completed | paused | failed
-  requirements Json     // StructuredRequirements
-  currentStep  String?  // script | characters | locations | storyboard
-  stepResults  Json?    // Per-step completion status
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([projectId])
 }
 
 model CharacterAsset {
@@ -261,26 +231,9 @@ model Storyboard {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  project Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  shots   StoryboardShot[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
-}
-
-model StoryboardShot {
-  id           String     @id @default(cuid())
-  storyboardId String
-  storyboard   Storyboard @relation(fields: [storyboardId], references: [id], onDelete: Cascade)
-  order        Int
-  imageUrl     String?
-  dialogue     String?  @db.Text
-  action       String?  @db.Text
-  cameraAngle  String?
-  generatedAt  DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  @@index([storyboardId, order])
 }
 
 // Image generation job queue

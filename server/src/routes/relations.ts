@@ -50,26 +50,6 @@ relations.post('/projects/:projectId/characters/relations', async (c) => {
   }
 });
 
-relations.patch('/projects/:projectId/characters/relations/:relationId', async (c) => {
-  const projectId = c.req.param('projectId');
-  const relationId = c.req.param('relationId');
-  const userId = c.get('user').userId;
-  const requestId = c.get('requestId');
-  const { type, weight, notes } = await c.req.json();
-
-  try {
-    await projectService.getProject(projectId, userId);
-    const result = await relationService.updateRelation(relationId, projectId, { type, weight, notes });
-    return c.json(result);
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : '更新关系失败';
-    if (message === 'Relation not found') {
-      return c.json({ success: false, error: { code: 'NOT_FOUND', message: '关系不存在', retryable: false }, requestId }, 404);
-    }
-    return c.json({ success: false, error: { code: 'UPDATE_FAILED', message, retryable: true }, requestId }, 500);
-  }
-});
-
 relations.delete('/projects/:projectId/characters/relations/:relationId', async (c) => {
   const projectId = c.req.param('projectId');
   const relationId = c.req.param('relationId');
@@ -86,21 +66,6 @@ relations.delete('/projects/:projectId/characters/relations/:relationId', async 
       return c.json({ success: false, error: { code: 'NOT_FOUND', message: '关系不存在', retryable: false }, requestId }, 404);
     }
     return c.json({ success: false, error: { code: 'DELETE_FAILED', message, retryable: true }, requestId }, 500);
-  }
-});
-
-relations.post('/projects/:projectId/characters/relations/cleanup', async (c) => {
-  const projectId = c.req.param('projectId');
-  const userId = c.get('user').userId;
-  const requestId = c.get('requestId');
-
-  try {
-    await projectService.getProject(projectId, userId);
-    const result = await relationService.cleanupOrphanRelations(projectId);
-    return c.json(result);
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : '清理孤儿关系失败';
-    return c.json({ success: false, error: { code: 'CLEANUP_FAILED', message, retryable: true }, requestId }, 500);
   }
 });
 

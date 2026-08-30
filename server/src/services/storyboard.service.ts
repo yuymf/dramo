@@ -73,26 +73,5 @@ export class StoryboardService {
       throw error;
     }
   }
-
-  /**
-   * Delete image for a specific frame
-   */
-  async deleteFrameImage(projectId: string, frameId: string): Promise<void> {
-    logger.info(`[StoryboardService] Deleting image for frame ${frameId} in project ${projectId}`);
-
-    try {
-      await prisma.storyboardFrameImage.deleteMany({
-        where: {
-          projectId,
-          frameId,
-        },
-      });
-
-      logger.info(`[StoryboardService] Successfully deleted frame image`);
-    } catch (error) {
-      logger.error(`[StoryboardService] Failed to delete frame image: ${error}`);
-      throw error;
-    }
-  }
 }
 

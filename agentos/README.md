@@ -14,14 +14,12 @@ FastAPI + Agno 工作流。只跑 AI，不碰数据库。
 | LocationsWorkflow | 提取场景 |
 | PolishWorkflow | 润色 |
 | ClarificationWorkflow | 对话澄清需求 |
-| DirectorWorkflow | 导演建议 |
 | InspirationsWorkflow | 灵感条目 |
 
 自定义路由（不走 workflow）：
 
 - `GET /health` — 探活
 - `POST /api/generate-image` — Seedream 生图
-- `GET/POST /api/ai/provider*` — 进程级供应商状态（工作流实际用请求里的 `_llm_config`）
 
 ## 本地
 

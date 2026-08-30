@@ -11,10 +11,7 @@ from openai import OpenAI
 import logging
 import json
 
-try:
-    from ..env_loader import load_backend_env
-except ImportError:
-    from env_loader import load_backend_env
+from env_loader import load_backend_env
 
 load_backend_env()
 logger = logging.getLogger(__name__)

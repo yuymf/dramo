@@ -37,15 +37,6 @@ projects.get('/projects/:id', async (c) => {
   return c.json(project);
 });
 
-projects.put('/projects/:id', async (c) => {
-  const id = c.req.param('id');
-  const { name, description } = await c.req.json();
-  const userId = c.get('user').userId;
-
-  const project = await projectService.updateProject(id, userId, { name, description });
-  return c.json(project);
-});
-
 projects.patch('/projects/:id', async (c) => {
   const id = c.req.param('id');
   const { name, description } = await c.req.json();

@@ -17,12 +17,10 @@ import { characters } from './routes/characters';
 import { locations } from './routes/locations';
 import { storyboard } from './routes/storyboard';
 import { storyboardPersistence } from './routes/storyboard-persistence';
-import { aiProviders } from './routes/ai-providers';
 import { relations } from './routes/relations';
 import { uploads } from './routes/uploads';
 import { generationJobs } from './routes/generation-jobs';
 import { llmConfigs } from './routes/llm-config';
-import { director } from './routes/director';
 
 const app = new Hono<AuthEnv>();
 
@@ -47,12 +45,10 @@ app.route('/api/v1', characters);
 app.route('/api/v1', locations);
 app.route('/api/v1', storyboard);
 app.route('/api/v1', storyboardPersistence);
-app.route('/api/v1', aiProviders);
 app.route('/api/v1', relations);
 app.route('/api/v1', uploads);
 app.route('/api/v1', generationJobs);
 app.route('/api/v1', llmConfigs);
-app.route('/api/v1', director);
 
 // --- Error handler ---
 app.onError(errorHandler);

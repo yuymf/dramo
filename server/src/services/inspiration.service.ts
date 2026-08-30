@@ -1,24 +1,7 @@
 import { prisma } from '../lib/db';
 import { startWorkflowRun } from '../lib/agentos-client';
+import { unwrapWorkflowJson } from '../lib/workflow-json';
 import { AppException, ErrorCode } from '../lib/errors';
-
-function unwrapWorkflowJson(raw: unknown): Record<string, unknown> {
-  if (typeof raw === 'object' && raw !== null) {
-    const obj = raw as Record<string, unknown>;
-    const inner = obj.content ?? obj.output ?? obj;
-    if (typeof inner === 'string') {
-      try {
-        return JSON.parse(inner) as Record<string, unknown>;
-      } catch {
-        return obj;
-      }
-    }
-    if (typeof inner === 'object' && inner !== null) {
-      return inner as Record<string, unknown>;
-    }
-  }
-  return {};
-}
 
 export class InspirationService {
   async getInspirations(projectId: string, userId: string, category?: string) {
@@ -115,14 +98,5 @@ export class InspirationService {
       inspirationId,
       isFavorite: updated.isFavorite,
     };
-  }
-
-  async getFavorites(userId: string) {
-    const inspirations = await prisma.inspiration.findMany({
-      where: { userId, isFavorite: true },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return { data: inspirations };
   }
 }

@@ -23,19 +23,4 @@ storyboardPersistence.put('/projects/:projectId/storyboard-data', async (c) => {
   return c.json({ success: true, updatedAt: new Date().toISOString() });
 });
 
-storyboardPersistence.patch('/projects/:projectId/storyboard-data/frames/:frameId', async (c) => {
-  const projectId = c.req.param('projectId');
-  const frameId = c.req.param('frameId');
-  const updates = await c.req.json();
-
-  await storyboardDataService.updateFrame(projectId, frameId, updates);
-  return c.json({ success: true });
-});
-
-storyboardPersistence.delete('/projects/:projectId/storyboard-data', async (c) => {
-  const projectId = c.req.param('projectId');
-  await storyboardDataService.deleteStoryboard(projectId);
-  return c.json({ success: true });
-});
-
 export { storyboardPersistence };

@@ -11,12 +11,8 @@ import json
 
 from config import get_model_from_config
 
-try:
-    from ..lib.json_utils import safe_parse_json, parse_workflow_input
-    from ..lib.prompt_loader import load_prompt as _load_prompt
-except ImportError:
-    from lib.json_utils import safe_parse_json, parse_workflow_input
-    from lib.prompt_loader import load_prompt as _load_prompt
+from lib.json_utils import safe_parse_json, parse_workflow_input
+from lib.prompt_loader import load_prompt as _load_prompt
 
 logger = logging.getLogger(__name__)
 

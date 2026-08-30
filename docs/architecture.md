@@ -47,7 +47,7 @@ Browser → fetch('/api/projects')
 
 长时间 AI 操作支持 Server-Sent Events：
 
-- **使用场景**：对话、分镜导入、角色/场景提取、台本润色
+- **使用场景**：对话、分镜导入
 - **超时**：55 秒（保守值，nginx `proxy_read_timeout` 设为 600s 兜底）
 - **心跳**：每 15 秒发送保活
 - **重连**：客户端自动重连，从断点续传
@@ -69,7 +69,7 @@ Browser → fetch('/api/projects')
 
 1. 创建 `GenerationJob` (status: queued)
 2. 后端 inline 执行（无独立队列服务）
-3. 客户端通过 SSE 流 `/api/jobs/stream` 或单独 GET 获取进度
+3. 客户端轮询 `GET /api/jobs` 获取进度
 4. 支持取消和重试（仅限可重试错误）
 
 ## 加密方案
@@ -184,4 +184,4 @@ POST /api/generate-image → AgentOS 智能模式选择:
 - `@sidebar` — 持久侧边栏（场景列表、导航）
 - `@content` — 深链接内容区（scripts、characters、storyboard）
 
-Legacy 路由 `/scripts/:id` 通过 `web/next.config.ts` 永久重定向到 `/projects/:id/scripts`。
+`/scripts/:id` 通过 `web/next.config.ts` 永久重定向到 `/projects/:id/scripts`。

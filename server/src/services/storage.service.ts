@@ -2,7 +2,6 @@ import { config } from '../config';
 import { logger } from '../lib/logger';
 import fs from 'fs/promises';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface StoredImage {
   url: string;
@@ -30,7 +29,7 @@ export class StorageService {
       }
       const buffer = Buffer.from(await response.arrayBuffer());
       const ext = this.getExtensionFromUrl(imageUrl) || 'png';
-      const filename = `${uuidv4()}.${ext}`;
+      const filename = `${crypto.randomUUID()}.${ext}`;
       const result = await this.uploadToLocal(projectId, filename, buffer);
       return result.url;
     } catch (error) {
@@ -50,7 +49,7 @@ export class StorageService {
       const buffer = Buffer.from(base64Content, 'base64');
       const formatMatch = base64Data.match(/^data:image\/(\w+);base64,/);
       const ext = formatMatch ? formatMatch[1] : 'png';
-      const filename = `${uuidv4()}.${ext}`;
+      const filename = `${crypto.randomUUID()}.${ext}`;
       return this.uploadToLocal(projectId, filename, buffer);
     } catch (error) {
       logger.error(`[Storage] Failed to upload image from base64: ${error}`);

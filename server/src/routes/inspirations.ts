@@ -40,9 +40,4 @@ inspirations.post('/inspirations/favorite', async (c) => {
   return c.json(await inspirationService.toggleFavorite(inspirationId, userId));
 });
 
-inspirations.get('/inspirations/favorites', async (c) => {
-  const userId = c.get('user').userId;
-  return c.json(await inspirationService.getFavorites(userId));
-});
-
 export { inspirations };

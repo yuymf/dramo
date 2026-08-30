@@ -1,5 +1,5 @@
 """
-AgentOS runtime — Agno workflows + custom image/provider routes.
+AgentOS runtime — Agno workflows + image generation.
 """
 from agno.os import AgentOS
 from fastapi import FastAPI, HTTPException, Request
@@ -16,10 +16,8 @@ from workflows.locations_workflow import LocationsWorkflow
 from workflows.polish_workflow import PolishWorkflow
 from workflows.script_workflow import ScriptWorkflow
 from workflows.clarification_workflow import ClarificationWorkflow
-from workflows.director_workflow import DirectorWorkflow
 from workflows.inspirations_workflow import InspirationsWorkflow
 from services.image_service import ImageGenerationService
-from config import get_ai_provider, set_ai_provider, get_available_providers, get_provider_config
 from middleware.llm_context import LLMContextMiddleware, get_llm_config
 
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +29,6 @@ locations_workflow = LocationsWorkflow()
 polish_workflow = PolishWorkflow()
 script_workflow = ScriptWorkflow()
 clarification_workflow = ClarificationWorkflow()
-director_workflow = DirectorWorkflow()
 inspirations_workflow = InspirationsWorkflow()
 
 custom_app = FastAPI(title="Dramo AgentOS", version="2.0.0")
@@ -113,46 +110,6 @@ async def generate_image(request: ImageGenerationRequest, raw_request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@custom_app.get("/api/ai/providers")
-async def list_providers():
-    try:
-        return {
-            "success": True,
-            "providers": get_available_providers(),
-            "current": get_ai_provider(),
-        }
-    except Exception as e:
-        logger.error(f"Failed to list providers: {e}")
-        return {"success": False, "error": str(e)}
-
-
-@custom_app.get("/api/ai/provider")
-async def get_current_provider():
-    try:
-        return {"success": True, "config": get_provider_config()}
-    except Exception as e:
-        logger.error(f"Failed to get provider config: {e}")
-        return {"success": False, "error": str(e)}
-
-
-@custom_app.post("/api/ai/provider")
-async def switch_provider(request: dict):
-    try:
-        provider = request.get("provider")
-        if not provider:
-            return {"success": False, "error": "Provider name is required"}
-        if not set_ai_provider(provider):
-            return {"success": False, "error": "Failed to switch provider"}
-        return {
-            "success": True,
-            "message": f"AI provider switched to {provider}",
-            "config": get_provider_config(),
-        }
-    except Exception as e:
-        logger.error(f"Failed to switch provider: {e}")
-        return {"success": False, "error": str(e)}
-
-
 agent_os = AgentOS(
     name="Dramo AgentOS",
     workflows=[
@@ -162,7 +119,6 @@ agent_os = AgentOS(
         polish_workflow,
         script_workflow,
         clarification_workflow,
-        director_workflow,
         inspirations_workflow,
     ],
     base_app=custom_app,

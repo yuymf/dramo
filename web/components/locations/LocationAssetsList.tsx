@@ -11,11 +11,6 @@ import { api } from "@/lib/api/client";
 import type { LocationImageAssetV2 } from "@/lib/models";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/Toast";
-import {
-  getProjectLocationAssets,
-  deleteProjectLocationAsset,
-  updateProjectLocationAsset,
-} from "@/lib/storage/local";
 import { cn } from "@/lib/utils";
 
 interface LocationAssetsListProps {
@@ -53,26 +48,13 @@ export function LocationAssetsList({
       if (!projectId) return;
 
       try {
-        // Load from API
         const res = await api<{ dataV2?: LocationImageAssetV2[] }>(
           `/api/projects/${projectId}/locations/assets`
         );
-
-        // Load from local storage
-        const localAssets = getProjectLocationAssets(projectId);
-
-        // Merge with deduplication: prefer remote, add local-only
-        const remoteAssets = res.dataV2 || [];
-        const remoteIds = new Set(remoteAssets.map(a => a.id));
-        const localOnlyAssets = localAssets.filter(a => !remoteIds.has(a.id));
-        const combined = [...remoteAssets, ...localOnlyAssets];
-
-        setAssets(combined);
+        setAssets(res.dataV2 || []);
       } catch (err) {
         console.error("Failed to load location assets:", err);
-        // Fallback to local only
-        const localAssets = getProjectLocationAssets(projectId);
-        setAssets(localAssets);
+        setAssets([]);
       } finally {
         setLoading(false);
       }
@@ -133,7 +115,6 @@ export function LocationAssetsList({
         });
         
         // Only update local and UI after backend success
-        deleteProjectLocationAsset(projectId, assetId);
         setAssets((prev) => prev.filter((a) => a.id !== assetId));
         showToast("资产已删除", "success");
         
@@ -165,9 +146,6 @@ export function LocationAssetsList({
       prev.map((a) => (a.id === assetId ? updatedAsset : a))
     );
 
-    // Update local storage
-    updateProjectLocationAsset(projectId, updatedAsset);
-
     // Update backend
     try {
       await api(`/api/projects/${projectId}/locations/assets/${assetId}`, {
@@ -182,7 +160,7 @@ export function LocationAssetsList({
       showToast("地点名已更新", "success");
     } catch (err) {
       console.error("Failed to update name on backend:", err);
-      showToast("后端更新失败，但本地已更新", "error");
+      showToast("后端更新失败", "error");
     }
     
     // Notify parent
@@ -208,9 +186,6 @@ export function LocationAssetsList({
       prev.map((a) => (a.id === assetId ? updatedAsset : a))
     );
 
-    // Update local storage
-    updateProjectLocationAsset(projectId, updatedAsset);
-
     // Update backend
     try {
       await api(`/api/projects/${projectId}/locations/assets/${assetId}`, {
@@ -225,7 +200,7 @@ export function LocationAssetsList({
       showToast("别称已更新", "success");
     } catch (err) {
       console.error("Failed to update alias on backend:", err);
-      showToast("后端更新失败，但本地已更新", "error");
+      showToast("后端更新失败", "error");
     }
   };
 
@@ -246,9 +221,6 @@ export function LocationAssetsList({
       prev.map((a) => (a.id === assetId ? updatedAsset : a))
     );
 
-    // Update local storage
-    updateProjectLocationAsset(projectId, updatedAsset);
-
     // Update backend
     try {
       await api(`/api/projects/${projectId}/locations/assets/${assetId}`, {
@@ -263,7 +235,7 @@ export function LocationAssetsList({
       showToast("描述已更新", "success");
     } catch (err) {
       console.error("Failed to update description on backend:", err);
-      showToast("后端更新失败，但本地已更新", "error");
+      showToast("后端更新失败", "error");
     }
   };
 
@@ -292,11 +264,6 @@ export function LocationAssetsList({
     }
 
     const updatedAsset = { ...asset, images: updatedImages };
-    
-    // Update local storage
-    updateProjectLocationAsset(projectId, updatedAsset);
-    
-    // Update state
     setAssets((prev) => prev.map((a) => (a.id === assetId ? updatedAsset : a)));
     
     showToast("图片已删除", "success");
@@ -343,10 +310,6 @@ export function LocationAssetsList({
       images: [...asset.images, ...newImages],
     };
 
-    // Update local storage
-    updateProjectLocationAsset(projectId, updatedAsset);
-    
-    // Update state
     setAssets((prev) => prev.map((a) => (a.id === assetId ? updatedAsset : a)));
     
     showToast(`已添加 ${newImages.length} 张图片`, "success");

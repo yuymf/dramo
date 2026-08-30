@@ -221,45 +221,6 @@ export async function uploadImage(params: {
   );
 }
 
-/**
- * 统一图片生成接口（支持 referencePaths）
- */
-export async function generateImageUnified(params: {
-  projectId: string;
-  name: string;
-  description: string;
-  style?: string;
-  referenceImages?: string[];
-  mode?: 'single' | 'sequence';
-  assetType?: 'character' | 'location';
-}) {
-  return api<{
-    success: boolean;
-    mode: string;
-    type: string;
-    images: Array<{
-      id: string;
-      url: string;
-      source: string;
-      createdAt: string;
-    }>;
-  }>(
-    `/api/projects/${params.projectId}/generate-image`,
-    {
-      method: 'POST',
-      body: {
-        name: params.name,
-        description: params.description,
-        style: params.style,
-        referenceImages: params.referenceImages,
-        mode: params.mode,
-        assetType: params.assetType,
-      },
-      timeoutMs: 100000, // 100 seconds timeout for image generation
-    }
-  );
-}
-
 // Storyboard Data API
 export async function getStoryboardData(projectId: string) {
   return api<{ success: boolean; frames: unknown[] }>(
