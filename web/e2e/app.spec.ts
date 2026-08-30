@@ -143,7 +143,7 @@ test.describe('项目工作区', () => {
     await expect(page.getByText('开场暖场')).toBeVisible();
     await expect(page.getByRole('button', { name: /添加场景/ })).toBeVisible();
 
-    const editor = page.locator('.ProseMirror').first();
+    const editor = page.getByRole('main', { name: 'Script editor' }).locator('.ProseMirror').first();
     await expect(editor).toBeVisible();
     const saved = page.waitForResponse(
       (res) => res.url().includes('/script/content') && res.request().method() === 'PATCH' && res.ok(),

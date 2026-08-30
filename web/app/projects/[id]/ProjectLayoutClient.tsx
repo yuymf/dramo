@@ -46,7 +46,7 @@ function ProjectLayoutContent({ children }: ProjectLayoutClientProps) {
       <div className="h-screen overflow-hidden">
         <PanelGroup orientation="horizontal" className="h-full">
         {/* Content area */}
-        <Panel defaultSize={65} minSize={40}>
+        <Panel defaultSize={72} minSize={50}>
           {children}
         </Panel>
 
@@ -56,7 +56,7 @@ function ProjectLayoutContent({ children }: ProjectLayoutClientProps) {
         </PanelResizeHandle>
 
         {/* Chat panel */}
-        <Panel defaultSize={35} minSize={20} collapsible collapsedSize={0}>
+        <Panel defaultSize={28} minSize={18} collapsible collapsedSize={0}>
           {projectId && <ChatPanel projectId={projectId} />}
         </Panel>
         </PanelGroup>
