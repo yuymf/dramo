@@ -79,7 +79,7 @@ class ClarificationWorkflow(Workflow):
 
         # Build conversation context
         conversation = "\n\n".join(
-            f"{'用户' if m['role'] == 'user' else 'AI'}: {m['content']}"
+            f"{'用户' if m.get('role') == 'user' else 'AI'}: {m.get('content', '')}"
             for m in messages
         )
 

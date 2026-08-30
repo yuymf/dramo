@@ -31,6 +31,7 @@ from workflows.locations_workflow import LocationsWorkflow
 from workflows.polish_workflow import PolishWorkflow
 from workflows.script_workflow import ScriptWorkflow
 from workflows.clarification_workflow import ClarificationWorkflow
+from workflows.director_workflow import DirectorWorkflow
 
 # Import image generation service
 from services.image_service import ImageGenerationService
@@ -53,6 +54,7 @@ locations_workflow = LocationsWorkflow()
 polish_workflow = PolishWorkflow()
 script_workflow = ScriptWorkflow()
 clarification_workflow = ClarificationWorkflow()
+director_workflow = DirectorWorkflow()
 
 # ============ Custom FastAPI App with Image Generation ============
 
@@ -76,7 +78,7 @@ custom_app = FastAPI(
 @custom_app.get("/api/health")
 async def health_check():
     """Liveness probe — returns 200 if the process is up."""
-    return {"status": "ok", "service": "agentos"}
+    return {"ok": True, "status": "ok", "service": "agentos"}
 
 # ============ Request/Response Models ============
 
@@ -259,6 +261,7 @@ agent_os = AgentOS(
         polish_workflow,
         script_workflow,
         clarification_workflow,
+        director_workflow,
     ],
     # teams=[research_team],  # Uncomment if needed
     base_app=custom_app,  # Pass custom FastAPI app

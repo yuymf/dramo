@@ -4,34 +4,43 @@ import { api } from '@/lib/api/client';
 type SaveStatus = 'saved' | 'saving' | 'error' | 'unsaved';
 
 interface UseScriptAutosaveOptions {
-  scriptId: string;
+  projectId: string;
   debounceMs?: number;
 }
 
-export function useScriptAutosave({ scriptId, debounceMs = 1500 }: UseScriptAutosaveOptions) {
+interface ScriptContent {
+  scenes: unknown;
+  acts?: unknown;
+}
+
+export function useScriptAutosave({ projectId, debounceMs = 1500 }: UseScriptAutosaveOptions) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const save = useCallback(async (content: string) => {
+  const save = useCallback(async (content: ScriptContent) => {
+    if (!projectId) return;
     setSaveStatus('saving');
     try {
-      await api(`/api/scripts/${scriptId}`, {
+      await api(`/api/projects/${projectId}/script/content`, {
         method: 'PATCH',
-        body: JSON.stringify({ scenes: content }),
+        body: {
+          scenes: content.scenes,
+          acts: content.acts,
+        },
       });
       setSaveStatus('saved');
     } catch {
       setSaveStatus('error');
     }
-  }, [scriptId]);
+  }, [projectId]);
 
-  const scheduleSave = useCallback((content: string) => {
+  const scheduleSave = useCallback((content: ScriptContent) => {
     setSaveStatus('unsaved');
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => save(content), debounceMs);
   }, [save, debounceMs]);
 
-  const saveNow = useCallback((content: string) => {
+  const saveNow = useCallback((content: ScriptContent) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     return save(content);
   }, [save]);

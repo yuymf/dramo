@@ -182,8 +182,8 @@ export async function checkAgentOSHealth(): Promise<boolean> {
     });
 
     if (res.ok) {
-      const health = (await res.json()) as { ok?: boolean };
-      return health.ok === true;
+      const health = (await res.json()) as { ok?: boolean; status?: string };
+      return health.ok === true || health.status === 'ok';
     }
     return false;
   } catch (err) {

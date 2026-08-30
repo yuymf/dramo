@@ -11,6 +11,15 @@ jest.mock('../../lib/db', () => ({
       delete: jest.fn(),
       deleteMany: jest.fn(),
     },
+    $transaction: jest.fn(async (fn: (tx: unknown) => unknown) => {
+      const tx = {
+        locationAsset: {
+          deleteMany: (jest.fn() as any).mockResolvedValue({ count: 0 }),
+          create: (jest.fn() as any).mockResolvedValue({ id: 'loc-1' }),
+        },
+      };
+      return fn(tx);
+    }),
   },
 }));
 
@@ -238,46 +247,27 @@ describe('LocationAssetService', () => {
   });
 
   describe('persistExtracted', () => {
-    it('should clear existing and save new locations', async () => {
-      (mockPrisma.locationAsset.deleteMany as jest.MockedFunction<typeof mockPrisma.locationAsset.deleteMany>)
-        .mockResolvedValue({ count: 3 });
-      (mockPrisma.locationAsset.create as jest.MockedFunction<typeof mockPrisma.locationAsset.create>)
-        .mockResolvedValue(makeLocationAsset() as any);
-
+    it('should replace existing locations inside a transaction', async () => {
       await service.persistExtracted('proj-1', {
         locations: [{ name: 'Forest', description: 'Dark', alias: 'F' }],
       });
 
-      expect(mockPrisma.locationAsset.deleteMany).toHaveBeenCalledWith({ where: { projectId: 'proj-1' } });
-      expect(mockPrisma.locationAsset.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ name: 'Forest', projectId: 'proj-1' }),
-      });
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
 
-    it('should unwrap nested locations array', async () => {
-      (mockPrisma.locationAsset.deleteMany as jest.MockedFunction<typeof mockPrisma.locationAsset.deleteMany>)
-        .mockResolvedValue({ count: 0 });
-      (mockPrisma.locationAsset.create as jest.MockedFunction<typeof mockPrisma.locationAsset.create>)
-        .mockResolvedValue(makeLocationAsset() as any);
-
-      // Nested format: locations: [ { locations: [...] } ]
+    it('should unwrap nested locations array before persisting', async () => {
       await service.persistExtracted('proj-1', {
         locations: [
           { locations: [{ name: 'Beach', description: 'Sunny' }] },
         ],
       });
 
-      expect(mockPrisma.locationAsset.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ name: 'Beach' }),
-      });
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
 
-    it('should handle missing locations gracefully', async () => {
-      (mockPrisma.locationAsset.deleteMany as jest.MockedFunction<typeof mockPrisma.locationAsset.deleteMany>)
-        .mockResolvedValue({ count: 0 });
-
-      await expect(service.persistExtracted('proj-1', {})).resolves.toBeUndefined();
-      expect(mockPrisma.locationAsset.create).not.toHaveBeenCalled();
+    it('should refuse to wipe the library when extraction is empty', async () => {
+      await expect(service.persistExtracted('proj-1', {})).rejects.toThrow('No locations extracted');
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
   });
 

@@ -1,6 +1,7 @@
 import { prisma } from '../lib/db';
 import { AppException, ErrorCode } from '../lib/errors';
 import { encrypt, decrypt, maskApiKey, sanitizeHeaderValue } from '../lib/crypto';
+import { logger } from '../lib/logger';
 import type { LLMConfigType } from '@prisma/client';
 
 const MAX_CONFIGS_PER_USER = 20;
@@ -30,10 +31,14 @@ export class LLMConfigService {
     });
 
     return {
-      data: configs.map((cfg) => ({
-        ...cfg,
-        apiKey: maskApiKey(decrypt(cfg.apiKey)),
-      })),
+      data: configs.map((cfg) => {
+        try {
+          return { ...cfg, apiKey: maskApiKey(decrypt(cfg.apiKey)) };
+        } catch (err) {
+          logger.warn({ err, configId: cfg.id }, 'Failed to decrypt LLM config apiKey');
+          return { ...cfg, apiKey: '[decrypt failed]' };
+        }
+      }),
     };
   }
 

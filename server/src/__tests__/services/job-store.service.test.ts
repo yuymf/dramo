@@ -9,6 +9,7 @@ jest.mock('../../lib/db', () => ({
       findFirst: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
   },
 }));
@@ -78,11 +79,11 @@ describe('JobStoreService', () => {
       (mockPrisma.generationJob.count as jest.MockedFunction<typeof mockPrisma.generationJob.count>)
         .mockResolvedValue(0);
 
-      await service.listJobs({ userId: 'user-1', status: ['queued', 'processing'] });
+      await service.listJobs({ userId: 'user-1', status: ['queued', 'running'] });
 
       expect(mockPrisma.generationJob.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { userId: 'user-1', status: { in: ['queued', 'processing'] } },
+          where: { userId: 'user-1', status: { in: ['queued', 'running'] } },
         })
       );
     });
@@ -161,15 +162,15 @@ describe('JobStoreService', () => {
 
   describe('updateJob', () => {
     it('should update job status', async () => {
-      const updated = makeJob({ status: 'processing' });
+      const updated = makeJob({ status: 'running' });
       (mockPrisma.generationJob.update as jest.MockedFunction<typeof mockPrisma.generationJob.update>)
         .mockResolvedValue(updated as any);
 
-      await service.updateJob('job-1', { status: 'processing' });
+      await service.updateJob('job-1', { status: 'running' });
 
       expect(mockPrisma.generationJob.update).toHaveBeenCalledWith({
         where: { id: 'job-1' },
-        data: expect.objectContaining({ status: 'processing' }),
+        data: expect.objectContaining({ status: 'running' }),
       });
     });
 
@@ -190,6 +191,31 @@ describe('JobStoreService', () => {
           error: { code: 'ERR', message: 'Failed', retryable: true },
         }),
       });
+    });
+
+    it('should update only active jobs via updateJobIfActive', async () => {
+      (mockPrisma.generationJob.updateMany as jest.MockedFunction<typeof mockPrisma.generationJob.updateMany>)
+        .mockResolvedValue({ count: 1 } as any);
+      (mockPrisma.generationJob.findFirst as jest.MockedFunction<typeof mockPrisma.generationJob.findFirst>)
+        .mockResolvedValue(makeJob({ status: 'running' }) as any);
+
+      const result = await service.updateJobIfActive('job-1', { status: 'running', progress: 10 });
+
+      expect(mockPrisma.generationJob.updateMany).toHaveBeenCalledWith({
+        where: { id: 'job-1', status: { in: ['queued', 'running'] } },
+        data: expect.objectContaining({ status: 'running', progress: 10 }),
+      });
+      expect(result?.status).toBe('running');
+    });
+
+    it('should return null from updateJobIfActive when job is no longer active', async () => {
+      (mockPrisma.generationJob.updateMany as jest.MockedFunction<typeof mockPrisma.generationJob.updateMany>)
+        .mockResolvedValue({ count: 0 } as any);
+
+      const result = await service.updateJobIfActive('job-1', { status: 'succeeded' });
+
+      expect(result).toBeNull();
+      expect(mockPrisma.generationJob.findFirst).not.toHaveBeenCalled();
     });
 
     it('should set updatedAt timestamp', async () => {

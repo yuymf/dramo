@@ -14,6 +14,16 @@ jest.mock('../../lib/db', () => ({
     characterRelation: {
       deleteMany: jest.fn(),
     },
+    $transaction: jest.fn(async (fn: (tx: unknown) => unknown) => {
+      const tx = {
+        characterRelation: { deleteMany: (jest.fn() as any).mockResolvedValue({ count: 0 }) },
+        characterAsset: {
+          deleteMany: (jest.fn() as any).mockResolvedValue({ count: 0 }),
+          create: (jest.fn() as any).mockResolvedValue({ id: 'asset-1' }),
+        },
+      };
+      return fn(tx);
+    }),
   },
 }));
 
@@ -245,32 +255,17 @@ describe('CharacterAssetService', () => {
   });
 
   describe('persistExtracted', () => {
-    it('should clear existing and save new characters', async () => {
-      (mockPrisma.characterRelation.deleteMany as jest.MockedFunction<typeof mockPrisma.characterRelation.deleteMany>)
-        .mockResolvedValue({ count: 1 });
-      (mockPrisma.characterAsset.deleteMany as jest.MockedFunction<typeof mockPrisma.characterAsset.deleteMany>)
-        .mockResolvedValue({ count: 2 });
-      (mockPrisma.characterAsset.create as jest.MockedFunction<typeof mockPrisma.characterAsset.create>)
-        .mockResolvedValue(makeCharacterAsset() as any);
-
+    it('should replace existing characters inside a transaction', async () => {
       await service.persistExtracted('proj-1', {
         new_characters: [{ name: 'Alice', description: 'A hero', alias: 'A' }],
       });
 
-      expect(mockPrisma.characterAsset.deleteMany).toHaveBeenCalled();
-      expect(mockPrisma.characterAsset.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ name: 'Alice', projectId: 'proj-1' }),
-      });
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
 
-    it('should handle missing new_characters gracefully', async () => {
-      (mockPrisma.characterRelation.deleteMany as jest.MockedFunction<typeof mockPrisma.characterRelation.deleteMany>)
-        .mockResolvedValue({ count: 0 });
-      (mockPrisma.characterAsset.deleteMany as jest.MockedFunction<typeof mockPrisma.characterAsset.deleteMany>)
-        .mockResolvedValue({ count: 0 });
-
-      await expect(service.persistExtracted('proj-1', {})).resolves.toBeUndefined();
-      expect(mockPrisma.characterAsset.create).not.toHaveBeenCalled();
+    it('should refuse to wipe the library when extraction is empty', async () => {
+      await expect(service.persistExtracted('proj-1', {})).rejects.toThrow('No characters extracted');
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
   });
 

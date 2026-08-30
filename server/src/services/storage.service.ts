@@ -71,8 +71,21 @@ export class StorageService {
     return Promise.all(filePaths.map(fp => this.getSignedUrl(fp, expiresInSec)));
   }
 
+  private assertSafeProjectId(projectId: string): void {
+    if (!/^[a-zA-Z0-9_-]+$/.test(projectId)) {
+      throw new Error('Invalid projectId');
+    }
+  }
+
   private async uploadToLocal(projectId: string, filename: string, buffer: Buffer): Promise<{ url: string; path: string }> {
-    const projectDir = path.join(config.storageLocalDir, 'projects', projectId);
+    this.assertSafeProjectId(projectId);
+
+    const root = path.resolve(config.storageLocalDir, 'projects');
+    const projectDir = path.resolve(root, projectId);
+    if (projectDir !== root && !projectDir.startsWith(root + path.sep)) {
+      throw new Error('Invalid projectId');
+    }
+
     await fs.mkdir(projectDir, { recursive: true });
 
     const filePath = path.join(projectDir, filename);
