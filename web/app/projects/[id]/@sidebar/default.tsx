@@ -20,7 +20,6 @@ export default function ProjectSidebarSlot() {
   const getActiveMenuItem = () => {
     if (!pathname) return undefined;
     
-    if (pathname.includes('/input')) return 'input';
     if (pathname.includes('/scripts')) return 'script';
     if (pathname.includes('/characters')) return 'characters';
     if (pathname.includes('/locations')) return 'locations';

@@ -117,6 +117,7 @@ export class CharacterAssetService implements AssetAdapter {
           projectId,
           name: data.name,
           description: data.description,
+          alias: data.alias,
           images: processedImages as any,
         },
       });

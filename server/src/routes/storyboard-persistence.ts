@@ -1,14 +1,19 @@
 import { Hono } from 'hono';
 import { StoryboardDataService } from '../services/storyboard-data.service';
+import { StoryboardService } from '../services/storyboard.service';
 import type { AuthEnv } from '../middleware/default-user';
 
 const storyboardPersistence = new Hono<AuthEnv>();
 const storyboardDataService = new StoryboardDataService();
+const storyboardService = new StoryboardService();
 
 storyboardPersistence.get('/projects/:projectId/storyboard-data', async (c) => {
   const projectId = c.req.param('projectId');
-  const frames = await storyboardDataService.getStoryboard(projectId);
-  return c.json({ success: true, frames });
+  const [frames, images] = await Promise.all([
+    storyboardDataService.getStoryboard(projectId),
+    storyboardService.getFrameImages(projectId),
+  ]);
+  return c.json({ success: true, frames, images });
 });
 
 storyboardPersistence.put('/projects/:projectId/storyboard-data', async (c) => {

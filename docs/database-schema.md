@@ -2,7 +2,7 @@
 
 > Prisma schema 位于 `server/src/db/schema.prisma`，本地 PostgreSQL 容器（`postgres:15-alpine`）。
 
-## 模型总览（15 张表）
+## 模型总览（14 张表）
 
 | 模型 | 用途 | 关键字段 |
 |------|------|---------|
@@ -16,10 +16,9 @@
 | `CharacterRelation` | 角色关系图（无向边）| projectId, nodeAId（较小 ID）, nodeBId（较大 ID）, type, weight |
 | `Storyboard` | 分镜数据 | projectId（unique）, frames (JSON) |
 | `StoryboardFrameImage` | 分镜帧图片 | projectId, frameId, image (JSON) |
-| `GenerationJob` | 图片生成队列 | userId, projectId, status, progress, params, resultUrl, error |
+| `GenerationJob` | 异步任务（生图 / 分镜导入） | userId, projectId, type, status, progress, params, resultUrl, result, error |
 | `ChatSession` | 对话会话 | projectId, title |
 | `ChatMessage` | 对话消息 | projectId, sessionId, role, content, messageType, options, selectedOption |
-| `Task` | 通用异步任务 | userId, type, status, input, result, error |
 | `Inspiration` | 灵感库 | projectId, text, category, isFavorite |
 
 > 默认用户：`id=default-local-user`、`email=local@dramo.tool`，由 `server/src/lib/default-user.ts` 在启动时 `upsert`。

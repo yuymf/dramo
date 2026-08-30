@@ -30,7 +30,6 @@ export function AppHeader({
   const getCurrentMode = (): string => {
     if (propMode) return propMode;
     if (pathname?.includes('/dialogue')) return 'dialogue';
-    if (pathname?.includes('/hollywood')) return 'hollywood';
     return 'script';
   };
 
@@ -48,8 +47,6 @@ export function AppHeader({
         router.push(`/projects/${projectId}/scripts`);
       } else if (newMode === 'dialogue') {
         router.push(`/projects/${projectId}/scripts/dialogue`);
-      } else if (newMode === 'hollywood') {
-        router.push(`/projects/${projectId}/scripts/hollywood`);
       }
     }
   };
@@ -57,7 +54,6 @@ export function AppHeader({
   const modes = [
     { id: 'script', label: t("scriptMode") },
     { id: 'dialogue', label: t("dialogueMode") },
-    { id: 'hollywood', label: t("hollywoodMode") },
   ];
 
   return (

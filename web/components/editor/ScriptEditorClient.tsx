@@ -609,24 +609,6 @@ export function ScriptEditorClient() {
     [activeSceneId]
   );
 
-  const handleFavoriteInspiration = useCallback(
-    async (inspirationId: string) => {
-      try {
-        await api<{ inspirationId: string; isFavorite: boolean }>(
-          "/api/inspirations/favorite",
-          {
-            method: "POST",
-            body: { inspirationId },
-          }
-        );
-        showToast("已添加到收藏！", "success");
-      } catch (err) {
-        showToast((err as Error).message, "error");
-      }
-    },
-    [showToast]
-  );
-
   const formatLastSaved = () => {
     if (!lastSaved) return "";
     const now = Date.now();
@@ -1469,7 +1451,6 @@ export function ScriptEditorClient() {
                   projectId={projectId}
                   sceneId={activeSceneId}
                   onInsert={handleInsertInspiration}
-                  onFavorite={handleFavoriteInspiration}
                   onCollapse={handleToggleInspirationPanel}
                 />
               </aside>

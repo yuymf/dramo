@@ -4,11 +4,11 @@ import { StoryboardDataService } from '../services/storyboard-data.service';
 import type { FrameData } from '../services/storyboard-data.service';
 import { CharacterAssetService } from '../services/character-asset.service';
 import { LocationAssetService } from '../services/location-asset.service';
-import { TaskService } from '../services/task.service';
 import { startWorkflowRun } from '../lib/agentos-client';
 import { logger } from '../lib/logger';
 import type { AuthEnv } from '../middleware/default-user';
 import { LLMConfigService } from '../services/llm-config.service';
+import { JobStoreService } from '../services/job-store.service';
 import { AppException, ErrorCode } from '../lib/errors';
 import { prisma } from '../lib/db';
 
@@ -18,7 +18,7 @@ const storyboardDataService = new StoryboardDataService();
 const characterAssetService = new CharacterAssetService();
 const locationAssetService = new LocationAssetService();
 const llmConfigService = new LLMConfigService();
-const taskService = new TaskService();
+const jobStore = new JobStoreService();
 
 /** Timeout for the background AgentOS workflow call (9 minutes) */
 const WORKFLOW_TIMEOUT_MS = 540_000;
@@ -90,10 +90,10 @@ function storyboardJsonToFrames(data: {
 
 /**
  * Execute storyboard import in background (fire-and-forget).
- * Updates Task record with progress/result/error.
+ * Updates GenerationJob with progress/result/error.
  */
 async function executeStoryboardImport(
-  taskId: string,
+  jobId: string,
   params: {
     projectId: string;
     userId: string;
@@ -102,11 +102,15 @@ async function executeStoryboardImport(
   }
 ): Promise<void> {
   try {
-    await taskService.updateTask(taskId, { status: 'processing', progress: 10 });
+    const started = await jobStore.updateJobIfActive(jobId, { status: 'running', progress: 10 });
+    if (!started) {
+      logger.info({ jobId }, 'Skip storyboard import — job is no longer active');
+      return;
+    }
 
     const [charactersLib, locationsLib] = await fetchProjectAssets(params.projectId);
 
-    await taskService.updateTask(taskId, { progress: 15 });
+    await jobStore.updateJobIfActive(jobId, { progress: 15 });
 
     // Use stream:true so AgentOS sends SSE keep-alive events during the long
     // 4-phase pipeline — prevents Node.js undici bodyTimeout from killing
@@ -165,7 +169,7 @@ async function executeStoryboardImport(
       }
     }
 
-    logger.info({ taskId, eventCount }, 'Storyboard SSE stream complete');
+    logger.info({ jobId, eventCount }, 'Storyboard SSE stream complete');
 
     if (!lastContent) {
       throw new Error('No content received from storyboard workflow SSE stream');
@@ -189,21 +193,21 @@ async function executeStoryboardImport(
     );
     if (frames.length > 0) {
       await storyboardDataService.saveStoryboard(params.projectId, frames);
-      logger.info({ taskId, frames: frames.length }, 'Storyboard frames saved to DB');
+      logger.info({ jobId, frames: frames.length }, 'Storyboard frames saved to DB');
     }
 
-    await taskService.updateTask(taskId, {
-      status: 'completed',
+    await jobStore.updateJobIfActive(jobId, {
+      status: 'succeeded',
       progress: 100,
       result: storyboardData,
     });
 
-    logger.info({ taskId, projectId: params.projectId }, 'Storyboard import completed');
+    logger.info({ jobId, projectId: params.projectId }, 'Storyboard import completed');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    logger.error({ error, taskId, projectId: params.projectId }, 'Storyboard import failed');
+    logger.error({ error, jobId, projectId: params.projectId }, 'Storyboard import failed');
 
-    await taskService.updateTask(taskId, {
+    await jobStore.updateJobIfActive(jobId, {
       status: 'failed',
       error: {
         code: ErrorCode.GENERATION_ERROR,
@@ -211,14 +215,14 @@ async function executeStoryboardImport(
         retryable: true,
       },
     }).catch((updateErr) => {
-      logger.error({ updateErr, taskId }, 'Failed to update task with error status');
+      logger.error({ updateErr, jobId }, 'Failed to update job with error status');
     });
   }
 }
 
 /**
  * Import storyboard from text — calls AgentOS storyboardworkflow.
- * Returns 202 Accepted with taskId. Frontend polls GET /api/tasks/:taskId.
+ * Returns 202 Accepted with jobId. Frontend polls GET /api/jobs/:jobId.
  */
 storyboard.post('/projects/:projectId/storyboard/import', async (c) => {
   const projectId = c.req.param('projectId');
@@ -229,7 +233,6 @@ storyboard.post('/projects/:projectId/storyboard/import', async (c) => {
     throw new AppException(ErrorCode.INVALID_INPUT, 'Missing text in request body');
   }
 
-  // Authorization: verify caller owns the project (BOLA prevention)
   const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
   if (!project) {
     throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
@@ -237,26 +240,22 @@ storyboard.post('/projects/:projectId/storyboard/import', async (c) => {
 
   const llmHeaders = await llmConfigService.getLLMHeaders(userId, 'TEXT_LLM');
 
-  // Async mode: create Task → return 202 → background execution
-  const task = await taskService.createTask({
-    type: 'storyboard_import',
-    userId,
-    input: { projectId, text: body.text },
-    estimatedSeconds: ESTIMATED_PIPELINE_SECONDS,
+  const job = await prisma.generationJob.create({
+    data: {
+      userId,
+      projectId,
+      type: 'storyboard_import',
+      params: { text: body.text, estimatedSeconds: ESTIMATED_PIPELINE_SECONDS },
+      status: 'queued',
+      progress: 0,
+    },
   });
 
-  // Fire-and-forget: execute in background
-  executeStoryboardImport(task.id, { projectId, userId, text: body.text, llmHeaders }).catch((err) => {
-    logger.error({ err, taskId: task.id }, 'Background storyboard import failed unexpectedly');
+  executeStoryboardImport(job.id, { projectId, userId, text: body.text, llmHeaders }).catch((err) => {
+    logger.error({ err, jobId: job.id }, 'Background storyboard import failed unexpectedly');
   });
 
-  return c.json({ taskId: task.id }, 202);
-});
-
-storyboard.get('/projects/:projectId/storyboard/frames/images', async (c) => {
-  const projectId = c.req.param('projectId');
-  const images = await storyboardService.getFrameImages(projectId);
-  return c.json({ success: true, images });
+  return c.json({ jobId: job.id }, 202);
 });
 
 storyboard.put('/projects/:projectId/storyboard/frames/:frameId/image', async (c) => {

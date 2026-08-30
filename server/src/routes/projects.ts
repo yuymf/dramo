@@ -46,12 +46,4 @@ projects.patch('/projects/:id', async (c) => {
   return c.json(project);
 });
 
-projects.delete('/projects/:id', async (c) => {
-  const id = c.req.param('id');
-  const userId = c.get('user').userId;
-
-  await projectService.deleteProject(id, userId);
-  return c.body(null, 204);
-});
-
 export { projects };

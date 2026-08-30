@@ -4,6 +4,7 @@
 import { api } from './client';
 import type {
   GenerationJob,
+  JobStatus,
   CreateJobRequest,
   CreateJobResponse,
   ListJobsRequest,
@@ -29,23 +30,23 @@ export async function listJobs(
   request: ListJobsRequest = {}
 ): Promise<ListJobsResponse> {
   const params = new URLSearchParams();
-  
+
   if (request.status) {
     const statuses = Array.isArray(request.status) ? request.status : [request.status];
-    statuses.forEach(s => params.append('status', s));
+    statuses.forEach((s) => params.append('status', s));
   }
-  
+
   if (request.limit) {
     params.set('limit', String(request.limit));
   }
-  
+
   if (request.offset) {
     params.set('offset', String(request.offset));
   }
-  
+
   const queryString = params.toString();
   const url = `/api/jobs${queryString ? `?${queryString}` : ''}`;
-  
+
   return api<ListJobsResponse>(url, { method: 'GET' });
 }
 
@@ -74,3 +75,17 @@ export async function retryJob(jobId: string): Promise<CreateJobResponse> {
   });
 }
 
+const TERMINAL: JobStatus[] = ['succeeded', 'failed', 'canceled'];
+
+export async function waitForJob(
+  jobId: string,
+  timeoutMs = 180_000,
+): Promise<GenerationJob> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const job = await getJob(jobId);
+    if (TERMINAL.includes(job.status)) return job;
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error('生成超时');
+}

@@ -8,11 +8,13 @@ export interface GenerationJob {
   id: string;
   userId: string;
   projectId: string;
+  type?: 'image' | 'storyboard_import' | string;
   storyboardId?: string;
   frameId?: string;
   params: {
-    name: string;
-    description: string;
+    name?: string;
+    description?: string;
+    text?: string;
     style?: string;
     colorGuide?: string;
     referenceImages?: string[];
@@ -23,6 +25,7 @@ export interface GenerationJob {
   progress: number; // 0-100
   queuePosition?: number;
   resultUrl?: string;
+  result?: unknown;
   error?: {
     message: string;
     code?: string;

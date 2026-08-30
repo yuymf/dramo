@@ -182,48 +182,9 @@ export async function api<T>(
   }
 }
 
-/**
- * 推荐灵感
- */
-export async function recommendInspirations(params: {
-  projectId: string;
-  script?: unknown;
-  position?: {
-    actOrder?: number;
-    sceneOrder?: number;
-    blockOrder?: number;
-  };
-  category?: 'quotes' | 'topics' | 'interactions' | 'hotspots';
-}) {
-  return api<{ data: Array<{ id: string; text: string; category: string; relevance?: number; source?: string }> }>(
-    `/api/inspirations/${params.projectId}/recommend`,
-    {
-      method: 'POST',
-      body: {
-        script: params.script,
-        position: params.position,
-        category: params.category,
-      },
-    }
-  );
-}
-
-export async function uploadImage(params: {
-  projectId: string;
-  base64Data: string;
-}) {
-  return api<{ success: boolean; url: string; path: string }>(
-    `/api/projects/${params.projectId}/uploads/image`,
-    {
-      method: 'POST',
-      body: { base64Data: params.base64Data },
-    }
-  );
-}
-
 // Storyboard Data API
 export async function getStoryboardData(projectId: string) {
-  return api<{ success: boolean; frames: unknown[] }>(
+  return api<{ success: boolean; frames: unknown[]; images: Record<string, unknown> }>(
     `/api/projects/${projectId}/storyboard-data`,
     { method: 'GET' }
   );

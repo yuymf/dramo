@@ -3,7 +3,7 @@
  */
 "use client";
 import { useEffect, useState } from "react";
-import { RefreshCw, ChevronRight } from "lucide-react";
+import { RefreshCw, ChevronRight, Star } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,13 +17,13 @@ interface Inspiration {
   category: "quotes" | "topics" | "interactions" | "hotspots";
   relevance?: number;
   source?: string;
+  isFavorite?: boolean;
 }
 
 interface InspirationPanelProps {
   projectId: string;
   sceneId?: string;
   onInsert: (text: string) => void;
-  onFavorite: (inspirationId: string) => void;
   onCollapse?: () => void;
 }
 
@@ -36,12 +36,10 @@ const CATEGORY_LABELS = {
 
 export function InspirationPanel({
   projectId,
-  sceneId, // eslint-disable-line @typescript-eslint/no-unused-vars -- 保留参数以保持接口兼容性
   onInsert,
-  onFavorite,
   onCollapse,
 }: InspirationPanelProps) {
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string>("all");
   const [inspirations, setInspirations] = useState<Inspiration[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,15 +47,12 @@ export function InspirationPanel({
   const { showToast } = useToast();
 
   useEffect(() => {
-    // 轻量加载：进入项目时自动获取已存储/缓存的灵感
     async function fetchInspirations() {
       if (!projectId || initialized) return;
       setLoading(true);
       try {
-        // 使用新的轻量接口 GET /api/inspirations/{projectId}
         const res = await api<{ data: Inspiration[] }>(
-          `/api/inspirations/${projectId}`,
-          { cacheTtlMs: 300000 } // 缓存5分钟
+          `/api/inspirations/${projectId}`
         );
         setInspirations(res.data);
         setInitialized(true);
@@ -70,26 +65,20 @@ export function InspirationPanel({
     fetchInspirations();
   }, [projectId, initialized]);
 
-  // 重上下文刷新：基于当前台本内容生成精准推荐
   const handleRefresh = async () => {
     if (!projectId) {
       showToast("缺少项目信息", "error");
       return;
     }
-    
+
     setRefreshing(true);
     try {
-      // 使用新的重上下文接口 POST /api/inspirations/{projectId}/recommend
-      // TODO: 传入完整的 script 对象和当前编辑位置以获得更精准的推荐
+      const category = activeFilter === "all" || activeFilter === "favorites" ? undefined : activeFilter;
       const res = await api<{ data: Inspiration[] }>(
         `/api/inspirations/${projectId}/recommend`,
         {
           method: "POST",
-          body: {
-            // script: currentScript, // 需要从父组件传入
-            // position: { actOrder, sceneOrder, blockOrder },
-            category: activeCategory || undefined,
-          },
+          body: { category },
         }
       );
       setInspirations(res.data);
@@ -102,10 +91,31 @@ export function InspirationPanel({
     }
   };
 
-  // 客户端过滤灵感，避免重新请求
-  const filteredInspirations = activeCategory 
-    ? inspirations.filter(insp => insp.category === activeCategory)
-    : inspirations;
+  const handleFavorite = async (inspirationId: string) => {
+    try {
+      const res = await api<{ inspirationId: string; isFavorite: boolean }>(
+        "/api/inspirations/favorite",
+        {
+          method: "POST",
+          body: { inspirationId },
+        }
+      );
+      setInspirations((prev) =>
+        prev.map((item) =>
+          item.id === inspirationId ? { ...item, isFavorite: res.isFavorite } : item
+        )
+      );
+      showToast(res.isFavorite ? "已收藏" : "已取消收藏", "success");
+    } catch (err) {
+      showToast((err as Error).message, "error");
+    }
+  };
+
+  const filteredInspirations = inspirations.filter((insp) => {
+    if (activeFilter === "favorites") return !!insp.isFavorite;
+    if (activeFilter === "all") return true;
+    return insp.category === activeFilter;
+  });
 
   return (
     <div className="h-full flex flex-col">
@@ -138,15 +148,14 @@ export function InspirationPanel({
             )}
           </div>
         </div>
-        {/* Category Tabs */}
         <div className="px-3 pt-2 pb-3">
-          <Tabs
-            value={activeCategory ?? "all"}
-            onValueChange={(val) => setActiveCategory(val === "all" ? null : val)}
-          >
-            <TabsList className="w-full grid grid-cols-3 gap-1">
+          <Tabs value={activeFilter} onValueChange={setActiveFilter}>
+            <TabsList className="w-full flex flex-wrap h-auto gap-1">
               <TabsTrigger value="all" className="text-xs jp-serif">
                 全部
+              </TabsTrigger>
+              <TabsTrigger value="favorites" className="text-xs jp-serif">
+                收藏
               </TabsTrigger>
               <TabsTrigger value="quotes" className="text-xs jp-serif">
                 💬
@@ -154,19 +163,26 @@ export function InspirationPanel({
               <TabsTrigger value="topics" className="text-xs jp-serif">
                 📋
               </TabsTrigger>
+              <TabsTrigger value="interactions" className="text-xs jp-serif">
+                🤝
+              </TabsTrigger>
+              <TabsTrigger value="hotspots" className="text-xs jp-serif">
+                🔥
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
       </div>
 
-      {/* Inspiration Cards */}
       <ScrollArea className="flex-1">
         <div className="space-y-3 px-3 pb-3">
           {loading && (
             <p className="text-sm text-slate-400 italic jp-serif">加载中...</p>
           )}
           {!loading && filteredInspirations.length === 0 && (
-            <p className="text-sm text-slate-400 italic jp-serif">暂无灵感</p>
+            <p className="text-sm text-slate-400 italic jp-serif">
+              {activeFilter === "favorites" ? "还没有收藏" : "暂无灵感"}
+            </p>
           )}
           {!loading &&
             filteredInspirations.map((insp) => (
@@ -200,12 +216,13 @@ export function InspirationPanel({
                       插入
                     </Button>
                     <Button
-                      onClick={() => onFavorite(insp.id)}
+                      onClick={() => handleFavorite(insp.id)}
                       variant="outline"
                       size="sm"
-                      className="text-xs h-7 jp-serif"
+                      className={`text-xs h-7 jp-serif ${insp.isFavorite ? "text-amber-500 border-amber-300" : ""}`}
                     >
-                      ⭐ 收藏
+                      <Star className={`w-3.5 h-3.5 mr-1 ${insp.isFavorite ? "fill-amber-400 text-amber-400" : ""}`} />
+                      {insp.isFavorite ? "已收藏" : "收藏"}
                     </Button>
                   </div>
                 </CardContent>
@@ -216,4 +233,3 @@ export function InspirationPanel({
     </div>
   );
 }
-

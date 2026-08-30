@@ -185,6 +185,13 @@ describe('JobRunnerService', () => {
       await expect(service.retryJob('job-1', 'user-1')).rejects.toThrow('Job is not retryable');
     });
 
+    it('should not retry storyboard import jobs', async () => {
+      const job = makeJob({ status: 'failed', type: 'storyboard_import', error: { retryable: true } });
+      mockStore.getJob.mockResolvedValue(job as any);
+
+      await expect(service.retryJob('job-1', 'user-1')).rejects.toThrow('Job is not retryable');
+    });
+
     it('should retry job with null error (retryable by default)', async () => {
       const failedJob = makeJob({ status: 'failed', error: null });
       const newJob = makeJob({ id: 'job-2', status: 'queued' });

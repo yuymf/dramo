@@ -23,11 +23,6 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
-// Mock agentos-client
-jest.mock('../../lib/agentos-client', () => ({
-  runImageGeneration: jest.fn(),
-}));
-
 // Mock storage service
 jest.mock('../../services/storage.service', () => ({
   StorageService: jest.fn().mockImplementation(() => ({
@@ -37,11 +32,9 @@ jest.mock('../../services/storage.service', () => ({
 }));
 
 import { prisma } from '../../lib/db';
-import { runImageGeneration } from '../../lib/agentos-client';
 import { LocationAssetService } from '../../services/location-asset.service';
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>;
-const mockRunImageGeneration = runImageGeneration as jest.MockedFunction<typeof runImageGeneration>;
 
 function makeLocationAsset(overrides: Record<string, unknown> = {}) {
   return {
@@ -268,34 +261,6 @@ describe('LocationAssetService', () => {
     it('should refuse to wipe the library when extraction is empty', async () => {
       await expect(service.persistExtracted('proj-1', {})).rejects.toThrow('No locations extracted');
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('generateLocationImage', () => {
-    it('should generate image and return result', async () => {
-      mockRunImageGeneration.mockResolvedValue({ images: [{ url: 'https://img.example.com/loc.png' }] } as any);
-      mockStorageService.uploadImageFromUrl.mockResolvedValue('https://cdn.example.com/loc.png');
-
-      const result = await service.generateLocationImage('proj-1', 'user-1', {
-        locationId: 'loc-1',
-        name: 'Forest',
-        description: 'A dark forest',
-        style: 'realistic',
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.locationId).toBe('loc-1');
-      expect(result.images).toHaveLength(1);
-    });
-
-    it('should throw on generation failure', async () => {
-      mockRunImageGeneration.mockRejectedValue(new Error('AgentOS failure'));
-
-      await expect(service.generateLocationImage('proj-1', 'user-1', {
-        locationId: 'loc-1',
-        name: 'Forest',
-        description: 'desc',
-      })).rejects.toThrow('AgentOS failure');
     });
   });
 

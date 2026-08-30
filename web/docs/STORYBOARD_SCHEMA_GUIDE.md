@@ -282,7 +282,7 @@ You would:
 ## Testing
 
 After making changes:
-1. Upload a script via `/projects/[id]/input`
+1. 在项目工作区生成或编辑台本（`/projects/[id]/scripts`）
 2. Generate a storyboard
 3. Navigate to `/projects/[id]/storyboard`
 4. Verify all fields (old and new) display correctly

@@ -30,9 +30,10 @@ export class JobRunnerService {
       data: {
         userId: data.userId,
         projectId: data.projectId,
+        type: 'image',
         storyboardId: data.storyboardId,
         frameId: data.frameId,
-        params: data.params as any,
+        params: data.params as object,
         status: 'queued',
         progress: 0,
       },
@@ -82,6 +83,10 @@ export class JobRunnerService {
       throw new Error('Job is not retryable');
     }
 
+    if (job.type === 'storyboard_import') {
+      throw new Error('Job is not retryable');
+    }
+
     const params = job.params as unknown as ImageGenerationParams;
     return this.createJob({
       userId: job.userId,
@@ -124,6 +129,7 @@ export class JobRunnerService {
         status: 'succeeded',
         progress: 100,
         resultUrl: firstImageUrl,
+        result: { images: result.images },
       });
       if (!finished) {
         logger.info({ jobId }, 'Skip success write — job was canceled during generation');

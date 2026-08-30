@@ -1,15 +1,7 @@
-import { runImageGeneration } from '../lib/agentos-client';
 import { StorageService } from './storage.service';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/db';
 import type { AssetAdapter } from '../lib/asset-route-factory';
-
-export interface LocationImageRequest {
-  locationId: string;
-  name: string;
-  description: string;
-  style?: string;
-}
 
 export interface LocationAssetData {
   name: string;
@@ -31,42 +23,6 @@ export class LocationAssetService implements AssetAdapter {
 
   constructor() {
     this.storageService = new StorageService();
-  }
-
-  /**
-   * Generate location image
-   */
-  async generateLocationImage(
-    projectId: string,
-    _userId: string,
-    request: LocationImageRequest,
-    llmHeaders?: Record<string, string>
-  ) {
-    logger.info(`[LocationAssetService] Generating image for location ${request.locationId}`);
-
-    try {
-      const prompt = this.buildPrompt(request.description, request.style);
-
-      const result = await runImageGeneration({
-        prompt,
-        mode: 'single',
-        stream: false,
-        style: request.style,
-      }, { llmHeaders });
-
-      const uploadedUrls = await Promise.all(
-        result.images.map((img) => this.storageService.uploadImageFromUrl(projectId, img.url))
-      );
-
-      return {
-        success: true,
-        locationId: request.locationId,
-        images: uploadedUrls.map((url) => ({ url })),
-      };
-    } catch (error) {
-      logger.error(`[LocationAssetService] Location image generation failed: ${error}`);
-      throw error;
-    }
   }
 
   /**
@@ -160,6 +116,7 @@ export class LocationAssetService implements AssetAdapter {
           projectId,
           name: data.name,
           description: data.description,
+          alias: data.alias,
           images: processedImages as any,
         },
       });
@@ -323,22 +280,5 @@ export class LocationAssetService implements AssetAdapter {
         });
       }
     });
-  }
-
-  private buildPrompt(description: string, style?: string): string {
-    let prompt = description.trim();
-
-    if (style) {
-      const styleMap: Record<string, string> = {
-        realistic: '写实风格, photorealistic, high detail',
-        sketch: '线稿风格, sketch, line art, black and white',
-        comic: '漫画风格, comic style, manga, illustration',
-        doodle: '涂鸦风格, doodle, hand-drawn, artistic',
-      };
-      const styleTag = styleMap[style] || style;
-      prompt = `${prompt}. Style: ${styleTag}`;
-    }
-
-    return prompt;
   }
 }

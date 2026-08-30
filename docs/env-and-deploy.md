@@ -41,18 +41,13 @@ STORAGE_LOCAL_DIR=./uploads
 STORAGE_BASE_URL=http://localhost:12321/uploads
 ```
 
-### AI 供应商
+### AgentOS 回退密钥（用户未在 UI 配置时使用）
 
 ```bash
-AI_PROVIDER=openai|hunyuan|ark
 OPENAI_API_KEY=sk-...
 OPENAI_API_BASE=<可选自定义 base URL>
 OPENAI_MODEL_ID=gpt-4-turbo-preview
-HUNYUAN_OPENAPI_KEY=...
-HUNYUAN_OPENAPI_URL=...
-HUNYUAN_MODEL_ID=hunyuan-turbos-latest
 ARK_API_KEY=...
-ARK_API_BASE=https://ark.cn-beijing.volces.com/api/v3
 ```
 
 ### 超时配置

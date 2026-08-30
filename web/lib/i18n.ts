@@ -17,7 +17,6 @@ export const translations = {
     
     // 项目侧栏
     projectName: "华尔街之狼",
-    input: "输入",
     script: "台本",
     characters: "角色",
     favorites: "收藏",
@@ -32,7 +31,6 @@ export const translations = {
     // 模式切换
     scriptMode: "台本式",
     dialogueMode: "分支式",
-    hollywoodMode: "分镜式",
     
     // 场景列表
     sceneList: "场景列表",
@@ -90,7 +88,6 @@ export const translations = {
     
     // Project Sidebar
     projectName: "The Wolf of Wall Street",
-    input: "Input",
     script: "Script",
     characters: "Characters",
     favorites: "Favorites",
@@ -105,7 +102,6 @@ export const translations = {
     // Mode Switcher
     scriptMode: "Script",
     dialogueMode: "Dialogue",
-    hollywoodMode: "Hollywood",
     
     // Scene List
     sceneList: "Scene List",

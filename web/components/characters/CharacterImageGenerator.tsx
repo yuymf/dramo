@@ -7,41 +7,10 @@ import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { Image as ImageIcon, Loader2, Upload, X, Plus } from "lucide-react";
 import { api } from "@/lib/api/client";
-import useSWRMutation from "swr/mutation";
+import { createGenerationJob, waitForJob } from "@/lib/api/jobs";
 import type { CharacterImageAsset, Script } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/Toast";
-// import { cn } from "@/lib/utils";
-
-// ---------------------------------------------------------------------------
-// Fetcher for useSWRMutation — defined outside component for stable reference
-// ---------------------------------------------------------------------------
-interface GenerateImageArg {
-  name: string;
-  description: string;
-  alias: string;
-  notes: string;
-  style: string;
-  script: unknown;
-  referenceImages: string[];
-}
-
-async function generateImageFetcher(
-  url: string,
-  { arg }: { arg: GenerateImageArg }
-): Promise<CharacterImageAsset> {
-  const res = await fetch(url, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(arg),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: { message: "生成失败" } }));
-    throw new Error((err as { error?: { message?: string } })?.error?.message ?? "生成失败");
-  }
-  return res.json() as Promise<CharacterImageAsset>;
-}
 
 interface CharacterImageGeneratorProps {
   projectId: string;
@@ -52,38 +21,19 @@ interface CharacterImageGeneratorProps {
 
 export function CharacterImageGenerator({
   projectId,
-  script,
+  script: _script,
   onGenerated,
   onUploaded,
 }: CharacterImageGeneratorProps) {
+  void _script;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [alias, setAlias] = useState("");
   const [notes, setNotes] = useState("");
   const [style, setStyle] = useState("");
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
-
-  const { trigger: generateImage, isMutating: loading } = useSWRMutation(
-    `/api/projects/${projectId}/characters/generate-image`,
-    generateImageFetcher,
-    {
-      onSuccess: (res) => {
-        showToast("角色图片生成成功", "success");
-        onGenerated?.(res);
-        // Reset form
-        setName("");
-        setDescription("");
-        setAlias("");
-        setNotes("");
-        setStyle("");
-        setReferenceImages([]);
-      },
-      onError: (err: Error) => {
-        showToast(err.message, "error");
-      },
-    }
-  );
 
   const refInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -204,14 +154,79 @@ export function CharacterImageGenerator({
     [projectId, name, description, alias, showToast, onUploaded]
   );
 
-  // Handle generation
+  // Handle generation via GenerationJob queue, then persist the asset
   const handleGenerate = useCallback(async () => {
     if (!name.trim()) {
       showToast("请输入角色名称", "error");
       return;
     }
-    await generateImage({ name, description, alias, notes, style, script: script ?? null, referenceImages });
-  }, [name, description, alias, notes, style, script, referenceImages, generateImage, showToast]);
+
+    setLoading(true);
+    try {
+      const characterName = name.trim();
+      const { jobId } = await createGenerationJob({
+        projectId,
+        params: {
+          name: characterName,
+          description: [description.trim(), notes.trim()].filter(Boolean).join("\n") || characterName,
+          style,
+          referenceImages,
+          mode: "single",
+          assetType: "character",
+        },
+      });
+      const job = await waitForJob(jobId);
+      if (job.status === "failed") {
+        throw new Error(job.error?.message ?? "生成失败");
+      }
+      if (job.status === "canceled") {
+        throw new Error("已取消");
+      }
+      if (!job.resultUrl) {
+        throw new Error("生成结果为空");
+      }
+
+      const images = [{
+        id: `img_${Date.now()}`,
+        url: job.resultUrl,
+        source: "generated" as const,
+        createdAt: new Date().toISOString(),
+      }];
+
+      const created = await api<{ id: string; name: string; description?: string }>(
+        `/api/projects/${projectId}/characters/assets`,
+        {
+          method: "POST",
+          body: {
+            name: characterName,
+            description: description.trim(),
+            alias: alias.trim() || undefined,
+            images,
+          },
+        }
+      );
+
+      showToast("角色图片生成成功", "success");
+      onGenerated?.({
+        id: created.id,
+        characterName: created.name ?? characterName,
+        description: created.description ?? description.trim(),
+        alias: alias.trim() || undefined,
+        images,
+        createdAt: new Date().toISOString(),
+      });
+      setName("");
+      setDescription("");
+      setAlias("");
+      setNotes("");
+      setStyle("");
+      setReferenceImages([]);
+    } catch (err) {
+      showToast((err as Error).message, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId, name, description, alias, notes, style, referenceImages, onGenerated, showToast]);
 
   return (
     <div className="space-y-6 p-4 border border-slate-200 rounded-lg bg-white">

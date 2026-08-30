@@ -54,23 +54,17 @@ Browser → fetch('/api/projects')
 - **Passthrough**：Next.js Route Handler 检测 `text/event-stream` 后直接 pipe `ReadableStream`，不缓冲
 - **实现**：`server/src/lib/sse.ts` — `streamSSEResponse()`, `parseAgentOSSSE()`
 
-## 异步任务模式
+## 异步任务（GenerationJob）
 
-分镜导入等超长耗时操作（>55s）：
+分镜导入和生图走同一张 `GenerationJob` 表：
 
-1. `POST` 返回 `202 Accepted` + `taskId`
-2. 后端 fire-and-forget 后台执行（Node.js 进程长驻，不依赖 serverless）
-3. 客户端轮询 `GET /api/tasks/:taskId` 获取进度
-4. 任务状态：`queued → running → completed/failed`
+1. `POST` 返回 `202 Accepted` + `jobId`（分镜 import）或 `{ jobId }`（生图）
+2. 后端 fire-and-forget 后台执行（Node.js 进程长驻）
+3. 客户端轮询 `GET /api/jobs/:id` / `GET /api/jobs` 获取进度
+4. 状态：`queued → running → succeeded/failed/canceled`
+5. `type=image` 写 `resultUrl`；`type=storyboard_import` 写 `result`
 
 > Node.js HTTP 服务器超时设置（`server/src/server.ts`）：headersTimeout 10min、requestTimeout 12min、keepAliveTimeout 10min20s。
-
-## 图片生成队列
-
-1. 创建 `GenerationJob` (status: queued)
-2. 后端 inline 执行（无独立队列服务）
-3. 客户端轮询 `GET /api/jobs` 获取进度
-4. 支持取消和重试（仅限可重试错误）
 
 ## 加密方案
 
@@ -172,7 +166,7 @@ POST /api/generate-image → AgentOS 智能模式选择:
 ## 前端状态管理
 
 - `AIChatProvider` — AI 对话抽屉、当前页面类型、JSON 上下文、待应用的 AI 建议
-- `GenerationJobsProvider` — 异步任务轮询（图片/台本生成）
+- `GenerationJobsProvider` — 生图 / 分镜导入任务轮询
 - SWR — 远端数据获取与缓存
 - Zustand — 局部客户端状态（如 pipeline 步进器）
 - 无全局认证状态（无登录设计）

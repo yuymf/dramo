@@ -100,24 +100,6 @@ model ScriptVersion {
   @@index([scriptId, createdAt])
 }
 
-model Task {
-  id               String   @id @default(cuid())
-  type             String
-  status           String   @default("queued")
-  progress         Int      @default(0)
-  input            Json
-  result           Json?
-  error            Json?
-  userId           String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  estimatedSeconds Int?
-
-  @@index([userId, status])
-  @@index([createdAt])
-  @@index([status])
-}
-
 model Inspiration {
   id         String   @id @default(cuid())
   text       String
@@ -241,13 +223,15 @@ model GenerationJob {
   id            String   @id @default(cuid())
   userId        String
   projectId     String
+  type          String   @default("image") // image | storyboard_import
   storyboardId  String?
   frameId       String?
-  params        Json     // {name, description, style, referenceImages, mode, assetType}
+  params        Json     // image: {name, description, style, ...} / import: {text}
   status        String   @default("queued") // queued, running, succeeded, failed, canceled
   progress      Int      @default(0) // 0-100
   queuePosition Int?
   resultUrl     String?
+  result        Json?
   error         Json?    // {message, code, retryable}
   retryCount    Int      @default(0)
   createdAt     DateTime @default(now())
@@ -256,6 +240,7 @@ model GenerationJob {
   @@index([userId, status])
   @@index([status, createdAt])
   @@index([projectId])
+  @@index([type, status])
 }
 
 

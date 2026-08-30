@@ -79,15 +79,17 @@ export class JobStoreService {
       progress?: number;
       queuePosition?: number;
       resultUrl?: string;
+      result?: unknown;
       error?: AppError;
     }
   ) {
-    const { error, ...rest } = data;
+    const { error, result, ...rest } = data;
     return prisma.generationJob.update({
       where: { id: jobId },
       data: {
         ...rest,
-        error: error ? (error as any) : undefined,
+        result: result !== undefined ? (result as object) : undefined,
+        error: error ? (error as object) : undefined,
         updatedAt: new Date(),
       },
     });
@@ -104,19 +106,21 @@ export class JobStoreService {
       progress?: number;
       queuePosition?: number;
       resultUrl?: string;
+      result?: unknown;
       error?: AppError;
     }
   ) {
-    const { error, ...rest } = data;
-    const result = await prisma.generationJob.updateMany({
+    const { error, result, ...rest } = data;
+    const updated = await prisma.generationJob.updateMany({
       where: { id: jobId, status: { in: ['queued', 'running'] } },
       data: {
         ...rest,
-        error: error ? (error as any) : undefined,
+        result: result !== undefined ? (result as object) : undefined,
+        error: error ? (error as object) : undefined,
         updatedAt: new Date(),
       },
     });
-    if (result.count === 0) return null;
+    if (updated.count === 0) return null;
     return prisma.generationJob.findFirst({ where: { id: jobId } });
   }
 

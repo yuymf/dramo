@@ -99,25 +99,4 @@ export class ProjectService {
     return updated;
   }
 
-  async deleteProject(id: string, userId: string) {
-    const project = await prisma.project.findFirst({
-      where: { id, userId },
-    });
-
-    if (!project) {
-      throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
-    }
-
-    await prisma.$transaction([
-      prisma.characterRelation.deleteMany({ where: { projectId: id } }),
-      prisma.characterAsset.deleteMany({ where: { projectId: id } }),
-      prisma.locationAsset.deleteMany({ where: { projectId: id } }),
-      prisma.storyboardFrameImage.deleteMany({ where: { projectId: id } }),
-      prisma.chatMessage.deleteMany({ where: { projectId: id } }),
-      prisma.chatSession.deleteMany({ where: { projectId: id } }),
-      prisma.generationJob.deleteMany({ where: { projectId: id } }),
-      prisma.inspiration.deleteMany({ where: { projectId: id } }),
-      prisma.project.delete({ where: { id } }),
-    ]);
-  }
 }

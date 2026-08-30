@@ -24,7 +24,7 @@ import type { FrameData } from "@/lib/types/storyboard";
 import { SavedAssetsPanel } from "@/components/storyboard/SavedAssetsPanel";
 import { GeneratorModal } from "@/components/storyboard/GeneratorModal";
 import { useToast } from "@/components/ui/Toast";
-import { readJSON, saveJSON, addProjectGeneratedAsset, type GeneratedAssetLocal } from "@/lib/storage/local";
+import { addProjectGeneratedAsset, type GeneratedAssetLocal } from "@/lib/storage/local";
 import { api, getStoryboardData, saveStoryboardData } from "@/lib/api/client";
 import { getProjectAssets } from "@/lib/utils/exporter";
 import type { ImageItem, StoryboardResponse } from "@/lib/models";
@@ -245,69 +245,14 @@ export default function StoryboardPage() {
       try {
         setLoading(true);
 
-        // 1. Try to load from database first
-        let framesLoaded = false;
-        try {
-          const result = await getStoryboardData(projectId);
-          if (result.success && result.frames && result.frames.length > 0) {
-            console.log('[Storyboard] Loaded from database:', result.frames.length, 'frames');
-            setFrames(result.frames as FrameData[]);
-            framesLoaded = true;
-          }
-        } catch (error) {
-          console.warn('[Storyboard] Failed to load from database, falling back to localStorage:', error);
-        }
-
-        // 2. If not loaded from database, try other sources
-        if (!framesLoaded) {
-          // Check for imported storyboard data in localStorage
-        const storyboardData = readJSON<StoryboardResponse | null>(
-          `storyboard_${projectId}`, 
-          null
-        );
-
-        if (storyboardData && storyboardData.scenes && storyboardData.scenes.length > 0) {
-          // Use imported storyboard data
-          const convertedFrames = storyboardJsonToFrames(storyboardData);
-          setFrames(convertedFrames);
-          setStoryboardData(storyboardData); // 保存用于AI上下文
+        const result = await getStoryboardData(projectId);
+        if (result.success && result.frames && result.frames.length > 0) {
+          setFrames(result.frames as FrameData[]);
         } else {
-          // No data available, use placeholders
           setFrames(getPlaceholderFrames());
           setStoryboardData(null);
         }
-        }
-
-        // Load saved frame images from backend
-        try {
-          const backendImages = await api<{ success: boolean; images: Record<string, ImageItem> }>(
-            `/api/projects/${projectId}/storyboard/frames/images`
-          );
-          
-          // Also load from localStorage as fallback
-          const localImages = readJSON<Record<string, ImageItem>>(
-            `storyboard_frames_${projectId}`,
-            {}
-          );
-
-          // Merge backend and local images (backend takes precedence)
-          const mergedImages = { ...localImages, ...backendImages.images };
-          setFrameImages(new Map(Object.entries(mergedImages)));
-        } catch (err) {
-          // 静默处理 404 错误（数据为空时正常情况）
-          const apiError = err as Error & { status?: number };
-          if (apiError.status === 404) {
-            console.log('[Storyboard] No frame images in backend, using localStorage only');
-          } else {
-            console.warn('[Storyboard] Failed to load frame images from backend, using localStorage only:', err);
-          }
-          // Fallback to localStorage only
-          const localImages = readJSON<Record<string, ImageItem>>(
-            `storyboard_frames_${projectId}`,
-            {}
-          );
-          setFrameImages(new Map(Object.entries(localImages)));
-        }
+        setFrameImages(new Map(Object.entries((result.images || {}) as Record<string, ImageItem>)));
 
         // Load assets - 确保这段代码总是执行
         console.log('[Storyboard] Loading assets...');
@@ -346,40 +291,20 @@ export default function StoryboardPage() {
     }
   }, [storyboardData, frames, projectId, updateJsonData]);
 
-  // Save frame images to localStorage
-  useEffect(() => {
-    const obj = Object.fromEntries(frameImages);
-    saveJSON(`storyboard_frames_${projectId}`, obj);
-  }, [frameImages, projectId]);
-
   // Auto-save frames to database (debounced)
   useEffect(() => {
     if (frames.length === 0) return;
 
-    // 检查是否是 placeholder frames（数据为空时的占位符）
     const isPlaceholderData = frames.every(frame => frame.id?.startsWith('placeholder_'));
-    if (isPlaceholderData) {
-      // 跳过保存 placeholder 数据
-      return;
-    }
+    if (isPlaceholderData) return;
 
     const timeoutId = setTimeout(async () => {
       try {
-        console.log('[Storyboard] Auto-saving', frames.length, 'frames to database...');
         await saveStoryboardData(projectId, frames);
-        console.log('[Storyboard] Auto-save successful');
       } catch (error) {
-        // 静默处理保存失败（可能是数据为空或网络问题）
-        const apiError = error as Error & { status?: number };
-        if (apiError.status === 404) {
-          console.log('[Storyboard] Storyboard data not found in backend, saving to localStorage only');
-        } else {
-          console.warn('[Storyboard] Auto-save failed, saving to localStorage only:', error);
-        }
-        // Fallback to localStorage
-        saveJSON(`storyboard_frames_data_${projectId}`, frames);
+        console.warn('[Storyboard] Auto-save failed:', error);
       }
-    }, 2000); // 2 seconds debounce
+    }, 2000);
 
     return () => clearTimeout(timeoutId);
   }, [frames, projectId]);
@@ -561,7 +486,6 @@ export default function StoryboardPage() {
           });
         } catch (err) {
           console.error("Failed to persist frame image to backend:", err);
-          // Still saved locally, no need to show error
         }
       }
     },

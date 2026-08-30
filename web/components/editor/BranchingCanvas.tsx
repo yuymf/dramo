@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import ReactFlow, {
+import {
+  ReactFlow,
   Node,
   Edge,
   Controls,
@@ -14,8 +15,8 @@ import ReactFlow, {
   Panel,
   ReactFlowProvider,
   useReactFlow,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import type { Script, Block } from "@/lib/models";
 import { readJSON, saveJSON } from "@/lib/storage/local";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ interface BranchingGraph {
   edges: Array<{ id: string; sourceId: string; targetId: string; label?: string }>;
 }
 
-interface BlockNodeData {
+interface BlockNodeData extends Record<string, unknown> {
   label: string;
   textSnippet: string;
   sceneTitle: string;
@@ -184,13 +185,17 @@ function BranchingCanvasInner({ script, projectId, onOpenBlock }: BranchingCanva
 
   const onConnect = useCallback(
     (params: Connection) => {
-      const newEdge = {
-        ...params,
-        id: `e-${params.source}-${params.target}`,
-        type: "smoothstep",
-        label: "",
-      };
-      setEdges((eds) => addEdge(newEdge, eds));
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...params,
+            id: `e-${params.source}-${params.target}`,
+            type: "smoothstep",
+            label: "",
+          },
+          eds,
+        ),
+      );
     },
     [setEdges]
   );

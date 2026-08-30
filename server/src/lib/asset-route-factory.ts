@@ -34,7 +34,6 @@ const llmConfigService = new LLMConfigService();
  * Factory that generates a Hono router containing asset routes for one model:
  *   GET    {basePath}/assets            — list
  *   POST   {basePath}/assets            — create
- *   GET    {basePath}/assets/:assetId   — single
  *   PUT    {basePath}/assets/:assetId   — update
  *   DELETE {basePath}/assets/:assetId   — delete
  *   POST   {basePath}/extract           — extraction + DB persistence
@@ -56,13 +55,6 @@ export function createAssetRouter(config: AssetRouterConfig): Hono<AuthEnv> {
     const data = await c.req.json() as Record<string, unknown>;
     const asset = await service.createAsset(projectId, data);
     return c.json(asset, 201);
-  });
-
-  router.get(`${basePath}/assets/:assetId`, async (c) => {
-    const projectId = c.req.param('projectId') as string;
-    const assetId = c.req.param('assetId') as string;
-    const asset = await service.getAsset(projectId, assetId);
-    return c.json(asset);
   });
 
   router.put(`${basePath}/assets/:assetId`, async (c) => {

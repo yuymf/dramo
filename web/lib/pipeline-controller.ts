@@ -232,9 +232,9 @@ function stripHtml(html: string): string {
  * Calls onChunk for each data event.
  * Returns the final parsed result when done.
  *
- * Special case: if the response is 202 Accepted with a `taskId`, polls
- * GET /api/tasks/:taskId until the task reaches a terminal state, then
- * returns the task result. This handles async endpoints like storyboard/import.
+ * Special case: if the response is 202 Accepted with a `jobId`, polls
+ * GET /api/jobs/:jobId until the job reaches a terminal state, then
+ * returns the job result. This handles async endpoints like storyboard/import.
  */
 async function executeSSEStep(
   endpoint: string,
@@ -256,11 +256,11 @@ async function executeSSEStep(
     throw new Error(`API error ${response.status}: ${text}`);
   }
 
-  // Async mode: server returns 202 + taskId, poll until done
+  // Async mode: server returns 202 + jobId, poll until done
   if (response.status === 202) {
-    const json = await response.json() as { taskId?: string };
-    if (json.taskId) {
-      return pollTask(json.taskId, signal, onChunk);
+    const json = await response.json() as { jobId?: string };
+    if (json.jobId) {
+      return pollJob(json.jobId, signal, onChunk);
     }
   }
 
@@ -303,9 +303,9 @@ async function executeSSEStep(
   return result as Record<string, unknown>;
 }
 
-/** Poll GET /api/tasks/:taskId until completed/failed, return task result. */
-async function pollTask(
-  taskId: string,
+/** Poll GET /api/jobs/:jobId until succeeded/failed, return job result. */
+async function pollJob(
+  jobId: string,
   signal: AbortSignal,
   onChunk: (data: unknown) => void,
   intervalMs = 3000,
@@ -323,29 +323,31 @@ async function pollTask(
 
     if (signal.aborted) return null;
 
-    const res = await fetch(`/api/tasks/${taskId}`, {
+    const res = await fetch(`/api/jobs/${jobId}`, {
       credentials: 'include',
       signal,
     });
 
     if (!res.ok) continue;
 
-    const task = await res.json() as {
+    const job = await res.json() as {
       status: string;
       result?: Record<string, unknown>;
       error?: { message?: string };
     };
 
-    onChunk({ taskId, status: task.status });
+    onChunk({ jobId, status: job.status });
 
-    if (task.status === 'completed') {
-      return task.result ?? null;
+    if (job.status === 'succeeded') {
+      return job.result ?? null;
     }
-    if (task.status === 'failed') {
-      throw new Error(task.error?.message ?? 'Task failed');
+    if (job.status === 'failed') {
+      throw new Error(job.error?.message ?? 'Job failed');
     }
-    // still processing / queued — keep polling
+    if (job.status === 'canceled') {
+      throw new Error('Job canceled');
+    }
   }
 
-  throw new Error(`Task ${taskId} timed out after ${timeoutMs / 1000}s`);
+  throw new Error(`Job ${jobId} timed out after ${timeoutMs / 1000}s`);
 }

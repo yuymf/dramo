@@ -7,6 +7,7 @@ import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { Image as ImageIcon, Loader2, Upload, X, Plus } from "lucide-react";
 import { api } from "@/lib/api/client";
+import { createGenerationJob, waitForJob } from "@/lib/api/jobs";
 import type { LocationImageAssetV2, Script } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/Toast";
@@ -20,10 +21,11 @@ interface LocationImageGeneratorProps {
 
 export function LocationImageGenerator({
   projectId,
-  script,
+  script: _script,
   onGenerated,
   onUploaded,
 }: LocationImageGeneratorProps) {
+  void _script;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [alias, setAlias] = useState("");
@@ -154,26 +156,59 @@ export function LocationImageGenerator({
     setLoading(true);
 
     try {
-      const res = await api<LocationImageAssetV2>(
-        `/api/projects/${projectId}/locations/generate-image`,
+      const locationName = name.trim();
+      const { jobId } = await createGenerationJob({
+        projectId,
+        params: {
+          name: locationName,
+          description: [description.trim(), notes.trim()].filter(Boolean).join("\n") || locationName,
+          style,
+          referenceImages,
+          mode: "single",
+          assetType: "location",
+        },
+      });
+      const job = await waitForJob(jobId);
+      if (job.status === "failed") {
+        throw new Error(job.error?.message ?? "生成失败");
+      }
+      if (job.status === "canceled") {
+        throw new Error("已取消");
+      }
+      if (!job.resultUrl) {
+        throw new Error("生成结果为空");
+      }
+
+      const images = [{
+        id: `img_${Date.now()}`,
+        url: job.resultUrl,
+        source: "generated" as const,
+        createdAt: new Date().toISOString(),
+      }];
+
+      const created = await api<{ id: string; name: string; description?: string }>(
+        `/api/projects/${projectId}/locations/assets`,
         {
           method: "POST",
           body: {
-            name,
-            description,
-            alias,
-            notes,
-            style,
-            script,
-            referenceImages,
+            name: locationName,
+            description: description.trim(),
+            alias: alias.trim() || undefined,
+            images,
           },
         }
       );
 
       showToast("地点图片生成成功", "success");
-      onGenerated?.(res);
+      onGenerated?.({
+        id: created.id,
+        locationName: created.name ?? locationName,
+        description: created.description ?? description.trim(),
+        alias: alias.trim() || undefined,
+        images,
+        createdAt: new Date().toISOString(),
+      });
 
-      // Reset form
       setName("");
       setDescription("");
       setAlias("");
