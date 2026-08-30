@@ -96,6 +96,9 @@ npm run dev
 
 ## 文档
 
+- [产品需求：对标 Laper](docs/prd-laper-parity.md)
+- [第一期任务拆分](docs/phase1-wbs.md)
+- [第一期共享契约](docs/phase1-contracts.md)
 - [架构与设计](docs/architecture.md)
 - [API 接口参考](docs/api-reference.md)
 - [数据库模型](docs/database-schema.md)
@@ -106,4 +109,5 @@ npm run dev
 - 环境变量统一在根目录 `.env` 管理，由 docker-compose 注入到各容器
 - 本地开发时 `server/.env` 与 `agentos` 共享变量（agentos `env_loader.py` 从 `../server/.env` 读取）
 - 无外部依赖：本地 PostgreSQL 容器自动启动；存储使用本地文件系统 (`/app/uploads` volume)
-- 默认用户 `local@dramo.tool` 在首次启动时自动创建
+- 需要注册/登录；不再注入 `default-local-user`
+- 静帧出图走 `SD_WORKERS` 多实例池，不再走 Seedream
