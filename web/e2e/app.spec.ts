@@ -19,16 +19,16 @@ test.describe('Dramo 核心页面', () => {
     await page.goto('/projects');
     await expect(page.getByRole('heading', { name: '我的项目' })).toBeVisible();
 
-    await page.getByRole('link', { name: /主页/ }).click();
+    await page.getByRole('link', { name: '主页', exact: true }).click();
     await expect(page).toHaveURL(/\/home/);
     await expect(page.getByRole('heading', { name: /今天想写/ })).toBeVisible();
 
-    await page.getByRole('link', { name: /设置/ }).click();
+    await page.getByRole('link', { name: '设置', exact: true }).click();
     await expect(page).toHaveURL(/\/settings/);
     await expect(page.getByRole('heading', { name: '设置' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'AI 模型配置' })).toBeVisible();
 
-    await page.getByRole('link', { name: /项目/ }).click();
+    await page.getByRole('link', { name: '项目', exact: true }).click();
     await expect(page).toHaveURL(/\/projects$/);
   });
 
@@ -87,19 +87,20 @@ test.describe('项目工作区', () => {
     await dialog.getByRole('button', { name: '创建' }).click();
     await expect(page).toHaveURL(/\/scripts/, { timeout: 15_000 });
 
-    await page.getByRole('link', { name: '角色' }).click();
+    const workspaceNav = page.getByRole('navigation');
+    await workspaceNav.getByRole('link', { name: '角色' }).click();
     await expect(page).toHaveURL(/\/characters/);
     await expect(page.getByRole('heading', { name: '角色管理' })).toBeVisible();
 
-    await page.getByRole('link', { name: '地点' }).click();
+    await workspaceNav.getByRole('link', { name: '地点' }).click();
     await expect(page).toHaveURL(/\/locations/);
     await expect(page.getByRole('heading', { name: '地点管理' })).toBeVisible();
 
-    await page.getByRole('link', { name: '分镜' }).click();
+    await workspaceNav.getByRole('link', { name: '分镜' }).click();
     await expect(page).toHaveURL(/\/storyboard/);
     await expect(page.getByText('分镜').first()).toBeVisible();
 
-    await page.getByRole('link', { name: '台本' }).click();
+    await workspaceNav.getByRole('link', { name: '台本' }).click();
     await expect(page).toHaveURL(/\/scripts/);
     await expect(page.getByRole('heading', { name: '场景列表' })).toBeVisible();
     expect(errors, errors.join('\n')).toEqual([]);

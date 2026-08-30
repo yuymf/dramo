@@ -144,7 +144,39 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
     usePipelineStore.getState().setAbortController(controller);
   }, [projectId, updateTaskStatus, setRequirements]);
 
-  // Streaming chat hook
+  const handleStreamDone = useCallback((payload: {
+    content: string;
+    options?: ExtendedChatMessage['options'];
+    clarificationComplete?: StructuredRequirements;
+  }) => {
+    const safe = sanitizeMessage(payload);
+
+    const finalMessage: ExtendedChatMessage = {
+      id: `assistant_${Date.now()}`,
+      role: 'assistant',
+      content: safe.content,
+      options: safe.options,
+      clarificationComplete: safe.clarificationComplete,
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((prev) => {
+      const filtered = prev.filter((m) => m.id !== STREAMING_MESSAGE_ID);
+      return [...filtered, finalMessage];
+    });
+    setLoading(false);
+
+    if (safe.clarificationComplete) {
+      handleClarificationComplete(safe.clarificationComplete);
+    }
+  }, [handleClarificationComplete]);
+
+  const handleStreamError = useCallback((error: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== STREAMING_MESSAGE_ID));
+    setLoading(false);
+    showToast(error, 'error');
+  }, [showToast]);
+
   const {
     sendStreamingMessage,
     streamingContent,
@@ -154,37 +186,13 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
   } = useStreamingChat({
     projectId,
     sessionId: activeSessionId,
-    onStreamDone: (payload) => {
-      // Last-mile defense: if backend leaked raw JSON as content, recover structured fields
-      const safe = sanitizeMessage(payload);
-
-      const finalMessage: ExtendedChatMessage = {
-        id: `assistant_${Date.now()}`,
-        role: 'assistant',
-        content: safe.content,
-        options: safe.options,
-        clarificationComplete: safe.clarificationComplete,
-        createdAt: new Date().toISOString(),
-      };
-
-      setMessages((prev) => {
-        const filtered = prev.filter((m) => m.id !== STREAMING_MESSAGE_ID);
-        return [...filtered, finalMessage];
-      });
-      setLoading(false);
-
-      if (safe.clarificationComplete) {
-        handleClarificationComplete(safe.clarificationComplete);
-      }
-    },
-    onError: (error) => {
-      setMessages((prev) => prev.filter((m) => m.id !== STREAMING_MESSAGE_ID));
-      setLoading(false);
-      showToast(error, 'error');
-    },
+    onStreamDone: handleStreamDone,
+    onError: handleStreamError,
   });
 
   abortStreamRef.current = abortStream;
+  const sendStreamingMessageRef = useRef(sendStreamingMessage);
+  sendStreamingMessageRef.current = sendStreamingMessage;
 
   // Update streaming message in-place
   useEffect(() => {
@@ -237,7 +245,7 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
             const session = activeSessionId ?? (await createSession(projectId)).id;
             if (!cancelled && !activeSessionId) setActiveSessionId(session);
             if (!cancelled) {
-              await sendStreamingMessage({
+              await sendStreamingMessageRef.current({
                 role: "user",
                 content: initialMessage,
                 mode: "clarification",
@@ -278,7 +286,7 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
 
     loadHistory();
     return () => { cancelled = true; };
-  }, [projectId, activeSessionId, initTasks, updateTaskStatus, sendStreamingMessage]);
+  }, [projectId, activeSessionId, initTasks, updateTaskStatus]);
 
   // Auto-scroll to bottom
   useEffect(() => {
