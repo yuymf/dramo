@@ -43,7 +43,7 @@ export function NewProjectDialog({
       const project = await createProject(name.trim());
       onSuccess?.(project.id);
       onClose();
-      router.replace(`/projects/${project.id}`);
+      router.replace(`/projects/${project.id}/scripts`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "创建项目失败");
     } finally {
@@ -70,6 +70,9 @@ export function NewProjectDialog({
 
       {/* Dialog */}
       <div
+        role="dialog"
+        aria-labelledby="new-project-title"
+        aria-modal="true"
         className="relative w-full max-w-md mx-4 p-8 rounded-2xl ink-reveal"
         style={{
           background: "linear-gradient(180deg, #fdfaf4 0%, #f8f5ef 100%)",
@@ -80,6 +83,7 @@ export function NewProjectDialog({
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2
+            id="new-project-title"
             className="text-xl ink-display"
             style={{ color: "var(--ink-black)" }}
           >
