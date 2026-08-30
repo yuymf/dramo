@@ -1,11 +1,19 @@
 import { api } from './client';
+import type { ProjectType, ScreenplayFormat } from '@/lib/types/screenplay';
 
 export type Project = {
   id: string;
   name: string;
   description?: string;
+  type?: ProjectType;
+  format?: ScreenplayFormat;
   createdAt: string;
   updatedAt: string;
+  episodes?: Array<{
+    id: string;
+    name: string;
+    sortOrder?: number;
+  }>;
   scripts?: Array<{
     id: string;
     title?: string;
@@ -23,16 +31,28 @@ export type ProjectListResponse = {
   };
 };
 
+export type CreateProjectOptions = {
+  type?: ProjectType;
+  format?: ScreenplayFormat;
+};
+
 export async function listProjects(page = 1, limit = 50): Promise<ProjectListResponse> {
   return api<ProjectListResponse>(`/api/projects?page=${page}&limit=${limit}`, {
     noCache: true, // 禁用缓存，确保获取最新数据
   });
 }
 
-export async function createProject(name: string): Promise<Project> {
+export async function createProject(
+  name: string,
+  options?: CreateProjectOptions
+): Promise<Project> {
   return api<Project>(`/api/projects`, {
     method: 'POST',
-    body: { name },
+    body: {
+      name,
+      type: options?.type ?? 'script',
+      format: options?.format ?? 'hollywood',
+    },
   });
 }
 
@@ -44,7 +64,7 @@ export async function getProject(projectId: string): Promise<Project> {
 
 export async function updateProject(
   projectId: string,
-  updates: Partial<Pick<Project, 'name' | 'description'>>
+  updates: Partial<Pick<Project, 'name' | 'description' | 'format'>>
 ): Promise<Project> {
   return api<Project>(`/api/projects/${projectId}`, {
     method: 'PATCH',
@@ -52,6 +72,3 @@ export async function updateProject(
     noCache: true,
   });
 }
-
-
-

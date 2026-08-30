@@ -91,6 +91,11 @@ export async function proxyRequest(
     headers.set("Content-Type", incomingContentType);
   }
 
+  const incomingCookie = request.headers.get("cookie");
+  if (incomingCookie) {
+    headers.set("Cookie", incomingCookie);
+  }
+
   const body = await resolveRequestBody(request, method, headers);
   const targetUrl = resolveBackendUrl(targetPath, request);
 
@@ -115,6 +120,13 @@ export async function proxyRequest(
         responseHeaders.set(key, value);
       }
     });
+    const setCookies =
+      typeof backendResponse.headers.getSetCookie === "function"
+        ? backendResponse.headers.getSetCookie()
+        : [];
+    for (const cookie of setCookies) {
+      responseHeaders.append("Set-Cookie", cookie);
+    }
     responseHeaders.set("Cache-Control", "no-store");
 
     const contentType = backendResponse.headers.get("content-type") ?? "";

@@ -219,41 +219,15 @@ export interface ImageGenerationResult {
   images: ImageItem[];
 }
 
-interface AgentOSImageResponse {
-  success: boolean;
-  mode?: string;
-  type?: string;
-  error?: string;
-  images?: ImageItem[];
-}
-
+/**
+ * Seedream / AgentOS image generation is no longer the main path.
+ * Phase 1 still frames go through SdPoolService (A1111 txt2img).
+ */
 export async function runImageGeneration(
-  params: ImageGenerationParams,
-  opts?: AgentOSCallOptions
+  _params: ImageGenerationParams,
+  _opts?: AgentOSCallOptions
 ): Promise<ImageGenerationResult> {
-  const result = await postAgentOS<AgentOSImageResponse>('/api/generate-image', {
-    prompt: params.prompt,
-    reference_images: params.referenceImages || [],
-    mode: params.mode || 'single',
-    stream: params.stream || false,
-    generation_type: params.generationType,
-    size: params.size || '2K',
-    watermark: params.watermark || false,
-    max_images: params.max_images || 3,
-  }, opts);
-
-  if (!result.success) {
-    throw new Error(result.error || 'Image generation failed');
-  }
-
-  return {
-    success: result.success,
-    mode: result.mode || 'single',
-    type: result.type || 'auto',
-    images: (result.images || []).map((img) => ({
-      url: img.url,
-      width: img.width,
-      height: img.height,
-    })),
-  };
+  throw new Error(
+    'runImageGeneration 已停用：出图主路径已切换到 SD worker 池，禁止回退 Seedream'
+  );
 }

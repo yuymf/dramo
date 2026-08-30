@@ -47,8 +47,8 @@ C + D + E + F + G + H → 联调验收
 
 **主文件：** `server/src/middleware/session.ts`（新建）、`server/src/routes/auth.ts`、`server/src/routes/projects.ts`、`server/src/services/project.service.ts`、`server/src/server.ts`、`server/src/app.ts`
 
-- [ ] 删除 `default-user.ts` / `defaultUserMiddleware` / `ensureDefaultUser`
-- [ ] Cookie 会话：`POST /auth/register`、`POST /auth/login`、`POST /auth/logout`、`GET /auth/me`
+- [x] 删除 `default-user.ts` / `defaultUserMiddleware` / `ensureDefaultUser`
+- [x] Cookie 会话：`POST /auth/register`、`POST /auth/login`、`POST /auth/logout`、`GET /auth/me`
 - [ ] 未登录 401；密码用 Node `scrypt`，不新增依赖
 - [ ] 项目 `type=script|cinema|spoken`，`format=hollywood|asian`
 - [ ] 创建 Script 项目时：当前用户为 OWNER，并建默认 Episode + 空 Screenplay

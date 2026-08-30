@@ -25,9 +25,8 @@ export function CreativeInput() {
 
     setLoading(true);
     try {
-      const project = await createProject(input.trim());
-      sessionStorage.setItem(`project_${project.id}_initialMessage`, input.trim());
-      router.push(`/projects/${project.id}/scripts`);
+      const project = await createProject(input.trim(), { type: "script" });
+      router.push(`/projects/${project.id}/screenplay`);
       showToast("项目已创建", "success");
     } catch (err) {
       console.error("Failed to create project:", err);

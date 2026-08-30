@@ -33,6 +33,10 @@ export const config = {
 
   // Frontend URL
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:12323',
+
+  // Stable Diffusion worker pool (A1111-compatible JSON array).
+  // Empty / unset → sd-pool.service applies the two default slots.
+  sdWorkers: process.env.SD_WORKERS ?? '',
 };
 
 /** Validate critical config on startup */

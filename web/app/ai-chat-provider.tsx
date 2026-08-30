@@ -35,7 +35,7 @@ export function AIChatProvider({ children }: AIChatProviderProps) {
 
   const getPageType = useCallback((path: string | null): PageType => {
     if (!path) return null;
-    if (path.includes('/scripts')) return 'script';
+    if (path.includes('/scripts') || path.includes('/screenplay') || path.includes('/cover')) return 'script';
     if (path.includes('/characters')) return 'characters';
     if (path.includes('/locations')) return 'locations';
     if (path.includes('/storyboard')) return 'storyboard';

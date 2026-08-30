@@ -1,5 +1,10 @@
-import { ScriptEditorClient } from "@/components/editor/ScriptEditorClient";
+import { redirect } from "next/navigation";
 
-export default function ScriptPage() {
-  return <ScriptEditorClient />;
+export default async function ScriptsRedirectPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  redirect(`/projects/${id}/screenplay`);
 }

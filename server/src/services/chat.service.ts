@@ -9,6 +9,7 @@ import { parseAgentResponse } from '../lib/parse-agent-response';
 import type { ParsedAgentResponse } from '../lib/parse-agent-response';
 
 const CHAT_HISTORY_WINDOW = 20;
+const DEFAULT_SESSION_TITLE = '新对话';
 
 /**
  * Chat Service — message persistence, history, session validation,
@@ -35,11 +36,36 @@ export class ChatService {
   }
 
   /**
+   * Resolve an existing session or create a default one for the project.
+   */
+  async ensureSession(projectId: string, sessionId?: string): Promise<string> {
+    if (sessionId) {
+      if (!(await this.validateSessionId(sessionId, projectId))) {
+        throw new AppException(ErrorCode.NOT_FOUND, 'Session not found');
+      }
+      return sessionId;
+    }
+
+    const existing = await prisma.chatSession.findFirst({
+      where: { projectId },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true },
+    });
+    if (existing) return existing.id;
+
+    const created = await prisma.chatSession.create({
+      data: { projectId, title: DEFAULT_SESSION_TITLE },
+    });
+    return created.id;
+  }
+
+  /**
    * List messages for a project, optionally scoped by sessionId.
    */
   async listMessages(projectId: string, sessionId?: string) {
-    const where: Record<string, unknown> = { projectId };
-    if (sessionId) where.sessionId = sessionId;
+    const where = sessionId
+      ? { sessionId, session: { projectId } }
+      : { session: { projectId } };
     return prisma.chatMessage.findMany({
       where,
       orderBy: { createdAt: 'asc' },
@@ -50,34 +76,31 @@ export class ChatService {
    * Persist a user message and return the record.
    */
   async createUserMessage(data: {
-    projectId: string;
-    sessionId: string | null;
+    sessionId: string;
     content: string;
-    blocks?: object[];
     messageType?: string | null;
-    selectedOption?: object;
   }) {
-    return prisma.chatMessage.create({
+    const message = await prisma.chatMessage.create({
       data: {
-        projectId: data.projectId,
         sessionId: data.sessionId,
         role: 'user',
         content: data.content,
-        blocks: data.blocks ?? [],
         messageType: data.messageType ?? null,
-        selectedOption: data.selectedOption ?? undefined,
       },
     });
+    await prisma.chatSession.update({
+      where: { id: data.sessionId },
+      data: { updatedAt: new Date() },
+    });
+    return message;
   }
 
   /**
    * Fetch the last N messages for context, in chronological order.
    */
-  async getHistory(projectId: string, sessionId: string | null): Promise<Array<{ role: string; content: string }>> {
-    const where: Record<string, unknown> = { projectId };
-    if (sessionId) where.sessionId = sessionId;
+  async getHistory(sessionId: string): Promise<Array<{ role: string; content: string }>> {
     const rows = await prisma.chatMessage.findMany({
-      where,
+      where: { sessionId },
       orderBy: { createdAt: 'desc' },
       take: CHAT_HISTORY_WINDOW,
     });
@@ -88,8 +111,9 @@ export class ChatService {
    * Delete all messages for a project, optionally scoped by sessionId.
    */
   async deleteMessages(projectId: string, sessionId?: string) {
-    const where: Record<string, unknown> = { projectId };
-    if (sessionId) where.sessionId = sessionId;
+    const where = sessionId
+      ? { sessionId, session: { projectId } }
+      : { session: { projectId } };
     return prisma.chatMessage.deleteMany({ where });
   }
 
@@ -97,21 +121,23 @@ export class ChatService {
    * Persist the assistant reply.
    */
   private async persistAssistantReply(
-    projectId: string,
-    sessionId: string | null,
+    sessionId: string,
     parsed: ParsedAgentResponse,
     rawContent: string
   ) {
-    return prisma.chatMessage.create({
+    const message = await prisma.chatMessage.create({
       data: {
-        projectId,
         sessionId,
         role: 'assistant',
         content: parsed.content || (parsed.clarificationComplete ? '' : rawContent) || 'No response',
         messageType: parsed.options ? 'options' : null,
-        options: parsed.options ? (parsed.options as object) : undefined,
       },
     });
+    await prisma.chatSession.update({
+      where: { id: sessionId },
+      data: { updatedAt: new Date() },
+    });
+    return message;
   }
 
   /**
@@ -121,8 +147,7 @@ export class ChatService {
   async *generateSSE(params: {
     userId: string;
     projectId: string;
-    sessionId: string | null;
-    userContent: string;
+    sessionId: string;
     messages: Array<{ role: string; content: string }>;
     requestId: string;
   }): AsyncGenerator<SSEEvent, void, unknown> {
@@ -183,7 +208,7 @@ export class ChatService {
           const rawContent = fullContent || workflowOutput;
           const parsed = structuredResult || parseAgentResponse(rawContent);
 
-          await this.persistAssistantReply(projectId, sessionId, parsed, rawContent);
+          await this.persistAssistantReply(sessionId, parsed, rawContent);
 
           yield {
             event: 'done',
@@ -217,14 +242,12 @@ export class ChatService {
    */
   async generateNonStreaming(params: {
     userId: string;
-    projectId: string;
-    sessionId: string | null;
-    userContent: string;
+    sessionId: string;
     userMessageRecord: { id: string; [key: string]: unknown };
     messages: Array<{ role: string; content: string }>;
     requestId: string;
   }) {
-    const { userId, projectId, sessionId, userMessageRecord, messages, requestId } = params;
+    const { userId, sessionId, userMessageRecord, messages, requestId } = params;
 
     try {
       const llmHeaders = await this.llmConfigService.getLLMHeaders(userId, 'TEXT_LLM');
@@ -236,7 +259,7 @@ export class ChatService {
       const responseText = await response.text();
       const parsed = parseAgentResponse(responseText);
 
-      const assistantMessage = await this.persistAssistantReply(projectId, sessionId, parsed, parsed.content);
+      const assistantMessage = await this.persistAssistantReply(sessionId, parsed, parsed.content);
 
       return {
         userMessage: userMessageRecord,

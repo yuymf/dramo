@@ -3,8 +3,7 @@ import type { Server } from 'node:http';
 import app from './app';
 import { config } from './config';
 import { logger } from './lib/logger';
-import { initPrisma, prisma } from './lib/db';
-import { ensureDefaultUser } from './lib/default-user';
+import { initPrisma } from './lib/db';
 
 const port = config.port;
 
@@ -40,7 +39,6 @@ httpServer.keepAliveTimeout = SERVER_KEEP_ALIVE_TIMEOUT_MS;
 
 // Eagerly validate DB connection with retry — surface failures at startup
 initPrisma()
-  .then(() => ensureDefaultUser(prisma))
   .catch((err) => {
     logger.error({ err }, 'Failed to connect to database after retries — exiting');
     process.exit(1);
