@@ -5,6 +5,8 @@ import {
   SdPoolService,
   DEFAULT_SD_WORKERS,
   SD_FAILURE_THRESHOLD,
+  NO_SD_WORKER_MESSAGE,
+  isUnreachableError,
   type SdWorkerRuntime,
 } from '../../services/sd-pool.service';
 
@@ -133,7 +135,56 @@ describe('SdPoolService pick + drain', () => {
   });
 });
 
+describe('isUnreachableError', () => {
+  it('treats fetch/connection failures as down', () => {
+    expect(isUnreachableError(new Error('fetch failed'))).toBe(true);
+    expect(isUnreachableError(new Error('connect ECONNREFUSED 127.0.0.1:7860'))).toBe(true);
+    expect(isUnreachableError(new Error('SD txt2img failed (500): OOM'))).toBe(false);
+  });
+});
+
+describe('SdPoolService probe drain', () => {
+  it('marks workers unreachable on probe network failure so pick returns null', async () => {
+    const fetchImpl = jest.fn(async () => {
+      throw new Error('fetch failed');
+    }) as unknown as typeof fetch;
+
+    const pool = new SdPoolService({
+      workers: [
+        { id: 'sd-1', baseUrl: 'http://127.0.0.1:7860', weight: 1, capabilities: ['txt2img'] },
+        { id: 'sd-2', baseUrl: 'http://127.0.0.1:7861', weight: 1, capabilities: ['txt2img'] },
+      ],
+      fetchImpl,
+      probeOnPick: true,
+    });
+
+    const picked = await pool.pickWorker({ capability: 'txt2img' });
+    expect(picked).toBeNull();
+    expect(pool.getRuntime().every((worker) => worker.healthy === false)).toBe(true);
+  });
+});
+
 describe('SdPoolService.txt2img', () => {
+  it('maps connection errors to the Chinese no-worker message and drains the slot', async () => {
+    const fetchImpl = jest.fn(async () => {
+      throw new Error('fetch failed');
+    }) as unknown as typeof fetch;
+
+    const pool = new SdPoolService({
+      workers: [{ id: 'sd-1', baseUrl: 'http://sd.local', weight: 1, capabilities: ['txt2img'] }],
+      fetchImpl,
+      probeOnPick: false,
+    });
+
+    await expect(
+      pool.txt2img(
+        { id: 'sd-1', baseUrl: 'http://sd.local' },
+        { prompt: 'a portrait', width: 512, height: 512 }
+      )
+    ).rejects.toThrow(NO_SD_WORKER_MESSAGE);
+    expect(pool.getRuntime()[0].healthy).toBe(false);
+  });
+
   it('returns images[0] base64 and marks success', async () => {
     const fetchImpl = jest.fn(async () => ({
       ok: true,

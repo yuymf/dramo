@@ -1,12 +1,19 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api/client";
 
-export default function RegisterPage() {
+function safeNext(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/home";
+  return raw;
+}
+
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +29,7 @@ export default function RegisterPage() {
         method: "POST",
         body: { email, name, password },
       });
-      router.push("/home");
+      router.push(next);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "注册失败");
@@ -110,11 +117,19 @@ export default function RegisterPage() {
         </form>
         <p className="mt-6 text-sm" style={{ color: "var(--ink-light)" }}>
           已有账号？{" "}
-          <Link href="/login" style={{ color: "var(--persimmon)" }}>
+          <Link href={`/login?next=${encodeURIComponent(next)}`} style={{ color: "var(--persimmon)" }}>
             登录
           </Link>
         </p>
       </main>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   );
 }

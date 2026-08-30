@@ -206,6 +206,44 @@ describe('JobRunnerService', () => {
       );
       expect(mockPool.release).toHaveBeenCalledWith('sd-1');
     });
+
+    it('maps a connection error from txt2img to the Chinese no-worker message', async () => {
+      const task = makeTask();
+      (mockPrisma.generationTask.create as jest.MockedFunction<typeof mockPrisma.generationTask.create>)
+        .mockResolvedValue(task as never);
+      mockPool.pickWorker.mockResolvedValue({
+        id: 'sd-1',
+        baseUrl: 'http://127.0.0.1:7860',
+        weight: 1,
+        capabilities: ['txt2img'],
+        queue: 1,
+        failCount: 0,
+        healthy: true,
+      });
+      mockPool.txt2img.mockRejectedValue(new Error('fetch failed'));
+      mockStore.updateJobIfActive.mockResolvedValue(task as never);
+
+      await service.createJob({
+        userId: 'user-1',
+        projectId: 'proj-1',
+        kind: 'portrait',
+        entityId: 'char-1',
+        prompt: 'a portrait',
+      });
+      await flush();
+
+      expect(mockStore.updateJobIfActive).toHaveBeenCalledWith(
+        'task-1',
+        expect.objectContaining({
+          status: 'failed',
+          error: expect.objectContaining({
+            code: 'NO_SD_WORKER',
+            message: NO_SD_WORKER_MESSAGE,
+          }),
+        })
+      );
+      expect(mockPool.release).toHaveBeenCalledWith('sd-1');
+    });
   });
 
   describe('cancelJob', () => {

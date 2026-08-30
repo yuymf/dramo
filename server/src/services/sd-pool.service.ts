@@ -116,6 +116,20 @@ export function selectWorker(
   return ranked[0] ?? null;
 }
 
+/** Connection / timeout errors mean the slot is down — drain immediately. */
+export function isUnreachableError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (err.name === 'AbortError' || err.name === 'TimeoutError') return true;
+  const message = err.message;
+  return (
+    message === 'fetch failed' ||
+    message === NO_SD_WORKER_MESSAGE ||
+    /ECONNREFUSED|ENOTFOUND|ECONNRESET|ETIMEDOUT|EHOSTUNREACH|Failed to fetch|NetworkError|socket hang up/i.test(
+      message
+    )
+  );
+}
+
 export interface SdPoolOptions {
   workers?: SdWorkerConfig[];
   fetchImpl?: typeof fetch;
@@ -184,6 +198,14 @@ export class SdPoolService {
     }
   }
 
+  markUnreachable(workerId: string): void {
+    const worker = this.workers.find((item) => item.id === workerId);
+    if (!worker) return;
+    worker.failCount = SD_FAILURE_THRESHOLD;
+    worker.healthy = false;
+    logger.warn({ workerId }, 'SD worker marked unreachable');
+  }
+
   async txt2img(worker: Pick<SdWorkerConfig, 'id' | 'baseUrl'>, params: Txt2ImgParams): Promise<string> {
     const url = `${worker.baseUrl}/sdapi/v1/txt2img`;
     const body = {
@@ -220,6 +242,10 @@ export class SdPoolService {
       if (err instanceof Error && err.message.startsWith('SD txt2img')) {
         throw err;
       }
+      if (isUnreachableError(err)) {
+        this.markUnreachable(worker.id);
+        throw new Error(NO_SD_WORKER_MESSAGE);
+      }
       this.markFailure(worker.id);
       throw err;
     }
@@ -245,7 +271,7 @@ export class SdPoolService {
       this.markSuccess(worker.id);
       return true;
     } catch (err) {
-      this.markFailure(worker.id);
+      this.markUnreachable(worker.id);
       logger.warn({ err, workerId: worker.id, url }, 'SD worker health probe failed');
       return false;
     }

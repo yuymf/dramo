@@ -5,6 +5,7 @@ import { JobStoreService } from './job-store.service';
 import { StorageService } from './storage.service';
 import {
   getSdPool,
+  isUnreachableError,
   NO_SD_WORKER_MESSAGE,
   SD_DEFAULT_STEPS,
   type SdPoolService,
@@ -213,11 +214,10 @@ export class JobRunnerService {
         logger.info({ taskId }, 'Skip success write — task was canceled during generation');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Image generation failed';
       logger.error({ err, taskId }, 'SD image generation failed');
       await this.store.updateJobIfActive(taskId, {
         status: 'failed',
-        error: { code: 'GENERATION_ERROR', message, retryable: true },
+        error: generationFailure(err),
       });
     } finally {
       this.pool.release(worker.id);
@@ -248,6 +248,18 @@ export class JobRunnerService {
       data: { images: images as object },
     });
   }
+}
+
+export function generationFailure(err: unknown): {
+  code: string;
+  message: string;
+  retryable: boolean;
+} {
+  const message = err instanceof Error ? err.message : 'Image generation failed';
+  if (message === NO_SD_WORKER_MESSAGE || isUnreachableError(err)) {
+    return { code: 'NO_SD_WORKER', message: NO_SD_WORKER_MESSAGE, retryable: true };
+  }
+  return { code: 'GENERATION_ERROR', message, retryable: true };
 }
 
 function appendImage(current: unknown, url: string): Array<{ url: string }> {

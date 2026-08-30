@@ -17,7 +17,8 @@ DROP TABLE IF EXISTS "GenerationJob" CASCADE;
 DROP TABLE IF EXISTS "ChatMessage" CASCADE;
 DROP TABLE IF EXISTS "ChatSession" CASCADE;
 
-ALTER TABLE "User" DROP CONSTRAINT IF EXISTS "User_pkey";
+ALTER TABLE "Project" DROP CONSTRAINT IF EXISTS "Project_userId_fkey";
+ALTER TABLE "UserLLMConfig" DROP CONSTRAINT IF EXISTS "UserLLMConfig_userId_fkey";
 
 -- Recreate chat + workspace tables
 CREATE TYPE "ProjectType" AS ENUM ('script', 'cinema', 'spoken');
@@ -25,9 +26,11 @@ CREATE TYPE "ScreenplayFormat" AS ENUM ('hollywood', 'asian');
 CREATE TYPE "MemberRole" AS ENUM ('OWNER', 'ADMIN', 'EDITOR', 'VIEWER');
 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT;
-UPDATE "User" SET "passwordHash" = COALESCE("passwordHash", "password", '') WHERE TRUE;
+UPDATE "User" SET "passwordHash" = '' WHERE "passwordHash" IS NULL;
 ALTER TABLE "User" ALTER COLUMN "passwordHash" SET NOT NULL;
 ALTER TABLE "User" DROP COLUMN IF EXISTS "password";
+
+ALTER TABLE "UserLLMConfig" ADD CONSTRAINT "UserLLMConfig_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 CREATE TABLE IF NOT EXISTS "Session" (
     "id" TEXT NOT NULL,
