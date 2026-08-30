@@ -37,7 +37,6 @@ services:
       AGENTOS_BASE_URL: http://agentos:12322
       AGENTOS_SECURITY_KEY: ${AGENTOS_KEY:-default_agentos_key}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      FRONTEND_URL: ${PUBLIC_URL:-http://localhost}
     volumes:
       - uploads:/app/uploads
     healthcheck:

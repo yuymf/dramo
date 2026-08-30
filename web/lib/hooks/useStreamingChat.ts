@@ -136,10 +136,15 @@ export function useStreamingChat({
       let accumulated = '';
 
       try {
+        const resolvedSessionId = (typeof body.sessionId === 'string' && body.sessionId) || sessionId;
+        if (!resolvedSessionId) {
+          throw new Error('sessionId is required');
+        }
+
         const requestBody = {
           ...body,
           stream: true,
-          sessionId: body.sessionId || sessionId || undefined,
+          sessionId: resolvedSessionId,
         };
 
         const response = await fetch(

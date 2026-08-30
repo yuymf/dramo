@@ -48,6 +48,7 @@ function makeCharacterAsset(overrides: Record<string, unknown> = {}) {
     description: 'A brave hero',
     alias: null,
     images: [],
+    position: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     ...overrides,
@@ -78,6 +79,17 @@ describe('CharacterAssetService', () => {
       expect(Array.isArray(result.data)).toBe(true);
       expect(result.data).toHaveLength(1);
       expect(result.data[0].name).toBe(asset.name);
+      expect(result.data[0].position).toBeUndefined();
+    });
+
+    it('should return persisted graph position', async () => {
+      const asset = makeCharacterAsset({ position: { x: 120, y: 80 } });
+      (mockPrisma.characterAsset.findMany as jest.MockedFunction<typeof mockPrisma.characterAsset.findMany>)
+        .mockResolvedValue([asset as any]);
+
+      const result = await service.listCharacterAssets('proj-1', 'user-1');
+
+      expect(result.data[0].position).toEqual({ x: 120, y: 80 });
     });
 
     it('should return empty data on error', async () => {
@@ -143,6 +155,22 @@ describe('CharacterAssetService', () => {
       const result = await service.updateCharacterAsset('proj-1', 'asset-1', { name: 'Updated Name' });
 
       expect(result).toEqual({ success: true, asset: updated });
+    });
+
+    it('should persist graph position', async () => {
+      const existing = makeCharacterAsset();
+      const updated = makeCharacterAsset({ position: { x: 10, y: 20 } });
+      (mockPrisma.characterAsset.findUnique as jest.MockedFunction<typeof mockPrisma.characterAsset.findUnique>)
+        .mockResolvedValue(existing as any);
+      (mockPrisma.characterAsset.update as jest.MockedFunction<typeof mockPrisma.characterAsset.update>)
+        .mockResolvedValue(updated as any);
+
+      await service.updateCharacterAsset('proj-1', 'asset-1', { position: { x: 10, y: 20 } });
+
+      expect(mockPrisma.characterAsset.update).toHaveBeenCalledWith({
+        where: { id: 'asset-1' },
+        data: { position: { x: 10, y: 20 } },
+      });
     });
 
     it('should throw if asset not found', async () => {

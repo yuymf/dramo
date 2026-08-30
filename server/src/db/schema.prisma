@@ -129,7 +129,7 @@ model ChatSession {
 model ChatMessage {
   id             String       @id @default(cuid())
   projectId      String
-  sessionId      String?
+  sessionId      String
   role           String
   content        String
   messageType    String?      // 'text' | 'options' | 'progress'
@@ -137,7 +137,7 @@ model ChatMessage {
   selectedOption Json?        // User's selection result
   createdAt      DateTime     @default(now())
 
-  session ChatSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([projectId, createdAt])
   @@index([sessionId, createdAt])
@@ -150,6 +150,7 @@ model CharacterAsset {
   description String?
   alias       String?
   images      Json     @default("[]")
+  position    Json?    // { x: number, y: number } on the relation graph
   createdAt   DateTime @default(now())
 
   relationsAsNodeA CharacterRelation[] @relation("Relation_NodeA")

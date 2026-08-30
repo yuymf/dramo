@@ -23,10 +23,8 @@ export class ChatService {
 
   /**
    * Validate that a sessionId belongs to the given project.
-   * Returns true if sessionId is absent (no session scoping).
    */
-  async validateSessionId(sessionId: string | undefined | null, projectId: string): Promise<boolean> {
-    if (!sessionId) return true;
+  async validateSessionId(sessionId: string, projectId: string): Promise<boolean> {
     const session = await prisma.chatSession.findFirst({
       where: { id: sessionId, projectId },
       select: { id: true },
@@ -35,13 +33,11 @@ export class ChatService {
   }
 
   /**
-   * List messages for a project, optionally scoped by sessionId.
+   * List messages for a session.
    */
-  async listMessages(projectId: string, sessionId?: string) {
-    const where: Record<string, unknown> = { projectId };
-    if (sessionId) where.sessionId = sessionId;
+  async listMessages(projectId: string, sessionId: string) {
     return prisma.chatMessage.findMany({
-      where,
+      where: { projectId, sessionId },
       orderBy: { createdAt: 'asc' },
     });
   }
@@ -51,7 +47,7 @@ export class ChatService {
    */
   async createUserMessage(data: {
     projectId: string;
-    sessionId: string | null;
+    sessionId: string;
     content: string;
     messageType?: string | null;
     selectedOption?: object;
@@ -71,11 +67,9 @@ export class ChatService {
   /**
    * Fetch the last N messages for context, in chronological order.
    */
-  async getHistory(projectId: string, sessionId: string | null): Promise<Array<{ role: string; content: string }>> {
-    const where: Record<string, unknown> = { projectId };
-    if (sessionId) where.sessionId = sessionId;
+  async getHistory(projectId: string, sessionId: string): Promise<Array<{ role: string; content: string }>> {
     const rows = await prisma.chatMessage.findMany({
-      where,
+      where: { projectId, sessionId },
       orderBy: { createdAt: 'desc' },
       take: CHAT_HISTORY_WINDOW,
     });
@@ -83,12 +77,10 @@ export class ChatService {
   }
 
   /**
-   * Delete all messages for a project, optionally scoped by sessionId.
+   * Delete all messages for a session.
    */
-  async deleteMessages(projectId: string, sessionId?: string) {
-    const where: Record<string, unknown> = { projectId };
-    if (sessionId) where.sessionId = sessionId;
-    return prisma.chatMessage.deleteMany({ where });
+  async deleteMessages(projectId: string, sessionId: string) {
+    return prisma.chatMessage.deleteMany({ where: { projectId, sessionId } });
   }
 
   /**
@@ -96,7 +88,7 @@ export class ChatService {
    */
   private async persistAssistantReply(
     projectId: string,
-    sessionId: string | null,
+    sessionId: string,
     parsed: ParsedAgentResponse,
     rawContent: string
   ) {
@@ -119,7 +111,7 @@ export class ChatService {
   async *generateSSE(params: {
     userId: string;
     projectId: string;
-    sessionId: string | null;
+    sessionId: string;
     userContent: string;
     messages: Array<{ role: string; content: string }>;
     requestId: string;

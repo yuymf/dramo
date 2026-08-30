@@ -15,9 +15,15 @@ chat.get('/chat/:projectId/messages', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
   const sessionId = c.req.query('sessionId');
+  if (!sessionId) {
+    return c.json({ error: { code: 'INVALID_INPUT', message: 'sessionId is required', retryable: false }, requestId: c.get('requestId') }, 400);
+  }
 
   const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
   if (!project) throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
+  if (!(await chatService.validateSessionId(sessionId, projectId))) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Session not found', retryable: false }, requestId: c.get('requestId') }, 404);
+  }
 
   const messages = await chatService.listMessages(projectId, sessionId);
   return c.json({ data: messages, projectId });
@@ -65,7 +71,15 @@ chat.post('/chat/:projectId/reset', async (c) => {
   const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
   if (!project) throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
 
-  await chatService.deleteMessages(projectId, body.sessionId as string | undefined);
+  const sessionId = typeof body.sessionId === 'string' ? body.sessionId : '';
+  if (!sessionId) {
+    return c.json({ error: { code: 'INVALID_INPUT', message: 'sessionId is required', retryable: false }, requestId: c.get('requestId') }, 400);
+  }
+  if (!(await chatService.validateSessionId(sessionId, projectId))) {
+    return c.json({ error: { code: 'NOT_FOUND', message: 'Session not found', retryable: false }, requestId: c.get('requestId') }, 404);
+  }
+
+  await chatService.deleteMessages(projectId, sessionId);
   return c.json({ projectId, reset: true, message: '对话已重置' });
 });
 

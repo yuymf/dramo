@@ -3,6 +3,8 @@ import { logger } from '../lib/logger';
 import { prisma } from '../lib/db';
 import type { AssetAdapter } from '../lib/asset-route-factory';
 
+export type GraphPosition = { x: number; y: number };
+
 export interface CharacterAssetData {
   name: string;
   description?: string;
@@ -13,6 +15,14 @@ export interface CharacterAssetData {
     source: 'upload' | 'generated' | 'reference';
     createdAt: string;
   }>;
+  position?: GraphPosition;
+}
+
+function parsePosition(value: unknown): GraphPosition | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const p = value as { x?: unknown; y?: unknown };
+  if (typeof p.x === 'number' && typeof p.y === 'number') return { x: p.x, y: p.y };
+  return undefined;
 }
 
 /**
@@ -41,6 +51,7 @@ export class CharacterAssetService implements AssetAdapter {
           description: asset.description ?? undefined,
           alias: asset.alias ?? undefined,
           images: Array.isArray(asset.images) ? asset.images : [],
+          position: parsePosition(asset.position),
           createdAt: asset.createdAt.toISOString(),
         })),
       };
@@ -77,6 +88,7 @@ export class CharacterAssetService implements AssetAdapter {
           description: data.description,
           alias: data.alias,
           images: processedImages as any,
+          ...(data.position && { position: data.position }),
         },
       });
 
@@ -104,6 +116,7 @@ export class CharacterAssetService implements AssetAdapter {
         source: 'upload' | 'generated' | 'reference';
         createdAt: string;
       }>;
+      position?: GraphPosition;
     }
   ) {
     try {
@@ -120,6 +133,7 @@ export class CharacterAssetService implements AssetAdapter {
           ...(data.description !== undefined && { description: data.description }),
           ...(data.alias !== undefined && { alias: data.alias }),
           ...(data.images && { images: data.images as any }),
+          ...(data.position && { position: data.position }),
         },
       });
 

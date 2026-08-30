@@ -88,6 +88,7 @@ export interface CharacterImageAsset {
   description?: string;
   alias?: string;
   images: ImageItem[];
+  position?: { x: number; y: number };
   createdAt: string;
 }
 

@@ -82,42 +82,20 @@ export default function CharactersPage() {
           description: c.description,
           alias: c.alias,
           images: c.images,
+          position: c.position,
           createdAt: new Date().toISOString(),
         })));
 
-        // Transform assets to nodes (with random positions for new nodes)
-        const existingNodePositions = new Map<string, { x: number; y: number }>();
-        
-        // Load existing positions from localStorage for migration
-        const localGraph = localStorage.getItem(`graph_nodes_${projectId}`);
-        if (localGraph) {
-          try {
-            const parsed = JSON.parse(localGraph);
-            if (Array.isArray(parsed)) {
-            parsed.forEach((n: { characterId?: string; x?: number; y?: number }) => {
-              if (n.characterId && n.x !== undefined && n.y !== undefined) {
-                existingNodePositions.set(n.characterId, { x: n.x, y: n.y });
-              }
-            });
-            }
-          } catch (e) {
-            console.warn('Failed to parse local graph positions:', e);
-          }
-        }
-
-        const remoteNodes: Node[] = assetsResult.characters.map((char, idx) => {
-          const existingPos = existingNodePositions.get(char.id);
-          return {
-            id: char.id,
-            characterId: char.id,
-            characterName: char.name,
-            description: char.description,
-            alias: (char as { alias?: string }).alias,
-            imageUrl: char.images && char.images.length > 0 ? char.images[0].url : undefined,
-            x: existingPos?.x ?? 100 + (idx % 5) * 250,
-            y: existingPos?.y ?? 100 + Math.floor(idx / 5) * 200,
-          };
-        });
+        const remoteNodes: Node[] = assetsResult.characters.map((char, idx) => ({
+          id: char.id,
+          characterId: char.id,
+          characterName: char.name,
+          description: char.description,
+          alias: char.alias,
+          imageUrl: char.images && char.images.length > 0 ? char.images[0].url : undefined,
+          x: char.position?.x ?? 100 + (idx % 5) * 250,
+          y: char.position?.y ?? 100 + Math.floor(idx / 5) * 200,
+        }));
 
         // Transform relations to edges
         const remoteEdges: Edge[] = relationsResult.data.map((rel) => ({
@@ -143,67 +121,36 @@ export default function CharactersPage() {
     loadData();
   }, [projectId, showToast, refreshTrigger]);
 
-  // Handle new character generation - auto-add to relation panel
+  const persistNodePosition = useCallback(async (characterId: string, x: number, y: number) => {
+    await api(`/api/projects/${projectId}/characters/assets/${characterId}`, {
+      method: "PUT",
+      body: { position: { x, y } },
+    });
+  }, [projectId]);
+
+  const placeOnGraph = useCallback(async (asset: CharacterImageAsset) => {
+    const x = 100 + Math.random() * 200;
+    const y = 100 + Math.random() * 200;
+    try {
+      await persistNodePosition(asset.id, x, y);
+    } catch (err) {
+      console.error("Failed to persist node position:", err);
+    }
+    showToast(`角色 "${asset.name}" 已添加到关系图`, "success");
+    setRefreshTrigger((prev) => prev + 1);
+  }, [persistNodePosition, showToast]);
+
   const handleGenerated = (asset: CharacterImageAsset) => {
-    // Check if character already exists in nodes and add if not
-    setNodes((prevNodes) => {
-      if (prevNodes.some((n) => n.characterId === asset.id)) {
-        return prevNodes;
-      }
-      const newNode: Node = {
-        id: asset.id, // Use characterId as node ID
-        characterId: asset.id,
-        characterName: asset.name,
-        description: asset.description,
-        alias: asset.alias,
-        imageUrl: asset.images && asset.images.length > 0 ? asset.images[0].url : undefined,
-        x: 100 + Math.random() * 200,
-        y: 100 + Math.random() * 200,
-      };
-      console.log('Adding generated character to graph:', newNode);
-      showToast(`角色 "${asset.name}" 已添加到关系图`, "success");
-      return [...prevNodes, newNode];
-    });
-    setRefreshTrigger((prev) => prev + 1);
+    void placeOnGraph(asset);
   };
 
-  // Handle new character upload - auto-add to relation panel
   const handleUploaded = (asset: CharacterImageAsset) => {
-    setRefreshTrigger((prev) => prev + 1);
-    
-    // Add to relation panel - use functional update to avoid stale closure
-    setNodes((prevNodes) => {
-      if (prevNodes.some((n) => n.characterId === asset.id)) {
-        return prevNodes;
-      }
-      const newNode: Node = {
-        id: asset.id, // Use characterId as node ID
-        characterId: asset.id,
-        characterName: asset.name,
-        description: asset.description,
-        alias: asset.alias,
-        imageUrl: asset.images && asset.images.length > 0 ? asset.images[0].url : undefined,
-        x: 100 + Math.random() * 200,
-        y: 100 + Math.random() * 200,
-      };
-      console.log('Adding uploaded character to graph:', newNode);
-      showToast(`角色 "${asset.name}" 已添加到关系图`, "success");
-      return [...prevNodes, newNode];
-    });
+    void placeOnGraph(asset);
   };
 
-  // Handle save relation graph - Now saves node positions to localStorage only
-  // Relations are already saved to backend when created/deleted
   const handleSaveRelations = async () => {
     try {
-      // Save node positions to localStorage for next load
-      const nodePositions = nodes.map((n) => ({
-        characterId: n.characterId,
-        x: n.x,
-        y: n.y,
-      }));
-      
-      localStorage.setItem(`graph_nodes_${projectId}`, JSON.stringify(nodePositions));
+      await Promise.all(nodes.map((n) => persistNodePosition(n.characterId, n.x, n.y)));
       showToast("节点位置已保存", "success");
     } catch (error) {
       console.error("Failed to save node positions:", error);
@@ -217,12 +164,15 @@ export default function CharactersPage() {
     if (!characterName?.trim()) return;
 
     try {
+      const x = pos?.x ?? 100 + Math.random() * 200;
+      const y = pos?.y ?? 100 + Math.random() * 200;
       const result = await api<{ id: string; name: string; description?: string; images: unknown[] }>(`/api/projects/${projectId}/characters/assets`, {
         method: "POST",
         body: {
           name: characterName.trim(),
           description: "手动创建",
           images: [],
+          position: { x, y },
         },
       });
 
@@ -232,8 +182,8 @@ export default function CharactersPage() {
         characterName: characterName.trim(),
         description: result.description,
         imageUrl: undefined,
-        x: pos?.x ?? 100 + Math.random() * 200,
-        y: pos?.y ?? 100 + Math.random() * 200,
+        x,
+        y,
       };
       setNodes((prevNodes) => {
         if (prevNodes.some(n => n.characterId === newNode.characterId)) {

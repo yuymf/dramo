@@ -250,9 +250,12 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
           return;
         }
 
-        const queryParams = activeSessionId ? `?sessionId=${activeSessionId}` : '';
+        if (!activeSessionId) {
+          if (!cancelled) setMessages([]);
+          return;
+        }
         const res = await api<{ data: ExtendedChatMessage[] }>(
-          `/api/chat/${projectId}/messages${queryParams}`
+          `/api/chat/${projectId}/messages?sessionId=${activeSessionId}`
         ).catch(() => ({ data: [] as ExtendedChatMessage[] }));
         if (!cancelled) {
           setMessages(res.data || []);
@@ -430,10 +433,16 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
   const handleReset = useCallback(async () => {
     if (!confirm("确定要清空对话历史吗？")) return;
 
+    if (!activeSessionId) {
+      setMessages([]);
+      usePipelineStore.getState().reset();
+      return;
+    }
+
     try {
       await api(`/api/chat/${projectId}/reset`, {
         method: "POST",
-        body: activeSessionId ? { sessionId: activeSessionId } : {},
+        body: { sessionId: activeSessionId },
       });
       setMessages([]);
       usePipelineStore.getState().reset();

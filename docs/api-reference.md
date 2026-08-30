@@ -46,7 +46,7 @@
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `.../characters/extract` | 从台本提取角色 |
-| GET | `.../characters/assets` | 角色资产列表 `{ data: [{ id, name, ... }] }` |
+| GET | `.../characters/assets` | 角色资产列表 `{ data: [{ id, name, position, ... }] }` |
 | POST | `.../characters/assets` | 创建角色资产 |
 | PUT | `.../characters/assets/:assetId` | 更新角色资产 |
 | DELETE | `.../characters/assets/:assetId` | 删除角色资产 |
@@ -64,7 +64,7 @@
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `.../locations/extract` | 从台本提取场景 |
-| GET | `.../locations/assets` | 场景资产列表 |
+| GET | `.../locations/assets` | 场景资产列表 `{ data: [{ id, name, ... }] }` |
 | POST | `.../locations/assets` | 创建场景资产 |
 | PUT | `.../locations/assets/:assetId` | 更新场景资产 |
 | DELETE | `.../locations/assets/:assetId` | 删除场景资产 |
@@ -88,9 +88,9 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/chat/:pid/messages` | 获取历史消息 |
-| POST | `/api/chat/:pid/messages` | 发送消息（支持 SSE 流）|
-| POST | `/api/chat/:pid/reset` | 清空对话 |
+| GET | `/api/chat/:pid/messages?sessionId=` | 获取该会话历史（必须带 sessionId）|
+| POST | `/api/chat/:pid/messages` | 发送消息（SSE，必须带 sessionId）|
+| POST | `/api/chat/:pid/reset` | 清空该会话（必须带 sessionId）|
 | GET | `/api/chat/:pid/sessions` | 列出会话 |
 | POST | `/api/chat/:pid/sessions` | 创建新会话 |
 | PATCH | `/api/chat/:pid/sessions/:sessionId` | 更新会话标题 |

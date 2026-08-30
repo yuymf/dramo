@@ -405,6 +405,7 @@ interface RemoteAsset {
   description?: string;
   alias?: string;
   images: ImageItem[];
+  position?: { x: number; y: number };
 }
 
 export async function getProjectAssets(
@@ -420,6 +421,7 @@ export async function getProjectAssets(
     description?: string;
     alias?: string;
     images: ImageItem[];
+    position?: { x: number; y: number };
   }>;
   locations: Array<{
     id: string;
@@ -436,6 +438,7 @@ export async function getProjectAssets(
       description?: string;
       alias?: string;
       images: ImageItem[];
+      position?: { x: number; y: number };
     }>,
     locations: [] as Array<{
       id: string;
@@ -459,6 +462,7 @@ export async function getProjectAssets(
         images: options?.sourceFilter
           ? asset.images.filter((img) => img.source === options.sourceFilter)
           : asset.images,
+        position: asset.position,
       }));
     } catch (err) {
       console.error('Failed to load character assets:', err);
