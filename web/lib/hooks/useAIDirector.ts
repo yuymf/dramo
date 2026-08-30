@@ -24,6 +24,10 @@ export function useAIDirector(projectId: string, scriptId: string) {
         body: JSON.stringify({ scriptContext }),
       });
 
+      if (!res.ok) {
+        throw new Error(`Director analysis failed (${res.status})`);
+      }
+
       const reader = res.body?.getReader();
       if (!reader) throw new Error('No response body');
 

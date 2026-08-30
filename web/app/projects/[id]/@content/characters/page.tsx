@@ -147,7 +147,7 @@ export default function CharactersPage() {
     }
 
     loadData();
-  }, [projectId, showToast]);
+  }, [projectId, showToast, refreshTrigger]);
 
   // Handle new character generation - auto-add to relation panel
   const handleGenerated = (asset: CharacterImageAsset) => {

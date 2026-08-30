@@ -141,8 +141,9 @@ export class LocationAssetService implements AssetAdapter {
    */
   async createLocationAsset(projectId: string, data: LocationAssetData) {
     try {
+      const images = data.images ?? [];
       const processedImages = await Promise.all(
-        data.images.map(async (img) => {
+        images.map(async (img) => {
           if (img.url.startsWith('data:image/')) {
             logger.info('[LocationAssetService] Converting base64 to storage URL for location asset');
             const { url, path } = await this.storageService.uploadImageFromBase64(
@@ -253,7 +254,7 @@ export class LocationAssetService implements AssetAdapter {
         select: { name: true, description: true, alias: true },
         orderBy: { createdAt: 'asc' },
       });
-      return assets.map((a) => ({
+      return assets.map((a: { name: string; description: string | null; alias: string | null }) => ({
         name: a.name,
         description: a.description ?? undefined,
         alias: a.alias ?? undefined,
@@ -291,8 +292,6 @@ export class LocationAssetService implements AssetAdapter {
   }
 
   async persistExtracted(projectId: string, extractedData: Record<string, unknown>): Promise<void> {
-    await prisma.locationAsset.deleteMany({ where: { projectId } });
-
     let rawLocs = Array.isArray((extractedData as { locations?: unknown[] }).locations)
       ? (extractedData as { locations: Record<string, unknown>[] }).locations
       : [];
@@ -304,9 +303,15 @@ export class LocationAssetService implements AssetAdapter {
       );
     }
 
-    for (const loc of rawLocs) {
-      try {
-        await prisma.locationAsset.create({
+    if (rawLocs.length === 0) {
+      throw new Error('No locations extracted');
+    }
+
+    await prisma.$transaction(async (tx: typeof prisma) => {
+      await tx.locationAsset.deleteMany({ where: { projectId } });
+
+      for (const loc of rawLocs) {
+        await tx.locationAsset.create({
           data: {
             projectId,
             name: (loc.name as string) || '未命名场景',
@@ -318,10 +323,8 @@ export class LocationAssetService implements AssetAdapter {
             images: [],
           },
         });
-      } catch (saveErr) {
-        logger.warn({ saveErr, projectId, locName: loc.name }, 'Failed to save extracted location');
       }
-    }
+    });
   }
 
   private buildPrompt(description: string, style?: string): string {

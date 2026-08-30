@@ -31,20 +31,20 @@ export function extractScriptJson(script: Script | null | undefined): object | n
     styles: script.styles,
     goal: script.goal,
     status: script.status,
-    acts: script.acts.map(act => ({
+    acts: (script.acts ?? []).map(act => ({
       id: act.id,
       name: act.name,
       order: act.order,
       sceneIds: act.sceneIds,
     })),
-    scenes: script.scenes.map(scene => ({
+    scenes: (script.scenes ?? []).map(scene => ({
       id: scene.id,
       title: scene.title,
       description: scene.description,
       isEXT: scene.isEXT,
       isDay: scene.isDay,
       order: scene.order,
-      content: scene.content.map(block => ({
+      content: (scene.content ?? []).map(block => ({
         id: block.id,
         label: block.label,
         text: block.text, // HTML内容

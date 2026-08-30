@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useParams, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { type Editor } from "@tiptap/react";
@@ -24,7 +24,7 @@ import { SceneList } from "@/components/sidebar/SceneList";
 import { SceneGeneratePanel } from "@/components/editor/SceneGeneratePanel";
 import { EditorBlock } from "@/components/editor/EditorBlock";
 import { PageLoadingSkeleton } from "@/components/ui/LoadingSkeleton";
-import { Toast, useToast } from "@/components/ui/Toast";
+import { useToast } from "@/components/ui/Toast";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw, Plus, Bold, Italic, Strikethrough, List, ListOrdered, Heading2, Heading3, Undo2, Redo2 } from "lucide-react";
 import {
@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAutosave } from "@/lib/hooks/useAutosave";
+import { useScriptAutosave } from "@/lib/hooks/useScriptAutosave";
 import { useKeyboardShortcuts } from "@/lib/hooks/useKeyboardShortcuts";
 import { useIsLargeScreen } from "@/lib/hooks/useIsLargeScreen";
 import { readJSON, saveJSON, addFavorite, saveVersion, remove as removeLocal } from "@/lib/storage/local";
@@ -267,7 +268,7 @@ export function ScriptEditorClient() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [inspirationPanelCollapsed, setInspirationPanelCollapsed] = useState(false);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
-  const { toasts, showToast, removeToast } = useToast();
+  const { showToast } = useToast();
 
   // Editor state for global toolbar
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
@@ -291,6 +292,9 @@ export function ScriptEditorClient() {
   const isDialogueMode = pathname?.includes('/dialogue');
   const { updateJsonData } = useAIChat();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const dirtyRef = useRef(false);
+  const hydratedRef = useRef(false);
+  const { scheduleSave, saveNow } = useScriptAutosave({ projectId: projectId ?? '' });
 
   // Listen for pipeline completion to refresh script data.
   // Also handles tab-switch back to scripts: the pipeline dispatches
@@ -346,9 +350,11 @@ export function ScriptEditorClient() {
   };
 
   const handleHistoryRevert = () => {
-    // 回滚后重新加载脚本
     setShowHistoryPanel(false);
-    // Script will be reloaded by the useEffect when projectId changes
+    if (projectId) {
+      removeLocal(`script_draft_${projectId}`);
+    }
+    setRefreshTrigger((n) => n + 1);
   };
 
   useEffect(() => {
@@ -373,13 +379,12 @@ export function ScriptEditorClient() {
 
             setLoading(false);
           }
-          // Still fetch from API in background to check for newer server data
-          // (e.g., after AI pipeline generates a new script while we were away)
+          // Draft exists. Only replace if the user has not edited this session
+          // and the server copy is actually newer.
           const res = await api<Script>(`/api/projects/${projectId}/script`).catch(() => null);
-          if (mounted && res) {
+          if (mounted && res && !dirtyRef.current) {
             const serverUpdatedAt = new Date(res.updatedAt).getTime();
             const draftUpdatedAt = draft.updatedAt ? new Date(draft.updatedAt).getTime() : 0;
-            // Use server data if it's newer than the draft
             if (serverUpdatedAt > draftUpdatedAt) {
               const finalScript = ensureConsistency(res);
               setScript(finalScript);
@@ -388,7 +393,6 @@ export function ScriptEditorClient() {
               setActiveActId(firstAct?.id);
               const firstSceneId = firstAct ? firstAct.sceneIds[0] : finalScript.scenes[0]?.id;
               setActiveSceneId(firstSceneId);
-              // Update draft to match server data
               removeLocal(`script_draft_${projectId}`);
             }
           }
@@ -406,6 +410,8 @@ export function ScriptEditorClient() {
           setActiveActId(firstAct?.id);
           const firstSceneId = firstAct ? firstAct.sceneIds[0] : finalScript.scenes[0]?.id;
           setActiveSceneId(firstSceneId);
+        } else if (mounted && !res) {
+          showToast("未找到台本，请先通过对话生成", "info");
         }
       } catch (err) {
         if (mounted) showToast((err as Error).message, "error");
@@ -424,6 +430,21 @@ export function ScriptEditorClient() {
     interval: 10000,
     onSave: (timestamp) => setLastSaved(timestamp),
   });
+
+  useEffect(() => {
+    hydratedRef.current = false;
+    dirtyRef.current = false;
+  }, [projectId, refreshTrigger]);
+
+  useEffect(() => {
+    if (!script || !projectId) return;
+    if (!hydratedRef.current) {
+      hydratedRef.current = true;
+      return;
+    }
+    dirtyRef.current = true;
+    scheduleSave({ scenes: script.scenes, acts: script.acts });
+  }, [script, projectId, scheduleSave]);
 
   // 注册到AI聊天上下文：当script变化时更新JSON数据
   useEffect(() => {
@@ -616,11 +637,12 @@ export function ScriptEditorClient() {
     return `Saved ${mins}m ago`;
   };
 
-  const handleManualSave = useCallback(() => {
-    if (!script) return;
+  const handleManualSave = useCallback(async () => {
+    if (!script || !projectId) return;
+    await saveNow({ scenes: script.scenes, acts: script.acts });
     saveVersion(script.id, script, "Manual save via Ctrl+S");
     showToast("Script saved successfully!", "success");
-  }, [script, showToast]);
+  }, [script, projectId, saveNow, showToast]);
 
   const handleExportText = useCallback(() => {
     if (!script) return;
@@ -1496,14 +1518,6 @@ export function ScriptEditorClient() {
         />
       )}
 
-      {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-        />
-      ))}
     </>
   );
 }

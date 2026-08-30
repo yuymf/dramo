@@ -47,7 +47,7 @@ export class JobRunnerService {
   }
 
   /**
-   * Cancel a queued or processing job.
+   * Cancel a queued or running job.
    */
   async cancelJob(jobId: string, userId: string) {
     const job = await this.store.getJob(jobId, userId);
@@ -56,11 +56,11 @@ export class JobRunnerService {
       return job;
     }
 
-    if (job.status === 'succeeded' || job.status === 'completed') {
+    if (job.status === 'succeeded' || job.status === 'failed') {
       throw new Error('Job cannot be canceled');
     }
 
-    if (job.status !== 'queued' && job.status !== 'processing' && job.status !== 'failed') {
+    if (job.status !== 'queued' && job.status !== 'running') {
       throw new Error('Job cannot be canceled');
     }
 
@@ -104,7 +104,11 @@ export class JobRunnerService {
     }
   ) {
     try {
-      await this.store.updateJob(jobId, { status: 'processing', progress: 10 });
+      const started = await this.store.updateJobIfActive(jobId, { status: 'running', progress: 10 });
+      if (!started) {
+        logger.info({ jobId }, 'Skip generation — job is no longer active');
+        return;
+      }
 
       const llmHeaders = await new LLMConfigService().getLLMHeaders(data.userId, 'IMAGE_GEN');
 
@@ -116,15 +120,18 @@ export class JobRunnerService {
 
       const firstImageUrl = result.images[0]?.url;
 
-      await this.store.updateJob(jobId, {
-        status: 'completed',
+      const finished = await this.store.updateJobIfActive(jobId, {
+        status: 'succeeded',
         progress: 100,
         resultUrl: firstImageUrl,
       });
+      if (!finished) {
+        logger.info({ jobId }, 'Skip success write — job was canceled during generation');
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Image generation failed';
       logger.error({ err, jobId }, 'Image generation failed');
-      await this.store.updateJob(jobId, {
+      await this.store.updateJobIfActive(jobId, {
         status: 'failed',
         error: { code: 'GENERATION_ERROR', message, retryable: true },
       });

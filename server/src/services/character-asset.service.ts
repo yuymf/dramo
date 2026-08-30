@@ -142,8 +142,9 @@ export class CharacterAssetService implements AssetAdapter {
    */
   async createCharacterAsset(projectId: string, data: CharacterAssetData) {
     try {
+      const images = data.images ?? [];
       const processedImages = await Promise.all(
-        data.images.map(async (img) => {
+        images.map(async (img) => {
           if (img.url.startsWith('data:image/')) {
             logger.info('[CharacterAssetService] Converting base64 to storage URL for character asset');
             const { url, path } = await this.storageService.uploadImageFromBase64(
@@ -261,7 +262,7 @@ export class CharacterAssetService implements AssetAdapter {
         select: { name: true, description: true, alias: true },
         orderBy: { createdAt: 'asc' },
       });
-      return assets.map((a) => ({
+      return assets.map((a: { name: string; description: string | null; alias: string | null }) => ({
         name: a.name,
         description: a.description ?? undefined,
         alias: a.alias ?? undefined,
@@ -299,17 +300,20 @@ export class CharacterAssetService implements AssetAdapter {
   }
 
   async persistExtracted(projectId: string, extractedData: Record<string, unknown>): Promise<void> {
-    // Clear existing and save newly extracted characters
-    await prisma.characterRelation.deleteMany({ where: { nodeA: { projectId } } });
-    await prisma.characterAsset.deleteMany({ where: { projectId } });
-
     const newChars = Array.isArray((extractedData as { new_characters?: unknown[] }).new_characters)
       ? (extractedData as { new_characters: Record<string, unknown>[] }).new_characters
       : [];
 
-    for (const char of newChars) {
-      try {
-        await prisma.characterAsset.create({
+    if (newChars.length === 0) {
+      throw new Error('No characters extracted');
+    }
+
+    await prisma.$transaction(async (tx: typeof prisma) => {
+      await tx.characterRelation.deleteMany({ where: { nodeA: { projectId } } });
+      await tx.characterAsset.deleteMany({ where: { projectId } });
+
+      for (const char of newChars) {
+        await tx.characterAsset.create({
           data: {
             projectId,
             name: (char.name as string) || '未命名角色',
@@ -321,10 +325,8 @@ export class CharacterAssetService implements AssetAdapter {
             images: [],
           },
         });
-      } catch (saveErr) {
-        logger.warn({ saveErr, projectId, charName: char.name }, 'Failed to save extracted character');
       }
-    }
+    });
   }
 
   private buildPrompt(description: string, style?: string): string {

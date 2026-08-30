@@ -94,6 +94,33 @@ export class JobStoreService {
   }
 
   /**
+   * Update only if the job is still queued/running.
+   * Returns the updated row, or null if the job was canceled / already terminal.
+   */
+  async updateJobIfActive(
+    jobId: string,
+    data: {
+      status?: string;
+      progress?: number;
+      queuePosition?: number;
+      resultUrl?: string;
+      error?: AppError;
+    }
+  ) {
+    const { error, ...rest } = data;
+    const result = await prisma.generationJob.updateMany({
+      where: { id: jobId, status: { in: ['queued', 'running'] } },
+      data: {
+        ...rest,
+        error: error ? (error as any) : undefined,
+        updatedAt: new Date(),
+      },
+    });
+    if (result.count === 0) return null;
+    return prisma.generationJob.findFirst({ where: { id: jobId } });
+  }
+
+  /**
    * Update queue positions for all queued jobs owned by userId
    */
   async updateQueuePositions(userId: string) {

@@ -51,8 +51,12 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
+  const abortStreamRef = useRef<() => void>(() => {});
+
   // Stable callback for session changes — doesn't cause re-renders in SessionSidebar
   const handleSessionChange = useCallback((id: string | null) => {
+    abortStreamRef.current();
+    setLoading(false);
     setActiveSessionId(id);
     setMessages([]);
   }, []);
@@ -179,6 +183,8 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
       showToast(error, 'error');
     },
   });
+
+  abortStreamRef.current = abortStream;
 
   // Update streaming message in-place
   useEffect(() => {
@@ -425,9 +431,9 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
       } catch (err) {
         showToast((err as Error).message, "error");
         setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMsg.id));
-      } finally {
-        setLoading(false);
       }
+    } finally {
+      setLoading(false);
     }
   }, [messages, projectId, pipelineStatus, showToast, handleClarificationComplete, sendStreamingMessage, activeSessionId]);
 

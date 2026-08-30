@@ -98,8 +98,17 @@ export class ProjectService {
       throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
     }
 
-    await prisma.project.delete({
-      where: { id },
-    });
+    await prisma.$transaction([
+      prisma.characterRelation.deleteMany({ where: { projectId: id } }),
+      prisma.characterAsset.deleteMany({ where: { projectId: id } }),
+      prisma.locationAsset.deleteMany({ where: { projectId: id } }),
+      prisma.storyboardFrameImage.deleteMany({ where: { projectId: id } }),
+      prisma.chatMessage.deleteMany({ where: { projectId: id } }),
+      prisma.chatSession.deleteMany({ where: { projectId: id } }),
+      prisma.generationJob.deleteMany({ where: { projectId: id } }),
+      prisma.pipelineRun.deleteMany({ where: { projectId: id } }),
+      prisma.inspiration.deleteMany({ where: { projectId: id } }),
+      prisma.project.delete({ where: { id } }),
+    ]);
   }
 }

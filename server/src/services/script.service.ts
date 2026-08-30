@@ -290,6 +290,25 @@ export class ScriptService {
     }
 
     const content = version.content as any;
+    const current = version.script;
+
+    const latestVersion = await prisma.scriptVersion.findFirst({
+      where: { scriptId: current.id },
+      orderBy: { version: 'desc' },
+    });
+    const nextVersion = (latestVersion?.version || 0) + 1;
+
+    await prisma.scriptVersion.create({
+      data: {
+        scriptId: current.id,
+        version: nextVersion,
+        summary: `Before revert to v${version.version}`,
+        content: {
+          scenes: current.scenes,
+          acts: current.acts,
+        },
+      },
+    });
 
     const updated = await prisma.script.update({
       where: { id: version.scriptId },

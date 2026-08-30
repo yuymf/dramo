@@ -4,7 +4,10 @@ import { api } from '@/lib/api/client';
 interface ScriptVersion {
   id: string;
   createdAt: string;
-  snapshot: string;
+  snapshot?: string;
+  summary?: string;
+  version?: number;
+  author?: string;
 }
 
 export function useScriptVersions(projectId: string, scriptId: string) {
@@ -14,10 +17,10 @@ export function useScriptVersions(projectId: string, scriptId: string) {
   const fetchVersions = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api<{ versions: ScriptVersion[] }>(
+      const data = await api<{ data: ScriptVersion[] }>(
         `/api/projects/${projectId}/script/versions`
       );
-      setVersions(data.versions ?? []);
+      setVersions(data.data ?? []);
     } finally {
       setLoading(false);
     }

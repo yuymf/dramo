@@ -63,6 +63,7 @@ describe('JobRunnerService', () => {
       listJobs: jest.fn(),
       getJob: jest.fn(),
       updateJob: jest.fn(),
+      updateJobIfActive: jest.fn(),
       updateQueuePositions: jest.fn(),
     } as unknown as jest.Mocked<JobStoreService>;
 
@@ -75,6 +76,7 @@ describe('JobRunnerService', () => {
       (mockPrisma.generationJob.create as jest.MockedFunction<typeof mockPrisma.generationJob.create>)
         .mockResolvedValue(job as any);
       mockStore.updateJob.mockResolvedValue(job as any);
+      mockStore.updateJobIfActive.mockResolvedValue(job as any);
       mockRunImageGeneration.mockResolvedValue({ images: [{ url: 'https://example.com/img.png' }] } as any);
 
       const result = await service.createJob({
@@ -99,6 +101,7 @@ describe('JobRunnerService', () => {
       (mockPrisma.generationJob.create as jest.MockedFunction<typeof mockPrisma.generationJob.create>)
         .mockResolvedValue(job as any);
       mockStore.updateJob.mockResolvedValue(job as any);
+      mockStore.updateJobIfActive.mockResolvedValue(job as any);
       mockRunImageGeneration.mockResolvedValue({ images: [{ url: 'https://example.com/img.png' }] } as any);
 
       await service.createJob({
@@ -111,7 +114,7 @@ describe('JobRunnerService', () => {
       await new Promise((resolve) => setImmediate(resolve));
 
       // Should have started execution
-      expect(mockStore.updateJob).toHaveBeenCalledWith('job-1', expect.objectContaining({ status: 'processing' }));
+      expect(mockStore.updateJobIfActive).toHaveBeenCalledWith('job-1', expect.objectContaining({ status: 'running' }));
     });
   });
 
@@ -145,8 +148,8 @@ describe('JobRunnerService', () => {
       await expect(service.cancelJob('job-1', 'user-1')).rejects.toThrow('Job cannot be canceled');
     });
 
-    it('should throw when trying to cancel completed job', async () => {
-      const job = makeJob({ status: 'completed' });
+    it('should throw when trying to cancel a failed job', async () => {
+      const job = makeJob({ status: 'failed' });
       mockStore.getJob.mockResolvedValue(job as any);
 
       await expect(service.cancelJob('job-1', 'user-1')).rejects.toThrow('Job cannot be canceled');
@@ -169,7 +172,7 @@ describe('JobRunnerService', () => {
     });
 
     it('should throw when retrying non-failed job', async () => {
-      const job = makeJob({ status: 'processing' });
+      const job = makeJob({ status: 'running' });
       mockStore.getJob.mockResolvedValue(job as any);
 
       await expect(service.retryJob('job-1', 'user-1')).rejects.toThrow('Only failed jobs can be retried');

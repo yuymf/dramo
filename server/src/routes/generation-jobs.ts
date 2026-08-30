@@ -11,6 +11,13 @@ generationJobs.post('/images/generations', async (c) => {
   const userId = c.get('user').userId;
   const body = await c.req.json();
 
+  if (!body?.projectId || typeof body.projectId !== 'string') {
+    return c.json({ error: 'projectId is required' }, 400);
+  }
+  if (!body?.params?.description || typeof body.params.description !== 'string') {
+    return c.json({ error: 'params.description is required' }, 400);
+  }
+
   try {
     const job = await jobService.createJob({
       userId,
@@ -35,7 +42,8 @@ generationJobs.get('/jobs', async (c) => {
   const query = c.req.query();
 
   try {
-    const status = query.status ? [query.status] : undefined;
+    const statusParams = c.req.queries('status');
+    const status = statusParams && statusParams.length > 0 ? statusParams : undefined;
 
     const result = await jobService.listJobs({
       userId,
@@ -83,9 +91,9 @@ generationJobs.get('/jobs/stream', async (c) => {
           const jobUpdated = new Date(job.updatedAt);
           if (jobUpdated > lastCheck) {
             const eventType =
-              job.status === 'completed' ? 'job.completed' :
+              job.status === 'succeeded' ? 'job.completed' :
               job.status === 'failed' ? 'job.failed' :
-              job.status === 'processing' ? 'job.progress' :
+              job.status === 'running' ? 'job.progress' :
               job.status === 'canceled' ? 'job.canceled' :
               'job.queued';
 

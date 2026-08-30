@@ -150,6 +150,10 @@ export function createAssetRouter(config: AssetRouterConfig): Hono<AuthEnv> {
           extractedData = JSON.parse(result.content) as Record<string, unknown>;
         } catch {
           logger.warn({ projectId }, `Failed to parse ${model}s content string`);
+          return c.json(
+            { error: { code: 'INTERNAL_ERROR', message: `提取${modelLabel}结果解析失败`, retryable: true }, requestId },
+            502
+          );
         }
       }
 

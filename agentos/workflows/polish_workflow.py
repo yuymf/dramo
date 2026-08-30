@@ -14,6 +14,11 @@ import json
 
 from config import get_model_from_config
 
+try:
+    from ..lib.json_utils import safe_parse_json
+except ImportError:
+    from lib.json_utils import safe_parse_json
+
 logger = logging.getLogger(__name__)
 
 # ============ Models ============
@@ -92,11 +97,12 @@ class PolishWorkflow(Workflow):
         result = response.content
 
         if isinstance(result, str):
-            try:
-                result = json.loads(result)
-            except json.JSONDecodeError:
+            parsed = safe_parse_json(result, expected_type=dict, fallback=None)
+            if parsed is None:
                 logger.error(f"Failed to parse AI response as JSON: {result[:200]}")
                 result = {"polished_text": result, "changes": []}
+            else:
+                result = parsed
 
         output = {
             "projectId": project_id,
