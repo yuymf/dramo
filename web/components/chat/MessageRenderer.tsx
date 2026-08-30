@@ -5,8 +5,6 @@ import { OptionCards, AnsweredOptionCards } from "@/components/chat/OptionCards"
 import { MarkdownContent } from "@/components/chat/MarkdownContent";
 import type { ExtendedChatMessage } from "@/lib/types/chat";
 
-const BLOCK_PREVIEW_LENGTH = 50;
-
 interface MessageRendererProps {
   message: ExtendedChatMessage;
   isLatest: boolean;
@@ -78,22 +76,6 @@ export function MessageRenderer({
               onCustomInput={() => {}}
             />
           )
-        )}
-
-        {/* Blocks (legacy — kept for backward compatibility with existing DB records) */}
-        {message.blocks && message.blocks.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-[var(--at-border-light)] space-y-1">
-            {message.blocks.map((block, idx) => (
-              <div key={`${block.label}-${idx}`} className="text-xs opacity-70">
-                <span className="font-medium">{block.label}:</span>{" "}
-                <span>
-                  {block.text.length > BLOCK_PREVIEW_LENGTH
-                    ? `${block.text.substring(0, BLOCK_PREVIEW_LENGTH)}...`
-                    : block.text}
-                </span>
-              </div>
-            ))}
-          </div>
         )}
 
         {/* Confirm-script gate: shown only when pipeline is paused for review */}

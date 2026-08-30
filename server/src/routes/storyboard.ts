@@ -23,9 +23,6 @@ const jobStore = new JobStoreService();
 /** Timeout for the background AgentOS workflow call (9 minutes) */
 const WORKFLOW_TIMEOUT_MS = 540_000;
 
-/** Estimated time for the full storyboard pipeline */
-const ESTIMATED_PIPELINE_SECONDS = 300;
-
 /**
  * Fetch project assets needed for storyboard generation.
  */
@@ -245,7 +242,7 @@ storyboard.post('/projects/:projectId/storyboard/import', async (c) => {
       userId,
       projectId,
       type: 'storyboard_import',
-      params: { text: body.text, estimatedSeconds: ESTIMATED_PIPELINE_SECONDS },
+      params: { text: body.text },
       status: 'queued',
       progress: 0,
     },

@@ -399,17 +399,9 @@ export function exportAsJSON(script: Script): string {
 import type { ImageItem } from "@/lib/models";
 import { api } from "@/lib/api/client";
 
-interface RemoteCharacterAsset {
+interface RemoteAsset {
   id: string;
-  characterName: string;
-  description?: string;
-  alias?: string;
-  images: ImageItem[];
-}
-
-interface RemoteLocationAsset {
-  id: string;
-  locationName: string;
+  name: string;
   description?: string;
   alias?: string;
   images: ImageItem[];
@@ -456,12 +448,12 @@ export async function getProjectAssets(
 
   if (!options?.type || options.type === 'character') {
     try {
-      const res = await api<{ dataV2?: RemoteCharacterAsset[] }>(
+      const res = await api<{ data?: RemoteAsset[] }>(
         `/api/projects/${projectId}/characters/assets`
       );
-      result.characters = (res.dataV2 || []).map((asset) => ({
+      result.characters = (res.data || []).map((asset) => ({
         id: asset.id,
-        name: asset.characterName,
+        name: asset.name,
         description: asset.description,
         alias: asset.alias,
         images: options?.sourceFilter
@@ -475,12 +467,12 @@ export async function getProjectAssets(
 
   if (!options?.type || options.type === 'location') {
     try {
-      const res = await api<{ dataV2?: RemoteLocationAsset[] }>(
+      const res = await api<{ data?: RemoteAsset[] }>(
         `/api/projects/${projectId}/locations/assets`
       );
-      result.locations = (res.dataV2 || []).map((asset) => ({
+      result.locations = (res.data || []).map((asset) => ({
         id: asset.id,
-        name: asset.locationName,
+        name: asset.name,
         description: asset.description,
         alias: asset.alias,
         images: options?.sourceFilter

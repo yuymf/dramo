@@ -1,4 +1,4 @@
-import type { Script, CharacterImageAsset, LocationImageAssetV2, StoryboardResponse } from "@/lib/models";
+import type { Script, CharacterImageAsset, LocationImageAsset, StoryboardResponse } from "@/lib/models";
 import type { PageType } from "@/app/ai-chat-provider";
 
 /**
@@ -67,7 +67,7 @@ export function extractCharactersJson(
   return {
     characters: characters.map(char => ({
       id: char.id,
-      characterName: char.characterName,
+      name: char.name,
       description: char.description,
       alias: char.alias,
       images: char.images.map(img => ({
@@ -89,14 +89,14 @@ export function extractCharactersJson(
  * 返回地点资产数组的完整JSON表示
  */
 export function extractLocationsJson(
-  locations: LocationImageAssetV2[] | null | undefined
+  locations: LocationImageAsset[] | null | undefined
 ): object | null {
   if (!locations || locations.length === 0) return null;
   
   return {
     locations: locations.map(loc => ({
       id: loc.id,
-      locationName: loc.locationName,
+      name: loc.name,
       description: loc.description,
       alias: loc.alias,
       images: loc.images.map(img => ({

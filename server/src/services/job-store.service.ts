@@ -5,6 +5,7 @@ export interface ImageGenerationParams {
   name: string;
   description: string;
   style?: string;
+  colorGuide?: string;
   referenceImages?: string[];
   mode?: 'single' | 'sequence';
   assetType?: 'character' | 'location';

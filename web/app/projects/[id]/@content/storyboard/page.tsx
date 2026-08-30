@@ -24,7 +24,6 @@ import type { FrameData } from "@/lib/types/storyboard";
 import { SavedAssetsPanel } from "@/components/storyboard/SavedAssetsPanel";
 import { GeneratorModal } from "@/components/storyboard/GeneratorModal";
 import { useToast } from "@/components/ui/Toast";
-import { addProjectGeneratedAsset, type GeneratedAssetLocal } from "@/lib/storage/local";
 import { api, getStoryboardData, saveStoryboardData } from "@/lib/api/client";
 import { getProjectAssets } from "@/lib/utils/exporter";
 import type { ImageItem, StoryboardResponse } from "@/lib/models";
@@ -462,22 +461,6 @@ export default function StoryboardPage() {
         setFrameImages((prev) => new Map(prev).set(frameId, newImage));
         showToast("图片生成成功！", "success");
 
-        // Store to generated assets collection
-        const frame = frames.find((f) => f.id === frameId);
-        const generatedAsset: GeneratedAssetLocal = {
-          id: `gen_${Date.now()}`,
-          name: frame?.title || "生成图片",
-          description: frame?.description,
-          images: images.map((img) => ({
-            id: img.id,
-            url: img.url,
-            source: 'generated' as const,
-            createdAt: img.createdAt,
-          })),
-          createdAt: new Date().toISOString(),
-        };
-        addProjectGeneratedAsset(projectId, generatedAsset);
-
         // Persist to backend
         try {
           await api(`/api/projects/${projectId}/storyboard/frames/${frameId}/image`, {
@@ -489,7 +472,7 @@ export default function StoryboardPage() {
         }
       }
     },
-    [projectId, showToast, frames]
+    [projectId, showToast]
   );
 
   // Auto-update frame images when generation jobs complete

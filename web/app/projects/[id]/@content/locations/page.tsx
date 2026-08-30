@@ -10,14 +10,14 @@ import { LocationAssetsList } from "@/components/locations/LocationAssetsList";
 import { useAIChat } from "@/app/ai-chat-provider";
 import { extractLocationsJson } from "@/lib/utils/json-context-extractor";
 import { getProjectAssets } from "@/lib/utils/exporter";
-import type { LocationImageAssetV2 } from "@/lib/models";
+import type { LocationImageAsset } from "@/lib/models";
 import { MapPin } from "lucide-react";
 
 export default function LocationsPage() {
   const params = useParams();
   const projectId = params.id as string;
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [locations, setLocations] = useState<LocationImageAssetV2[]>([]);
+  const [locations, setLocations] = useState<LocationImageAsset[]>([]);
   const { updateJsonData } = useAIChat();
 
   const handleRefresh = () => {
@@ -32,7 +32,7 @@ export default function LocationsPage() {
         const assetsResult = await getProjectAssets(projectId, { type: 'location' });
         setLocations(assetsResult.locations.map(l => ({
           id: l.id,
-          locationName: l.name,
+          name: l.name,
           description: l.description,
           alias: l.alias,
           images: l.images,

@@ -38,7 +38,6 @@ function makeJob(overrides: Record<string, unknown> = {}) {
     id: 'job-1',
     userId: 'user-1',
     projectId: 'proj-1',
-    storyboardId: null,
     frameId: null,
     status: 'queued',
     progress: 0,

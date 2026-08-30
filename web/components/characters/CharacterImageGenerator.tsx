@@ -103,7 +103,7 @@ export function CharacterImageGenerator({
       const characterName = name.trim() || "未命名角色";
       let finalAsset: CharacterImageAsset = {
         id: `char_upload_${Date.now()}`,
-        characterName,
+        name: characterName,
         description: description.trim(),
         alias: alias.trim() || undefined,
         images,
@@ -206,7 +206,7 @@ export function CharacterImageGenerator({
       showToast("角色图片生成成功", "success");
       onGenerated?.({
         id: created.id,
-        characterName: created.name ?? characterName,
+        name: created.name ?? characterName,
         description: created.description ?? description.trim(),
         alias: alias.trim() || undefined,
         images,

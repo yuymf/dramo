@@ -33,11 +33,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAutosave } from "@/lib/hooks/useAutosave";
 import { useScriptAutosave } from "@/lib/hooks/useScriptAutosave";
 import { useKeyboardShortcuts } from "@/lib/hooks/useKeyboardShortcuts";
 import { useIsLargeScreen } from "@/lib/hooks/useIsLargeScreen";
-import { readJSON, saveJSON, remove as removeLocal } from "@/lib/storage/local";
+import { readJSON, saveJSON } from "@/lib/storage/local";
 import { exportAsText, downloadTextFile, exportAsPDF, exportAsSRT, exportAsTeleprompter, exportAsMarkdown, exportAsDOCX, exportAsJSON } from "@/lib/utils/exporter";
 import { useAIChat } from "@/app/ai-chat-provider";
 import { extractScriptJson } from "@/lib/utils/json-context-extractor";
@@ -306,15 +305,12 @@ export function ScriptEditorClient() {
       const { step } = (e as CustomEvent).detail;
       if (step === 'script') {
         // Clear local draft so we fetch fresh data from server
-        removeLocal(`script_draft_${projectId}`);
         setRefreshTrigger((prev) => prev + 1);
       }
     };
     const handleTabSwitch = (e: Event) => {
       const { tab } = (e as CustomEvent).detail;
       if (tab === 'scripts') {
-        // Pipeline navigated back to scripts tab — clear draft and reload
-        removeLocal(`script_draft_${projectId}`);
         setRefreshTrigger((prev) => prev + 1);
       }
     };
@@ -351,9 +347,6 @@ export function ScriptEditorClient() {
 
   const handleHistoryRevert = () => {
     setShowHistoryPanel(false);
-    if (projectId) {
-      removeLocal(`script_draft_${projectId}`);
-    }
     setRefreshTrigger((n) => n + 1);
   };
 
@@ -363,41 +356,6 @@ export function ScriptEditorClient() {
       try {
         if (!projectId) return;
         setLoading(true);
-
-        const draft = readJSON<Script | null>(`script_draft_${projectId}`, null);
-        if (draft && draft.scenes && draft.scenes.length > 0) {
-          if (mounted) {
-            const finalScript = ensureConsistency(draft);
-
-            setScript(finalScript);
-            setActs(finalScript.acts);
-
-            const firstAct = finalScript.acts[0];
-            setActiveActId(firstAct?.id);
-            const firstSceneId = firstAct ? firstAct.sceneIds[0] : finalScript.scenes[0]?.id;
-            setActiveSceneId(firstSceneId);
-
-            setLoading(false);
-          }
-          // Draft exists. Only replace if the user has not edited this session
-          // and the server copy is actually newer.
-          const res = await api<Script>(`/api/projects/${projectId}/script`).catch(() => null);
-          if (mounted && res && !dirtyRef.current) {
-            const serverUpdatedAt = new Date(res.updatedAt).getTime();
-            const draftUpdatedAt = draft.updatedAt ? new Date(draft.updatedAt).getTime() : 0;
-            if (serverUpdatedAt > draftUpdatedAt) {
-              const finalScript = ensureConsistency(res);
-              setScript(finalScript);
-              setActs(finalScript.acts);
-              const firstAct = finalScript.acts[0];
-              setActiveActId(firstAct?.id);
-              const firstSceneId = firstAct ? firstAct.sceneIds[0] : finalScript.scenes[0]?.id;
-              setActiveSceneId(firstSceneId);
-              removeLocal(`script_draft_${projectId}`);
-            }
-          }
-          return;
-        }
 
         const res = await api<Script>(`/api/projects/${projectId}/script`).catch(() => null);
         if (mounted && res) {
@@ -423,13 +381,6 @@ export function ScriptEditorClient() {
       mounted = false;
     };
   }, [projectId, showToast, refreshTrigger]);
-
-  useAutosave({
-    data: script,
-    key: `script_draft_${projectId}`,
-    interval: 10000,
-    onSave: (timestamp) => setLastSaved(timestamp),
-  });
 
   useEffect(() => {
     hydratedRef.current = false;

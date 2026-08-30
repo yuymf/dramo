@@ -25,9 +25,6 @@ export class CharacterAssetService implements AssetAdapter {
     this.storageService = new StorageService();
   }
 
-  /**
-   * List character assets with lazy base64→URL migration
-   */
   async listCharacterAssets(projectId: string, _userId: string) {
     logger.info(`[CharacterAssetService] Listing character assets for project ${projectId}`);
 
@@ -37,58 +34,19 @@ export class CharacterAssetService implements AssetAdapter {
         orderBy: { createdAt: 'desc' },
       });
 
-      const processedAssets = await Promise.all(
-        assets.map(async (asset: { id: string; name: string; description: string | null; images: unknown; createdAt: Date; alias?: unknown }) => {
-          let needsUpdate = false;
-          const images = (Array.isArray(asset.images) ? asset.images : JSON.parse(String(asset.images || '[]'))) as Array<{ url: string; [key: string]: unknown }>;
-
-          const processedImages = await Promise.all(
-            images.map(async (img) => {
-              if (img.url && img.url.startsWith('data:image/')) {
-                needsUpdate = true;
-                logger.info(`[CharacterAssetService] Converting legacy base64 image in character asset ${asset.id}`);
-                try {
-                  const { url, path } = await this.storageService.uploadImageFromBase64(
-                    projectId,
-                    img.url,
-                  );
-                  return { ...img, url, path };
-                } catch (error) {
-                  logger.error(`[CharacterAssetService] Failed to convert base64 for character asset ${asset.id}: ${error}`);
-                  return img;
-                }
-              }
-              return img;
-            })
-          );
-
-          if (needsUpdate) {
-            try {
-              await prisma.characterAsset.update({
-                where: { id: asset.id },
-                data: { images: processedImages as any },
-              });
-              logger.info(`[CharacterAssetService] Updated character asset ${asset.id} with converted URLs`);
-            } catch (error) {
-              logger.error(`[CharacterAssetService] Failed to update character asset ${asset.id}: ${error}`);
-            }
-          }
-
-          return {
-            id: asset.id,
-            characterName: asset.name,
-            description: asset.description || undefined,
-            alias: (asset as any).alias || undefined,
-            images: processedImages,
-            createdAt: asset.createdAt.toISOString(),
-          };
-        })
-      );
-
-      return { success: true, dataV2: processedAssets };
+      return {
+        data: assets.map((asset) => ({
+          id: asset.id,
+          name: asset.name,
+          description: asset.description ?? undefined,
+          alias: asset.alias ?? undefined,
+          images: Array.isArray(asset.images) ? asset.images : [],
+          createdAt: asset.createdAt.toISOString(),
+        })),
+      };
     } catch (error) {
       logger.error(`[CharacterAssetService] Failed to list character assets: ${error}`);
-      return { success: false, dataV2: [] };
+      return { data: [] };
     }
   }
 
@@ -236,14 +194,6 @@ export class CharacterAssetService implements AssetAdapter {
 
   async createAsset(projectId: string, data: Record<string, unknown>): Promise<unknown> {
     return this.createCharacterAsset(projectId, data as unknown as CharacterAssetData);
-  }
-
-  async getAsset(projectId: string, assetId: string): Promise<unknown> {
-    const asset = await prisma.characterAsset.findUnique({ where: { id: assetId } });
-    if (!asset || asset.projectId !== projectId) {
-      throw new Error('Character asset not found');
-    }
-    return asset;
   }
 
   async updateAsset(projectId: string, assetId: string, data: Record<string, unknown>): Promise<unknown> {

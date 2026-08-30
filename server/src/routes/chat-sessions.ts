@@ -6,24 +6,6 @@ import type { AuthEnv } from '../middleware/default-user';
 const chatSessions = new Hono<AuthEnv>();
 
 const DEFAULT_SESSION_TITLE = '新对话';
-const ORPHAN_SESSION_TITLE = '历史对话';
-
-async function adoptOrphanMessages(projectId: string): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    const orphanCount = await tx.chatMessage.count({
-      where: { projectId, sessionId: null },
-    });
-    if (orphanCount === 0) return;
-
-    const session = await tx.chatSession.create({
-      data: { projectId, title: ORPHAN_SESSION_TITLE },
-    });
-    await tx.chatMessage.updateMany({
-      where: { projectId, sessionId: null },
-      data: { sessionId: session.id },
-    });
-  });
-}
 
 chatSessions.get('/chat/:projectId/sessions', async (c) => {
   const projectId = c.req.param('projectId');
@@ -33,8 +15,6 @@ chatSessions.get('/chat/:projectId/sessions', async (c) => {
   if (!project) {
     throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
   }
-
-  await adoptOrphanMessages(projectId);
 
   const sessions = await prisma.chatSession.findMany({
     where: { projectId },

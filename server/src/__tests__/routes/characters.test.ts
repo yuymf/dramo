@@ -34,9 +34,8 @@ describe('Characters routes (factory)', () => {
     const req = new Request('http://localhost/api/v1/projects/p1/characters/assets');
     const res = await app.fetch(req);
     expect(res.status).toBe(200);
-    const body = await res.json() as { success: boolean; dataV2: unknown[] };
-    expect(body.success).toBe(true);
-    expect(Array.isArray(body.dataV2)).toBe(true);
+    const body = await res.json() as { data: unknown[] };
+    expect(Array.isArray(body.data)).toBe(true);
   });
 });
 

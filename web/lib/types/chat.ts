@@ -36,7 +36,6 @@ export interface ExtendedChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  blocks?: Array<{ label: string; text: string }>;
   messageType?: 'text' | 'options' | 'progress' | 'confirm_script';
   options?: ChatMessageOptions;
   selectedOption?: string[] | string;  // What the user picked

@@ -23,7 +23,6 @@ generationJobs.post('/images/generations', async (c) => {
     const job = await runner.createJob({
       userId,
       projectId: body.projectId,
-      storyboardId: body.storyboardId,
       frameId: body.frameId,
       params: body.params,
     });

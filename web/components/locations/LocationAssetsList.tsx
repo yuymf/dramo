@@ -8,7 +8,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { Loader2, Download, Trash2, Copy, Filter, Upload, Plus, X, ChevronDown, ChevronUp, Edit } from "lucide-react";
 import { api } from "@/lib/api/client";
-import type { LocationImageAssetV2 } from "@/lib/models";
+import type { LocationImageAsset } from "@/lib/models";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,7 @@ export function LocationAssetsList({
   onRenameLocation,
   onSelectLocation,
 }: LocationAssetsListProps) {
-  const [assets, setAssets] = useState<LocationImageAssetV2[]>([]);
+  const [assets, setAssets] = useState<LocationImageAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [sourceFilter, setSourceFilter] = useState<
     "all" | "upload" | "generated" | "reference"
@@ -48,10 +48,10 @@ export function LocationAssetsList({
       if (!projectId) return;
 
       try {
-        const res = await api<{ dataV2?: LocationImageAssetV2[] }>(
+        const res = await api<{ data?: LocationImageAsset[] }>(
           `/api/projects/${projectId}/locations/assets`
         );
-        setAssets(res.dataV2 || []);
+        setAssets(res.data || []);
       } catch (err) {
         console.error("Failed to load location assets:", err);
         setAssets([]);
@@ -138,7 +138,7 @@ export function LocationAssetsList({
 
     const updatedAsset = {
       ...asset,
-      locationName: newName.trim(),
+      name: newName.trim(),
     };
 
     // Update UI
@@ -191,7 +191,7 @@ export function LocationAssetsList({
       await api(`/api/projects/${projectId}/locations/assets/${assetId}`, {
         method: "PUT",
         body: {
-          name: asset.locationName,
+          name: asset.name,
           description: asset.description,
           alias: newAlias.trim() || undefined,
           images: asset.images,
@@ -226,7 +226,7 @@ export function LocationAssetsList({
       await api(`/api/projects/${projectId}/locations/assets/${assetId}`, {
         method: "PUT",
         body: {
-          name: asset.locationName,
+          name: asset.name,
           description: newDescription.trim() || undefined,
           alias: asset.alias,
           images: asset.images,
@@ -399,11 +399,11 @@ export function LocationAssetsList({
                       className="font-semibold text-sm ink-display cursor-pointer hover:text-[var(--persimmon)] transition-colors"
                       onDoubleClick={(e) => {
                         e.stopPropagation();
-                        handleRenameLocationName(asset.id, asset.locationName);
+                        handleRenameLocationName(asset.id, asset.name);
                       }}
                       title="双击可改名"
                     >
-                      {asset.locationName}
+                      {asset.name}
                     </h3>
                     {asset.alias && (
                       <p className="text-xs text-slate-400 mt-0.5">
@@ -470,7 +470,7 @@ export function LocationAssetsList({
                           <div className="relative group bg-slate-100 rounded border border-slate-200 overflow-hidden aspect-square">
                             <Image
                               src={img.url}
-                              alt={asset.locationName}
+                              alt={asset.name}
                               fill
                               className="object-cover"
                               sizes="(max-width: 768px) 33vw, 120px"
@@ -502,7 +502,7 @@ export function LocationAssetsList({
                                 e.stopPropagation();
                                 handleDownload(
                                   img.url,
-                                  `${asset.locationName}_${img.id}.png`
+                                  `${asset.name}_${img.id}.png`
                                 );
                               }}
                               className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 transition-colors"

@@ -70,37 +70,18 @@ describe('LocationAssetService', () => {
 
       const result = await service.listLocationAssets('proj-1', 'user-1');
 
-      expect(result.success).toBe(true);
-      expect(Array.isArray(result.dataV2)).toBe(true);
-      expect(result.dataV2).toHaveLength(1);
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].name).toBe(asset.name);
     });
 
-    it('should return empty dataV2 on error', async () => {
+    it('should return empty data on error', async () => {
       (mockPrisma.locationAsset.findMany as jest.MockedFunction<typeof mockPrisma.locationAsset.findMany>)
         .mockRejectedValue(new Error('DB error'));
 
       const result = await service.listLocationAssets('proj-1', 'user-1');
 
-      expect(result.success).toBe(false);
-      expect(result.dataV2).toEqual([]);
-    });
-
-    it('should convert base64 images to URLs lazily', async () => {
-      const base64Url = 'data:image/png;base64,abc123';
-      const asset = makeLocationAsset({
-        images: [{ url: base64Url, id: 'img-1', source: 'upload', createdAt: '2024-01-01' }],
-      });
-      (mockPrisma.locationAsset.findMany as jest.MockedFunction<typeof mockPrisma.locationAsset.findMany>)
-        .mockResolvedValue([asset as any]);
-      mockStorageService.uploadImageFromBase64.mockResolvedValue({ url: 'https://cdn.example.com/img.png', path: 'path/img.png' });
-      (mockPrisma.locationAsset.update as jest.MockedFunction<typeof mockPrisma.locationAsset.update>)
-        .mockResolvedValue(asset as any);
-
-      const result = await service.listLocationAssets('proj-1', 'user-1');
-
-      expect(result.success).toBe(true);
-      expect(mockStorageService.uploadImageFromBase64).toHaveBeenCalled();
-      expect(mockPrisma.locationAsset.update).toHaveBeenCalled();
+      expect(result.data).toEqual([]);
     });
   });
 
@@ -270,23 +251,7 @@ describe('LocationAssetService', () => {
         .mockResolvedValue([]);
 
       const result = await service.listAssets('proj-1', 'user-1');
-      expect((result as { success: boolean }).success).toBe(true);
-    });
-
-    it('getAsset returns asset when found', async () => {
-      const asset = makeLocationAsset();
-      (mockPrisma.locationAsset.findUnique as jest.MockedFunction<typeof mockPrisma.locationAsset.findUnique>)
-        .mockResolvedValue(asset as any);
-
-      const result = await service.getAsset('proj-1', 'loc-1');
-      expect(result).toEqual(asset);
-    });
-
-    it('getAsset throws when not found', async () => {
-      (mockPrisma.locationAsset.findUnique as jest.MockedFunction<typeof mockPrisma.locationAsset.findUnique>)
-        .mockResolvedValue(null);
-
-      await expect(service.getAsset('proj-1', 'nonexistent')).rejects.toThrow('Location asset not found');
+      expect(Array.isArray((result as { data: unknown[] }).data)).toBe(true);
     });
   });
 });

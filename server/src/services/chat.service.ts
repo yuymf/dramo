@@ -12,7 +12,7 @@ const CHAT_HISTORY_WINDOW = 20;
 
 /**
  * Chat Service — message persistence, history, session validation,
- * SSE streaming generation, and non-streaming generation.
+ * and SSE streaming generation.
  */
 export class ChatService {
   private llmConfigService: LLMConfigService;
@@ -53,7 +53,6 @@ export class ChatService {
     projectId: string;
     sessionId: string | null;
     content: string;
-    blocks?: object[];
     messageType?: string | null;
     selectedOption?: object;
   }) {
@@ -63,7 +62,6 @@ export class ChatService {
         sessionId: data.sessionId,
         role: 'user',
         content: data.content,
-        blocks: data.blocks ?? [],
         messageType: data.messageType ?? null,
         selectedOption: data.selectedOption ?? undefined,
       },
@@ -211,50 +209,4 @@ export class ChatService {
     }
   }
 
-  /**
-   * Non-streaming generation — calls clarificationworkflow, persists reply,
-   * and returns both user and assistant messages.
-   */
-  async generateNonStreaming(params: {
-    userId: string;
-    projectId: string;
-    sessionId: string | null;
-    userContent: string;
-    userMessageRecord: { id: string; [key: string]: unknown };
-    messages: Array<{ role: string; content: string }>;
-    requestId: string;
-  }) {
-    const { userId, projectId, sessionId, userMessageRecord, messages, requestId } = params;
-
-    try {
-      const llmHeaders = await this.llmConfigService.getLLMHeaders(userId, 'TEXT_LLM');
-      const response = await startWorkflowRun('clarificationworkflow', {
-        messages,
-        stream: false,
-      }, { requestId, stream: false, llmHeaders });
-
-      const responseText = await response.text();
-      const parsed = parseAgentResponse(responseText);
-
-      const assistantMessage = await this.persistAssistantReply(projectId, sessionId, parsed, parsed.content);
-
-      return {
-        userMessage: userMessageRecord,
-        assistantMessage: {
-          ...assistantMessage,
-          clarificationComplete: parsed.clarificationComplete || undefined,
-        },
-      };
-    } catch (err) {
-      // Re-throw typed errors that the route's global error-handler handles.
-      // Translate known upstream patterns into AppException so the handler maps them correctly.
-      const errCode = err instanceof AppException ? err.code : '';
-      const errMsg = err instanceof Error ? err.message : '';
-      if (errCode === ErrorCode.LLM_NOT_CONFIGURED || errMsg.includes('No default'))
-        throw new AppException(ErrorCode.LLM_NOT_CONFIGURED, '请先在设置页面配置 LLM API Key');
-      if (errMsg.includes('ECONNREFUSED') || errMsg.includes('fetch failed'))
-        throw new AppException(ErrorCode.UPSTREAM_ERROR, 'AI 服务未启动或不可用', { retryable: true });
-      throw err;
-    }
-  }
 }

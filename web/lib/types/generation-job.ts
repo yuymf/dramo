@@ -9,7 +9,6 @@ export interface GenerationJob {
   userId: string;
   projectId: string;
   type?: 'image' | 'storyboard_import' | string;
-  storyboardId?: string;
   frameId?: string;
   params: {
     name?: string;
@@ -50,7 +49,6 @@ export interface JobEvent {
 
 export interface CreateJobRequest {
   projectId: string;
-  storyboardId?: string;
   frameId?: string;
   params: {
     name: string;

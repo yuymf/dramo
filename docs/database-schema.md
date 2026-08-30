@@ -9,14 +9,14 @@
 | `User` | 默认用户记录（无认证） | email, name |
 | `UserLLMConfig` | 用户自定义 LLM 配置 | type (TEXT_LLM/IMAGE_GEN), apiKey (AES-256-GCM 加密), baseUrl, modelId, isDefault |
 | `Project` | 项目工作区 | userId, name, description |
-| `Script` | 台本 | projectId, type/style/form, scenes (JSON), acts (JSON), status |
+| `Script` | 台本 | projectId, form, contentType, scenes (JSON), acts (JSON), status |
 | `ScriptVersion` | 台本版本历史 | scriptId, version, content (JSON) |
 | `CharacterAsset` | 角色资产（多图）| projectId, name, alias, description, images (JSON) |
 | `LocationAsset` | 场景资产（多图）| projectId, name, alias, description, images (JSON) |
 | `CharacterRelation` | 角色关系图（无向边）| projectId, nodeAId（较小 ID）, nodeBId（较大 ID）, type, weight |
 | `Storyboard` | 分镜数据 | projectId（unique）, frames (JSON) |
 | `StoryboardFrameImage` | 分镜帧图片 | projectId, frameId, image (JSON) |
-| `GenerationJob` | 异步任务（生图 / 分镜导入） | userId, projectId, type, status, progress, params, resultUrl, result, error |
+| `GenerationJob` | 异步任务（生图 / 分镜导入） | userId, projectId, type, frameId, status, progress, params, resultUrl, result, error |
 | `ChatSession` | 对话会话 | projectId, title |
 | `ChatMessage` | 对话消息 | projectId, sessionId, role, content, messageType, options, selectedOption |
 | `Inspiration` | 灵感库 | projectId, text, category, isFavorite |

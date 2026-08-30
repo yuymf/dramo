@@ -8,13 +8,13 @@ import Image from "next/image";
 import { Image as ImageIcon, Loader2, Upload, X, Plus } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { createGenerationJob, waitForJob } from "@/lib/api/jobs";
-import type { LocationImageAssetV2 } from "@/lib/models";
+import type { LocationImageAsset } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/Toast";
 
 interface LocationImageGeneratorProps {
   projectId: string;
-  onGenerated?: (asset: LocationImageAssetV2) => void;
+  onGenerated?: (asset: LocationImageAsset) => void;
   onUploaded?: () => void;
 }
 
@@ -101,9 +101,9 @@ export function LocationImageGenerator({
 
       // All files loaded, save to local storage and backend
       const locationName = name.trim() || "未命名地点";
-      const asset: LocationImageAssetV2 = {
+      const asset: LocationImageAsset = {
         id: `loc_upload_${Date.now()}`,
-        locationName,
+        name: locationName,
         description: description.trim(),
         alias: alias.trim() || undefined,
         images,
@@ -199,7 +199,7 @@ export function LocationImageGenerator({
       showToast("地点图片生成成功", "success");
       onGenerated?.({
         id: created.id,
-        locationName: created.name ?? locationName,
+        name: created.name ?? locationName,
         description: created.description ?? description.trim(),
         alias: alias.trim() || undefined,
         images,

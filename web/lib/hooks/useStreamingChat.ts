@@ -139,7 +139,7 @@ export function useStreamingChat({
         const requestBody = {
           ...body,
           stream: true,
-          sessionId: sessionId || undefined,
+          sessionId: body.sessionId || sessionId || undefined,
         };
 
         const response = await fetch(
@@ -162,35 +162,8 @@ export function useStreamingChat({
         }
 
         const contentType = response.headers.get('content-type') || '';
-
-        // Non-streaming fallback — backend returned JSON instead of SSE
         if (!contentType.includes('text/event-stream')) {
-          const data = await response.json();
-          const payload = data as {
-            assistantMessage?: {
-              content: string;
-              options?: ChatMessageOptions;
-              clarificationComplete?: StructuredRequirements;
-            };
-          };
-          if (payload.assistantMessage) {
-            streamDoneFired = true;
-            setState({
-              streamingContent: payload.assistantMessage.content,
-              isStreaming: false,
-              error: null,
-            });
-            onStreamDone?.({
-              content: payload.assistantMessage.content,
-              options: payload.assistantMessage.options,
-              clarificationComplete: payload.assistantMessage.clarificationComplete,
-            });
-          } else {
-            // No assistantMessage in non-SSE response — unblock UI
-            streamDoneFired = true;
-            setState((prev) => ({ ...prev, isStreaming: false }));
-          }
-          return;
+          throw new Error('服务器未返回流式响应');
         }
 
         // Parse SSE stream

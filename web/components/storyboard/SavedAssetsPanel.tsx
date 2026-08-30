@@ -7,7 +7,6 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Upload, ChevronRight, Loader2 } from "lucide-react";
 import { getProjectAssets } from "@/lib/utils/exporter";
-import { getProjectGeneratedAssets } from "@/lib/storage/local";
 import { useToast } from "@/components/ui/Toast";
 import type { ImageItem } from "@/lib/models";
 import { cn } from "@/lib/utils";
@@ -19,7 +18,7 @@ interface SavedAssetsPanelProps {
   onToggleCollapse?: () => void;
 }
 
-type TabType = "all" | "characters" | "locations" | "generated";
+type TabType = "all" | "characters" | "locations";
 
 export function SavedAssetsPanel({
   projectId,
@@ -44,20 +43,6 @@ export function SavedAssetsPanel({
       images: ImageItem[];
     }>
   >([]);
-  const [generated, setGenerated] = useState<
-    Array<{
-      id: string;
-      name: string;
-      description?: string;
-      images: Array<{
-        id: string;
-        url: string;
-        source: 'generated';
-        createdAt: string;
-      }>;
-    }>
-  >([]);
-
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
@@ -68,10 +53,6 @@ export function SavedAssetsPanel({
         const data = await getProjectAssets(projectId);
         setCharacters(data.characters);
         setLocations(data.locations);
-        
-        // Load generated assets from local storage
-        const generatedAssets = getProjectGeneratedAssets(projectId);
-        setGenerated(generatedAssets);
       } catch (err) {
         console.error("Failed to load assets:", err);
       } finally {
@@ -79,14 +60,6 @@ export function SavedAssetsPanel({
       }
     }
     loadAssets();
-    
-    // Refresh generated assets periodically (in case new ones were added)
-    const interval = setInterval(() => {
-      const generatedAssets = getProjectGeneratedAssets(projectId);
-      setGenerated(generatedAssets);
-    }, 10000);
-    
-    return () => clearInterval(interval);
   }, [projectId]);
 
   // Handle asset upload
@@ -181,8 +154,7 @@ export function SavedAssetsPanel({
   const displayAssets = (() => {
     if (activeTab === "characters") return characters;
     if (activeTab === "locations") return locations;
-    if (activeTab === "generated") return generated;
-    return [...characters, ...locations, ...generated];
+    return [...characters, ...locations];
   })();
 
   if (collapsed) {
@@ -247,17 +219,6 @@ export function SavedAssetsPanel({
           )}
         >
           地点
-        </button>
-        <button
-          onClick={() => setActiveTab("generated")}
-          className={cn(
-            "flex-1 px-3 py-2 text-sm font-medium transition-colors",
-            activeTab === "generated"
-              ? "text-[var(--brand-600)] border-b-2 border-[var(--brand-600)]"
-              : "text-slate-600 hover:text-slate-800"
-          )}
-        >
-          已生成
         </button>
       </div>
 

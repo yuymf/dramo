@@ -39,7 +39,7 @@ export interface FrameData {
   style?: string;
   referenceImages?: string[];
   referencePaths?: string[];
-  // New enrichment fields (why: enrich frame semantics without breaking old data)
+  // Shot enrichment from AgentOS
   characters?: string[]; // Character names in this frame
   locations?: string[]; // Location names in this frame
   dialogues?: Dialogue[]; // Dialogues and narration

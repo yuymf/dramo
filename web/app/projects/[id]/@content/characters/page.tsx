@@ -78,7 +78,7 @@ export default function CharactersPage() {
         // 保存角色数据用于AI上下文（转换 name → characterName）
         setCharacters(assetsResult.characters.map(c => ({
           id: c.id,
-          characterName: c.name,
+          name: c.name,
           description: c.description,
           alias: c.alias,
           images: c.images,
@@ -153,7 +153,7 @@ export default function CharactersPage() {
       const newNode: Node = {
         id: asset.id, // Use characterId as node ID
         characterId: asset.id,
-        characterName: asset.characterName,
+        characterName: asset.name,
         description: asset.description,
         alias: asset.alias,
         imageUrl: asset.images && asset.images.length > 0 ? asset.images[0].url : undefined,
@@ -161,7 +161,7 @@ export default function CharactersPage() {
         y: 100 + Math.random() * 200,
       };
       console.log('Adding generated character to graph:', newNode);
-      showToast(`角色 "${asset.characterName}" 已添加到关系图`, "success");
+      showToast(`角色 "${asset.name}" 已添加到关系图`, "success");
       return [...prevNodes, newNode];
     });
     setRefreshTrigger((prev) => prev + 1);
@@ -179,7 +179,7 @@ export default function CharactersPage() {
       const newNode: Node = {
         id: asset.id, // Use characterId as node ID
         characterId: asset.id,
-        characterName: asset.characterName,
+        characterName: asset.name,
         description: asset.description,
         alias: asset.alias,
         imageUrl: asset.images && asset.images.length > 0 ? asset.images[0].url : undefined,
@@ -187,7 +187,7 @@ export default function CharactersPage() {
         y: 100 + Math.random() * 200,
       };
       console.log('Adding uploaded character to graph:', newNode);
-      showToast(`角色 "${asset.characterName}" 已添加到关系图`, "success");
+      showToast(`角色 "${asset.name}" 已添加到关系图`, "success");
       return [...prevNodes, newNode];
     });
   };
@@ -303,7 +303,7 @@ export default function CharactersPage() {
       prev.map((n) => (n.characterId === characterId ? { ...n, characterName: newName } : n))
     );
     setCharacters((prev) =>
-      prev.map((c) => (c.id === characterId ? { ...c, characterName: newName } : c))
+      prev.map((c) => (c.id === characterId ? { ...c, name: newName } : c))
     );
     try {
       await api(`/api/projects/${projectId}/characters/assets/${characterId}`, {

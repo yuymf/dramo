@@ -234,15 +234,15 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
           }
 
           try {
-            const res = await api<{
-              userMessage: ExtendedChatMessage;
-              assistantMessage: ExtendedChatMessage;
-            }>(`/api/chat/${projectId}/messages`, {
-              method: "POST",
-              body: { role: "user", content: initialMessage, mode: "clarification" },
-            });
+            const session = activeSessionId ?? (await createSession(projectId)).id;
+            if (!cancelled && !activeSessionId) setActiveSessionId(session);
             if (!cancelled) {
-              setMessages([res.userMessage, res.assistantMessage]);
+              await sendStreamingMessage({
+                role: "user",
+                content: initialMessage,
+                mode: "clarification",
+                sessionId: session,
+              });
             }
           } catch (err) {
             console.error("Failed to send initial message:", err);
@@ -275,7 +275,7 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
 
     loadHistory();
     return () => { cancelled = true; };
-  }, [projectId, activeSessionId, initTasks, updateTaskStatus]);
+  }, [projectId, activeSessionId, initTasks, updateTaskStatus, sendStreamingMessage]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -294,6 +294,13 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
     }
   }, [projectId]);
 
+  const ensureSession = useCallback(async () => {
+    if (activeSessionId) return activeSessionId;
+    const session = await createSession(projectId);
+    setActiveSessionId(session.id);
+    return session.id;
+  }, [activeSessionId, projectId]);
+
   const handleSend = useCallback(async () => {
     if (!input.trim() || loading) return;
 
@@ -309,14 +316,25 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
     };
     setMessages((prev) => [...prev, optimisticUserMsg]);
 
-    if (activeSessionId && messages.length === 0) {
-      autoTitleSession(activeSessionId, userMessage);
+    let sessionId = activeSessionId;
+    try {
+      sessionId = await ensureSession();
+    } catch (err) {
+      showToast((err as Error).message, "error");
+      setInput(userMessage);
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMsg.id));
+      setLoading(false);
+      return;
+    }
+
+    if (sessionId && messages.length === 0) {
+      autoTitleSession(sessionId, userMessage);
     }
 
     const requestBody: Record<string, unknown> = {
       role: "user",
       content: userMessage,
-      sessionId: activeSessionId || undefined,
+      sessionId,
     };
 
     if (currentPageType && currentJsonData) {
@@ -329,44 +347,14 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
 
     try {
       await sendStreamingMessage(requestBody);
-    } catch {
-      try {
-        const res = await api<{
-          userMessage: ExtendedChatMessage;
-          assistantMessage: ExtendedChatMessage;
-        }>(`/api/chat/${projectId}/messages`, {
-          method: "POST",
-          body: requestBody,
-        });
-
-        const safeAssistant = {
-          ...res.assistantMessage,
-          ...sanitizeMessage(res.assistantMessage),
-        };
-
-        setMessages((prev) => {
-          const filtered = prev.filter(
-            (m) => m.id !== optimisticUserMsg.id && m.id !== STREAMING_MESSAGE_ID
-          );
-          return [...filtered, res.userMessage, safeAssistant];
-        });
-
-        if (safeAssistant.clarificationComplete) {
-          handleClarificationComplete(safeAssistant.clarificationComplete);
-        }
-      } catch (err) {
-        showToast((err as Error).message, "error");
-        setInput(userMessage);
-        setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMsg.id));
-      } finally {
-        setLoading(false);
-      }
+    } catch (err) {
+      showToast((err as Error).message, "error");
+      setInput(userMessage);
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMsg.id));
     } finally {
-      // Safety net: ensure loading is always cleared even if streaming
-      // consumed the error internally without propagating it
       setLoading(false);
     }
-  }, [input, loading, currentPageType, currentJsonData, pipelineStatus, projectId, showToast, handleClarificationComplete, sendStreamingMessage, activeSessionId, messages.length, autoTitleSession]);
+  }, [input, loading, currentPageType, currentJsonData, pipelineStatus, showToast, sendStreamingMessage, activeSessionId, messages.length, autoTitleSession, ensureSession]);
 
   const handleOptionSelect = useCallback(async (messageId: string, selected: string[]) => {
     setMessages((prev) =>
@@ -385,12 +373,21 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
 
     setLoading(true);
 
+    let sessionId = activeSessionId;
+    try {
+      sessionId = await ensureSession();
+    } catch (err) {
+      showToast((err as Error).message, "error");
+      setLoading(false);
+      return;
+    }
+
     const requestBody: Record<string, unknown> = {
       role: "user",
       content: selectedLabels,
       mode: pipelineStatus === 'clarifying' ? 'clarification' : undefined,
       selectedOption: selected,
-      sessionId: activeSessionId || undefined,
+      sessionId,
     };
 
     const optimisticUserMsg: ExtendedChatMessage = {
@@ -403,39 +400,13 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
 
     try {
       await sendStreamingMessage(requestBody);
-    } catch {
-      try {
-        const res = await api<{
-          userMessage: ExtendedChatMessage;
-          assistantMessage: ExtendedChatMessage;
-        }>(`/api/chat/${projectId}/messages`, {
-          method: "POST",
-          body: requestBody,
-        });
-
-        const safeAssistant = {
-          ...res.assistantMessage,
-          ...sanitizeMessage(res.assistantMessage),
-        };
-
-        setMessages((prev) => {
-          const filtered = prev.filter(
-            (m) => m.id !== optimisticUserMsg.id && m.id !== STREAMING_MESSAGE_ID
-          );
-          return [...filtered, res.userMessage, safeAssistant];
-        });
-
-        if (safeAssistant.clarificationComplete) {
-          handleClarificationComplete(safeAssistant.clarificationComplete);
-        }
-      } catch (err) {
-        showToast((err as Error).message, "error");
-        setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMsg.id));
-      }
+    } catch (err) {
+      showToast((err as Error).message, "error");
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMsg.id));
     } finally {
       setLoading(false);
     }
-  }, [messages, projectId, pipelineStatus, showToast, handleClarificationComplete, sendStreamingMessage, activeSessionId]);
+  }, [messages, pipelineStatus, showToast, sendStreamingMessage, activeSessionId, ensureSession]);
 
   const handleCustomInput = useCallback(() => {
     inputRef.current?.focus();

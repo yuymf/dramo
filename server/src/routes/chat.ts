@@ -40,26 +40,21 @@ chat.post('/chat/:projectId/messages', async (c) => {
   const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
   if (!project) throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
 
-  const sessionId = (body.sessionId as string) || null;
-  if (sessionId && !(await chatService.validateSessionId(sessionId, projectId)))
+  const sessionId = typeof body.sessionId === 'string' ? body.sessionId : '';
+  if (!sessionId)
+    return c.json({ error: { code: 'INVALID_INPUT', message: 'sessionId is required', retryable: false }, requestId }, 400);
+  if (!(await chatService.validateSessionId(sessionId, projectId)))
     return c.json({ error: { code: 'NOT_FOUND', message: 'Session not found', retryable: false }, requestId }, 404);
 
-  const userMessage = await chatService.createUserMessage({
+  await chatService.createUserMessage({
     projectId, sessionId, content,
-    blocks: (body.blocks as object[]) || [],
     messageType: (body.messageType as string) || null,
     selectedOption: (body.selectedOption as object) || undefined,
   });
 
   const messages = await chatService.getHistory(projectId, sessionId);
-
-  if (body.stream) {
-    const sseGen = chatService.generateSSE({ userId, projectId, sessionId, userContent: content, messages, requestId });
-    return streamSSEResponse(c, sseGen);
-  }
-
-  const result = await chatService.generateNonStreaming({ userId, projectId, sessionId, userContent: content, userMessageRecord: userMessage, messages, requestId });
-  return c.json(result);
+  const sseGen = chatService.generateSSE({ userId, projectId, sessionId, userContent: content, messages, requestId });
+  return streamSSEResponse(c, sseGen);
 });
 
 chat.post('/chat/:projectId/reset', async (c) => {

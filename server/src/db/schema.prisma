@@ -63,8 +63,6 @@ model Script {
   id         String   @id @default(cuid())
   title      String
   projectId  String
-  type       String   @default("drama")
-  style      String   @default("casual")
   form       String?
   contentType String?
   goal       String?
@@ -134,7 +132,6 @@ model ChatMessage {
   sessionId      String?
   role           String
   content        String
-  blocks         Json?
   messageType    String?      // 'text' | 'options' | 'progress'
   options        Json?        // OptionCards data (AI-generated)
   selectedOption Json?        // User's selection result
@@ -224,7 +221,6 @@ model GenerationJob {
   userId        String
   projectId     String
   type          String   @default("image") // image | storyboard_import
-  storyboardId  String?
   frameId       String?
   params        Json     // image: {name, description, style, ...} / import: {text}
   status        String   @default("queued") // queued, running, succeeded, failed, canceled
@@ -233,7 +229,6 @@ model GenerationJob {
   resultUrl     String?
   result        Json?
   error         Json?    // {message, code, retryable}
-  retryCount    Int      @default(0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

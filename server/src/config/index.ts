@@ -30,9 +30,6 @@ export const config = {
   // SSE
   sseTimeoutMs: safeParseInt(process.env.SSE_TIMEOUT_MS, 55000),
   sseHeartbeatMs: safeParseInt(process.env.SSE_HEARTBEAT_MS, 15000),
-
-  // Frontend URL
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:12323',
 };
 
 /** Validate critical config on startup */

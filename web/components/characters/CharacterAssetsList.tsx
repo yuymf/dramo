@@ -47,11 +47,11 @@ export function CharacterAssetsList({
 
     try {
       // Load from API (remote is source of truth)
-      const res = await api<{ dataV2?: CharacterImageAsset[] }>(
+        const res = await api<{ data?: CharacterImageAsset[] }>(
         `/api/projects/${projectId}/characters/assets`
       );
 
-      setAssets(res.dataV2 || []);
+      setAssets(res.data || []);
     } catch (err) {
       console.error("Failed to load character assets:", err);
       setAssets([]);
@@ -153,7 +153,7 @@ export function CharacterAssetsList({
       // Only update local and UI after backend success
       const updatedAsset = {
         ...asset,
-        characterName: newName.trim(),
+        name: newName.trim(),
       };
 
       setAssets((prev) =>
@@ -196,7 +196,7 @@ export function CharacterAssetsList({
       await api(`/api/projects/${projectId}/characters/assets/${assetId}`, {
         method: "PUT",
         body: {
-          name: asset.characterName,
+          name: asset.name,
           description: asset.description,
           alias: newAlias.trim() || undefined,
           images: asset.images,
@@ -232,7 +232,7 @@ export function CharacterAssetsList({
       await api(`/api/projects/${projectId}/characters/assets/${assetId}`, {
         method: "PUT",
         body: {
-          name: asset.characterName,
+          name: asset.name,
           description: newDescription.trim() || undefined,
           alias: asset.alias,
           images: asset.images,
@@ -406,11 +406,11 @@ export function CharacterAssetsList({
                       className="font-semibold text-sm ink-display cursor-pointer hover:text-[var(--persimmon)] transition-colors"
                       onDoubleClick={(e) => {
                         e.stopPropagation();
-                        handleRenameCharacterName(asset.id, asset.characterName);
+                        handleRenameCharacterName(asset.id, asset.name);
                       }}
                       title="双击可改名"
                     >
-                      {asset.characterName}
+                      {asset.name}
                     </h3>
                     {asset.alias && (
                       <p className="text-xs text-slate-400 mt-0.5">
@@ -477,7 +477,7 @@ export function CharacterAssetsList({
                           <div className="relative group bg-slate-100 rounded border border-slate-200 overflow-hidden aspect-square">
                             <Image
                               src={img.url}
-                              alt={asset.characterName}
+                              alt={asset.name}
                               fill
                               className="object-cover"
                               sizes="(max-width: 768px) 33vw, 120px"
@@ -509,7 +509,7 @@ export function CharacterAssetsList({
                                 e.stopPropagation();
                                 handleDownload(
                                   img.url,
-                                  `${asset.characterName}_${img.id}.png`
+                                  `${asset.name}_${img.id}.png`
                                 );
                               }}
                               className="flex-1 flex items-center justify-center gap-1 px-1.5 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50 transition-colors"

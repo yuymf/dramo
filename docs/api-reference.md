@@ -46,7 +46,7 @@
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `.../characters/extract` | 从台本提取角色 |
-| GET | `.../characters/assets` | 角色资产列表 |
+| GET | `.../characters/assets` | 角色资产列表 `{ data: [{ id, name, ... }] }` |
 | POST | `.../characters/assets` | 创建角色资产 |
 | PUT | `.../characters/assets/:assetId` | 更新角色资产 |
 | DELETE | `.../characters/assets/:assetId` | 删除角色资产 |

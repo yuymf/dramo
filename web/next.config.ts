@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
         destination: '/projects/:id/scripts',
         permanent: true,
       },
+      {
+        source: '/profile',
+        destination: '/settings',
+        permanent: true,
+      },
     ];
   },
   experimental: {

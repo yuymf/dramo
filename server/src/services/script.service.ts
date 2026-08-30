@@ -6,8 +6,6 @@ export function buildEmptyDraftScript(title: string) {
   const sceneId = `scene_${ts}`;
   return {
     title: title || '未命名剧本',
-    type: 'drama',
-    style: 'casual',
     form: 'linear',
     contentType: 'short_video',
     status: 'draft',
@@ -129,8 +127,6 @@ export class ScriptService {
       data: {
         projectId,
         title: data.title || data.topic || '未命名剧本',
-        type: data.contentType || 'drama',
-        style: data.styles?.[0] || 'casual',
         form: data.form,
         contentType: data.contentType,
         goal: data.goal,
@@ -252,7 +248,7 @@ export class ScriptService {
         situation: `请重新生成以下场景。保持整体剧情一致，但创作新的对话和动作。\n\n现有剧本上下文：\n${contextStr}`,
         form: script.form,
         contentType: script.contentType,
-        styles: params?.styles || [script.style],
+        styles: params?.styles || [],
         goal: params?.goal || 'regenerate_scene',
       },
       { llmHeaders, timeoutMs: 120000 }

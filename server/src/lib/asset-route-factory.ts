@@ -12,10 +12,8 @@ import { logger } from './logger';
 export interface AssetAdapter {
   listAssets(projectId: string, userId: string): Promise<unknown>;
   createAsset(projectId: string, data: Record<string, unknown>): Promise<unknown>;
-  getAsset(projectId: string, assetId: string): Promise<unknown>;
   updateAsset(projectId: string, assetId: string, data: Record<string, unknown>): Promise<unknown>;
   deleteAsset(projectId: string, assetId: string): Promise<unknown>;
-  /** Called after extract to persist results into DB. */
   persistExtracted(projectId: string, extractedData: Record<string, unknown>): Promise<void>;
 }
 

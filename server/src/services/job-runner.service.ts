@@ -22,7 +22,6 @@ export class JobRunnerService {
   async createJob(data: {
     userId: string;
     projectId: string;
-    storyboardId?: string;
     frameId?: string;
     params: ImageGenerationParams;
   }) {
@@ -31,7 +30,6 @@ export class JobRunnerService {
         userId: data.userId,
         projectId: data.projectId,
         type: 'image',
-        storyboardId: data.storyboardId,
         frameId: data.frameId,
         params: data.params as object,
         status: 'queued',
@@ -91,7 +89,6 @@ export class JobRunnerService {
     return this.createJob({
       userId: job.userId,
       projectId: job.projectId,
-      storyboardId: job.storyboardId ?? undefined,
       frameId: job.frameId ?? undefined,
       params,
     });
@@ -117,8 +114,14 @@ export class JobRunnerService {
 
       const llmHeaders = await new LLMConfigService().getLLMHeaders(data.userId, 'IMAGE_GEN');
 
+      const promptParts = [data.params.description];
+      if (data.params.style) promptParts.push(`Style: ${data.params.style}`);
+      if (data.params.colorGuide && data.params.colorGuide !== 'default') {
+        promptParts.push(`Color: ${data.params.colorGuide}`);
+      }
+
       const result = await runImageGeneration({
-        prompt: data.params.description,
+        prompt: promptParts.join('. '),
         style: data.params.style,
         referenceImages: data.params.referenceImages,
       }, { llmHeaders });
