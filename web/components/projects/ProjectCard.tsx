@@ -47,10 +47,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    const day = date.getDate();
-    const month = date.toLocaleString("en", { month: "short" });
-    const year = date.getFullYear().toString().slice(-2);
-    return `${day} ${month} '${year}`;
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
   };
 
   return (
@@ -76,7 +73,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               src={coverUrl}
               alt={project.name}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              className="object-cover"
               sizes="(max-width: 768px) 100vw, 25vw"
               unoptimized
             />

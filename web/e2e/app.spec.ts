@@ -1,17 +1,17 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Dramo 核心页面', () => {
-  test('落地页渲染，CTA 进入项目列表', async ({ page }) => {
+  test('落地页渲染，CTA 进入写作台', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));
 
     await page.goto('/');
     await expect(page.getByRole('heading', { name: /写下第一个故事/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: '免费开始创作' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '开始写作' }).first()).toBeVisible();
 
-    await page.getByRole('button', { name: '免费开始创作' }).click();
-    await expect(page).toHaveURL(/\/projects/);
-    await expect(page.getByRole('heading', { name: '我的项目' })).toBeVisible();
+    await page.getByRole('link', { name: '开始写作' }).first().click();
+    await expect(page).toHaveURL(/\/home/);
+    await expect(page.getByRole('heading', { name: /今天想写/ })).toBeVisible();
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
