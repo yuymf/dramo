@@ -203,8 +203,11 @@ test.describe('剧本工作区', () => {
     });
     await expect(dialogue).toHaveValue('末班车要到了。');
 
-    const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: '导出 TXT PDF DOCX' }).click();
+    await expect(page.getByRole('menuitem', { name: 'TXT' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'PDF' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'DOCX' })).toBeVisible();
+    const downloadPromise = page.waitForEvent('download');
     await page.getByRole('menuitem', { name: 'TXT' }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.txt$/i);
