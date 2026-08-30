@@ -8,24 +8,21 @@ import Image from "next/image";
 import { Image as ImageIcon, Loader2, Upload, X, Plus } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { createGenerationJob, waitForJob } from "@/lib/api/jobs";
-import type { LocationImageAssetV2, Script } from "@/lib/models";
+import type { LocationImageAssetV2 } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/Toast";
 
 interface LocationImageGeneratorProps {
   projectId: string;
-  script?: Script;
   onGenerated?: (asset: LocationImageAssetV2) => void;
   onUploaded?: () => void;
 }
 
 export function LocationImageGenerator({
   projectId,
-  script: _script,
   onGenerated,
   onUploaded,
 }: LocationImageGeneratorProps) {
-  void _script;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [alias, setAlias] = useState("");

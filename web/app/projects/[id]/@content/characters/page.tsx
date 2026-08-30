@@ -532,7 +532,6 @@ export default function CharactersPage() {
           <div className="flex-1 overflow-y-auto p-4">
             <CharacterImageGenerator
               projectId={projectId}
-              script={script}
               onGenerated={handleGenerated}
               onUploaded={handleUploaded}
             />

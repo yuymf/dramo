@@ -8,24 +8,21 @@ import Image from "next/image";
 import { Image as ImageIcon, Loader2, Upload, X, Plus } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { createGenerationJob, waitForJob } from "@/lib/api/jobs";
-import type { CharacterImageAsset, Script } from "@/lib/models";
+import type { CharacterImageAsset } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/Toast";
 
 interface CharacterImageGeneratorProps {
   projectId: string;
-  script?: Script;
   onGenerated?: (asset: CharacterImageAsset) => void;
   onUploaded?: (asset: CharacterImageAsset) => void;
 }
 
 export function CharacterImageGenerator({
   projectId,
-  script: _script,
   onGenerated,
   onUploaded,
 }: CharacterImageGeneratorProps) {
-  void _script;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [alias, setAlias] = useState("");
