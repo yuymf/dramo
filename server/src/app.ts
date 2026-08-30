@@ -31,17 +31,6 @@ app.use('*', cors({
   origin: '*',
 }));
 
-// --- Legacy /api/* → /api/v1/* redirect (308 preserves HTTP method) ---
-app.use('/api/*', async (c, next) => {
-  const path = new URL(c.req.url).pathname;
-  if (!path.startsWith('/api/v1')) {
-    const newPath = path.replace(/^\/api\//, '/api/v1/');
-    const search = new URL(c.req.url).search;
-    return c.redirect(`${newPath}${search}`, 308);
-  }
-  return next();
-});
-
 app.use('*', defaultUserMiddleware);
 
 // --- Routes (all mounted under /api/v1) ---

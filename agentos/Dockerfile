@@ -14,7 +14,6 @@ COPY workflows/ ./workflows/
 COPY services/ ./services/
 COPY middleware/ ./middleware/
 COPY lib/ ./lib/
-COPY tests/ ./tests/
 
 # Expose port
 EXPOSE 12322

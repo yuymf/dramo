@@ -11,16 +11,11 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  async rewrites() {
-    return [];
-  },
   experimental: {
     externalDir: true,
-    // 设置代理超时时间（开发环境）
-    proxyTimeout: 100000, // 100 seconds
+    proxyTimeout: 600000,
   },
   webpack: (config) => {
-    // Exclude backend directory from Next.js build
     config.watchOptions = {
       ...config.watchOptions,
       ignored: ['**/server/**'],

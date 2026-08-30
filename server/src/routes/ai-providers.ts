@@ -8,7 +8,7 @@ const aiProviders = new Hono<AuthEnv>();
 aiProviders.get('/ai/providers', async (c) => {
   const requestId = c.get('requestId');
   try {
-    const data = await getAgentOS<unknown>('/ai/providers');
+    const data = await getAgentOS<unknown>('/api/ai/providers');
     return c.json({ success: true, data, requestId });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to list AI providers';
@@ -20,7 +20,7 @@ aiProviders.get('/ai/providers', async (c) => {
 aiProviders.get('/ai/provider', async (c) => {
   const requestId = c.get('requestId');
   try {
-    const data = await getAgentOS<unknown>('/ai/provider');
+    const data = await getAgentOS<unknown>('/api/ai/provider');
     return c.json({ success: true, data, requestId });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to get current provider';
@@ -34,7 +34,7 @@ aiProviders.post('/ai/provider', async (c) => {
   const { provider } = await c.req.json();
 
   try {
-    const data = await postAgentOS<unknown>('/ai/provider', { provider });
+    const data = await postAgentOS<unknown>('/api/ai/provider', { provider });
     return c.json({ success: true, data, message: `AI provider switched to ${provider}`, requestId });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to switch AI provider';

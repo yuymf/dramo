@@ -5,24 +5,25 @@ import os
 from unittest.mock import patch, MagicMock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from workflows.characters_workflow import CharactersWorkflow, _parse_input
+from workflows.characters_workflow import CharactersWorkflow
+from lib.json_utils import parse_workflow_input
 
 
 class TestParseInput:
     def test_parses_dict(self):
-        result = _parse_input({"text": "hello"})
+        result = parse_workflow_input({"text": "hello"})
         assert result == {"text": "hello"}
 
     def test_parses_json_string(self):
-        result = _parse_input('{"text": "hello"}')
+        result = parse_workflow_input('{"text": "hello"}')
         assert result == {"text": "hello"}
 
     def test_returns_empty_on_invalid(self):
-        result = _parse_input("not json")
+        result = parse_workflow_input("not json")
         assert result == {"text": "not json"}
 
     def test_returns_empty_on_none(self):
-        result = _parse_input(None)
+        result = parse_workflow_input(None)
         assert result == {}
 
 

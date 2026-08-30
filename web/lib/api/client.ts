@@ -34,9 +34,8 @@ function evictCache(ttlMs: number): void {
 }
 
 /**
- * 统一的API客户端
- * 所有请求通过Next.js API Routes代理到后端
- * 认证通过Cookie在服务端处理，客户端无需手动添加认证头
+ * 统一 API 客户端。浏览器始终请求相对路径 /api/*：
+ * 生产由 nginx 改写到 Hono /api/v1/*，本地开发由 Next.js catch-all 转发。
  */
 export async function api<T>(
   path: string,
@@ -58,7 +57,7 @@ export async function api<T>(
   // 注意：认证token通过Cookie在服务端处理，客户端不需要手动添加
   const headers: Record<string, string> = {
     // 只有当有 body 且不是 FormData 时才设置 Content-Type
-    // 避免 DELETE 等无 body 请求时 Fastify 报错：Body cannot be empty when content-type is set to 'application/json'
+    // DELETE 等无 body 请求不要带 Content-Type: application/json
     ...(!isFormData && options?.body ? { 'Content-Type': 'application/json' } : {}),
     ...(options?.headers ?? {}),
   };
@@ -184,29 +183,7 @@ export async function api<T>(
 }
 
 /**
- * 刷新灵感推荐
- * @deprecated 使用 recommendInspirations 代替
- */
-export async function refreshInspirations(params: {
-  projectId: string;
-  locale?: string;
-}) {
-  // 迁移到新接口
-  return api<{ data: Array<{ id: string; text: string; category: string; relevance?: number; source?: string }> }>(
-    `/api/inspirations/${params.projectId}/recommend`,
-    {
-      method: 'POST',
-      body: {
-        category: undefined, // 可以后续添加分类过滤
-      },
-    }
-  ).then(response => ({
-    inspirations: response.data || [],
-  }));
-}
-
-/**
- * 推荐灵感（新接口）
+ * 推荐灵感
  */
 export async function recommendInspirations(params: {
   projectId: string;
@@ -231,15 +208,12 @@ export async function recommendInspirations(params: {
   );
 }
 
-/**
- * 上传图片（V2：返回 url + path）
- */
-export async function uploadImageV2(params: {
+export async function uploadImage(params: {
   projectId: string;
   base64Data: string;
 }) {
   return api<{ success: boolean; url: string; path: string }>(
-    `/api/projects/${params.projectId}/uploads/image-v2`,
+    `/api/projects/${params.projectId}/uploads/image`,
     {
       method: 'POST',
       body: { base64Data: params.base64Data },

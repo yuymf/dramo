@@ -12,31 +12,13 @@ import json
 from config import get_model_from_config
 
 try:
-    from ..lib.json_utils import safe_parse_json
-except ImportError:
-    from lib.json_utils import safe_parse_json
-
-logger = logging.getLogger(__name__)
-
-try:
+    from ..lib.json_utils import safe_parse_json, parse_workflow_input
     from ..lib.prompt_loader import load_prompt as _load_prompt
 except ImportError:
+    from lib.json_utils import safe_parse_json, parse_workflow_input
     from lib.prompt_loader import load_prompt as _load_prompt
 
-
-_PARSE_FAILED = object()  # sentinel — distinct from any valid parse result
-
-
-def _parse_input(raw_input: Any) -> Dict[str, Any]:
-    """Parse input from Agno workflow runner (string JSON or dict)"""
-    if isinstance(raw_input, dict):
-        return raw_input
-    if isinstance(raw_input, str):
-        result = safe_parse_json(raw_input, expected_type=dict, fallback=_PARSE_FAILED)
-        if result is not _PARSE_FAILED:
-            return result
-        return {"text": raw_input}
-    return {}
+logger = logging.getLogger(__name__)
 
 
 
@@ -59,7 +41,7 @@ class CharactersWorkflow(Workflow):
     def _extract_characters(self, workflow: "CharactersWorkflow",
                              execution_input: WorkflowExecutionInput, **kwargs: Any) -> str:
         """Callable steps function invoked by Agno framework"""
-        params = _parse_input(execution_input.input)
+        params = parse_workflow_input(execution_input.input)
         project_id = params.get("projectId", "")
         text = params.get("text", "")
         llm_config = params.get("_llm_config")

@@ -879,7 +879,11 @@ export function ScriptEditorClient() {
     }
 
     try {
-      const res = await api<import('@/lib/models').PolishResponse>('/api/polish', {
+      if (!projectId) {
+        showToast("缺少项目信息", "error");
+        return;
+      }
+      const res = await api<import('@/lib/models').PolishResponse>(`/api/projects/${projectId}/polish`, {
         method: 'POST',
         body: {
           text: block.text,
@@ -915,7 +919,7 @@ export function ScriptEditorClient() {
     } catch (err) {
       showToast((err as Error).message, "error");
     }
-  }, [activeSceneId, showToast]);
+  }, [activeSceneId, projectId, showToast]);
 
   const handleGenerateBlock = useCallback((block: Block) => {
     // 生成接口占位

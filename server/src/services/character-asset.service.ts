@@ -95,8 +95,7 @@ export class CharacterAssetService implements AssetAdapter {
                   const { url, path } = await this.storageService.uploadImageFromBase64(
                     projectId,
                     img.url,
-                    { detailed: true }
-                  ) as { url: string; path: string };
+                  );
                   return { ...img, url, path };
                 } catch (error) {
                   logger.error(`[CharacterAssetService] Failed to convert base64 for character asset ${asset.id}: ${error}`);
@@ -149,9 +148,8 @@ export class CharacterAssetService implements AssetAdapter {
             logger.info('[CharacterAssetService] Converting base64 to storage URL for character asset');
             const { url, path } = await this.storageService.uploadImageFromBase64(
               projectId,
-              img.url,
-              { detailed: true }
-            ) as { url: string; path: string };
+              img.url
+            );
             return { ...img, url, path };
           }
           return img;

@@ -20,20 +20,11 @@ except ImportError:
     from lib.prompt_loader import load_prompt as _load_prompt
 
 try:
-    from ..lib.json_utils import safe_parse_json
+    from ..lib.json_utils import safe_parse_json, parse_workflow_input
 except ImportError:
-    from lib.json_utils import safe_parse_json
+    from lib.json_utils import safe_parse_json, parse_workflow_input
 
 logger = logging.getLogger(__name__)
-
-
-def _parse_input(raw_input: Any) -> Dict[str, Any]:
-    """Parse input from Agno workflow runner (string JSON or dict)"""
-    if isinstance(raw_input, dict):
-        return raw_input
-    if isinstance(raw_input, str):
-        return safe_parse_json(raw_input, expected_type=dict, fallback={})
-    return {}
 
 
 class ClarificationWorkflow(Workflow):
@@ -57,7 +48,7 @@ class ClarificationWorkflow(Workflow):
         **kwargs: Any,
     ) -> str:
         """Run one round of clarification dialogue"""
-        params = _parse_input(execution_input.input)
+        params = parse_workflow_input(execution_input.input)
         messages: List[Dict[str, str]] = params.get("messages", [])
         llm_config = params.get("_llm_config")
 

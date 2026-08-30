@@ -6,51 +6,25 @@ import type { AuthEnv } from '../middleware/default-user';
 const chatSessions = new Hono<AuthEnv>();
 
 const DEFAULT_SESSION_TITLE = '新对话';
-const LEGACY_SESSION_TITLE = '历史对话';
+const ORPHAN_SESSION_TITLE = '历史对话';
 
-/**
- * POST /api/chat/:projectId/sessions/migrate-legacy
- * Migrate orphaned messages (no sessionId) into a "历史对话" session.
- * Registered BEFORE the :sessionId routes to avoid path shadowing.
- */
-chatSessions.post('/chat/:projectId/sessions/migrate-legacy', async (c) => {
-  const projectId = c.req.param('projectId');
-  const userId = c.get('user').userId;
-  const requestId = c.get('requestId');
-
-  const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
-  if (!project) {
-    throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
-  }
-
-  // Atomic transaction to prevent race conditions with concurrent calls
-  const result = await prisma.$transaction(async (tx) => {
+async function adoptOrphanMessages(projectId: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
     const orphanCount = await tx.chatMessage.count({
       where: { projectId, sessionId: null },
     });
-
-    if (orphanCount === 0) {
-      return { session: null, migrated: 0 };
-    }
+    if (orphanCount === 0) return;
 
     const session = await tx.chatSession.create({
-      data: { projectId, title: LEGACY_SESSION_TITLE },
+      data: { projectId, title: ORPHAN_SESSION_TITLE },
     });
-
-    const updated = await tx.chatMessage.updateMany({
+    await tx.chatMessage.updateMany({
       where: { projectId, sessionId: null },
       data: { sessionId: session.id },
     });
-
-    return { session, migrated: updated.count };
   });
+}
 
-  return c.json({ data: result.session, migrated: result.migrated, requestId });
-});
-
-/**
- * GET /api/chat/:projectId/sessions — List all sessions for a project
- */
 chatSessions.get('/chat/:projectId/sessions', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;
@@ -59,6 +33,8 @@ chatSessions.get('/chat/:projectId/sessions', async (c) => {
   if (!project) {
     throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
   }
+
+  await adoptOrphanMessages(projectId);
 
   const sessions = await prisma.chatSession.findMany({
     where: { projectId },

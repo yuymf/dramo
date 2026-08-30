@@ -2,7 +2,7 @@
 
 > 完整的后端 API 端点列表。**无认证** —— 所有请求自动关联 `default-local-user`。
 
-后端实际挂载在 `/api/v1/*`，前端通过 `/api/*` 访问，由 Next.js API Route 与后端 308 重定向中间件统一重写为 `/api/v1/*`。
+后端实际挂载在 `/api/v1/*`。浏览器走 `/api/*`，生产由 nginx 改写，本地由 Next.js catch-all 转发。
 
 ## 统一错误信封
 
@@ -104,7 +104,6 @@
 | GET | `/api/chat/:pid/sessions` | 列出会话 |
 | POST | `/api/chat/:pid/sessions` | 创建新会话 |
 | GET/PUT/DELETE | `/api/chat/:pid/sessions/:sessionId` | 单会话操作 |
-| POST | `/api/chat/:pid/sessions/migrate-legacy` | 迁移旧会话 |
 
 ## 图片生成与任务 (`/api/images/`, `/api/jobs/`)
 
@@ -151,5 +150,4 @@
 |------|------|------|
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/tasks/:taskId` | 异步任务状态查询 |
-| POST | `/api/projects/:pid/uploads/image` | 图片上传 |
-| POST | `/api/projects/:pid/uploads/image-v2` | 图片上传 V2（返回 url + path）|
+| POST | `/api/projects/:pid/uploads/image` | 图片上传（返回 url + path）|

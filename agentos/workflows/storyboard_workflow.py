@@ -19,9 +19,9 @@ except ImportError:
     from env_loader import load_backend_env
 
 try:
-    from ..lib.json_utils import safe_parse_json
+    from ..lib.json_utils import safe_parse_json, parse_workflow_input
 except ImportError:
-    from lib.json_utils import safe_parse_json
+    from lib.json_utils import safe_parse_json, parse_workflow_input
 
 load_backend_env()
 logger = logging.getLogger(__name__)
@@ -63,14 +63,7 @@ def merge_scenes(scene_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]
 
 def _parse_input(step_input: StepInput) -> Dict[str, Any]:
     """Parse workflow input from StepInput"""
-    raw_input = getattr(step_input, 'input', None)
-    if raw_input is None:
-        return {}
-    if isinstance(raw_input, str):
-        return safe_parse_json(raw_input, expected_type=dict, fallback={})
-    if isinstance(raw_input, dict):
-        return raw_input
-    return {}
+    return parse_workflow_input(getattr(step_input, 'input', None))
 
 
 def _get_previous_output(step_input: StepInput) -> Dict[str, Any]:

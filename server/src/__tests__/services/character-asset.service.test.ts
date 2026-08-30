@@ -109,7 +109,7 @@ describe('CharacterAssetService', () => {
       const result = await service.listCharacterAssets('proj-1', 'user-1');
 
       expect(result.success).toBe(true);
-      expect(mockStorageService.uploadImageFromBase64).toHaveBeenCalledWith('proj-1', base64Url, { detailed: true });
+      expect(mockStorageService.uploadImageFromBase64).toHaveBeenCalledWith('proj-1', base64Url);
       expect(mockPrisma.characterAsset.update).toHaveBeenCalled();
     });
   });
