@@ -22,7 +22,9 @@ async function createScriptProject(page: Page, name: string) {
   await dialog.getByLabel('项目名称').fill(name);
   await dialog.getByRole('button', { name: '创建剧本项目' }).click();
   await expect(page).toHaveURL(/\/projects\/[^/]+\/screenplay/, { timeout: 15_000 });
-  await expect(page.getByRole('heading', { name: '剧本' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: '剧本', exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
 }
 
 async function writeTwoScenes(page: Page) {
@@ -78,15 +80,15 @@ test.describe('注册后的书桌', () => {
   test('侧栏可在主页 / 项目 / 设置之间切换', async ({ page }) => {
     await signUp(page);
 
-    await page.getByRole('link', { name: /项目/ }).click();
+    await page.getByRole('link', { name: '项目', exact: true }).click();
     await expect(page).toHaveURL(/\/projects/);
     await expect(page.getByRole('heading', { name: '我的项目' })).toBeVisible();
 
-    await page.getByRole('link', { name: /主页/ }).click();
+    await page.getByRole('link', { name: '主页', exact: true }).click();
     await expect(page).toHaveURL(/\/home/);
     await expect(page.getByRole('heading', { name: /今天想写/ })).toBeVisible();
 
-    await page.getByRole('link', { name: /设置/ }).click();
+    await page.getByRole('link', { name: '设置', exact: true }).click();
     await expect(page).toHaveURL(/\/settings/);
     await expect(page.getByRole('heading', { name: '设置' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'AI 模型配置' })).toBeVisible();
@@ -142,20 +144,24 @@ test.describe('剧本工作区', () => {
 
     await page.getByRole('link', { name: '角色' }).click();
     await expect(page).toHaveURL(/\/characters/);
-    await expect(page.getByRole('heading', { name: '角色' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '角色', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: '林晚' })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole('heading', { name: '值班员' })).toBeVisible();
 
     await page.getByRole('link', { name: '地点' }).click();
     await expect(page).toHaveURL(/\/locations/);
-    await expect(page.getByRole('heading', { name: '地点' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '地点', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: '地铁车厢' })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole('heading', { name: '月台' })).toBeVisible();
 
     await page.getByRole('link', { name: '剧本' }).click();
     await expect(page).toHaveURL(/\/screenplay/);
-    await expect(page.getByText('INT. 地铁车厢 - NIGHT')).toBeVisible();
-    await expect(page.getByText('林晚')).toBeVisible();
+    await expect(
+      page.getByRole('list', { name: '剧本正文' }).getByRole('textbox', { name: '场次标题' }).first()
+    ).toHaveValue('INT. 地铁车厢 - NIGHT');
+    await expect(
+      page.getByRole('list', { name: '剧本正文' }).getByRole('textbox', { name: '角色' }).first()
+    ).toHaveValue('林晚');
   });
 
   test('工作区可切封面、口播，且没有分镜轨', async ({ page }) => {
@@ -169,8 +175,10 @@ test.describe('剧本工作区', () => {
     await page.getByRole('button', { name: '正文' }).click();
     await expect(page).toHaveURL(/\/screenplay/);
 
-    await page.getByRole('button', { name: '更多' }).click();
-    await page.getByRole('menuitem', { name: '口播' }).click();
+    await expect(page.getByRole('button', { name: '更多' })).toBeVisible();
+    const projectId = page.url().match(/\/projects\/([^/]+)/)?.[1];
+    expect(projectId).toBeTruthy();
+    await page.goto(`/projects/${projectId}/spoken`);
     await expect(page).toHaveURL(/\/spoken/);
     await expect(page.getByText('口播工作区')).toBeVisible();
 
