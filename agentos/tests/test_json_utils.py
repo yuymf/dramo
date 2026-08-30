@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from lib.json_utils import safe_parse_json, strip_markdown_fences
+from lib.json_utils import safe_parse_json, strip_markdown_fences, parse_workflow_input
 
 class TestStripMarkdownFences:
     def test_strips_json_fence(self):
@@ -54,3 +54,17 @@ class TestSafeParseJson:
         """Implicit None→{} fallback when fallback param not provided."""
         result = safe_parse_json("not json at all", expected_type=dict)
         assert result == {}
+
+
+class TestParseWorkflowInput:
+    def test_dict_passthrough(self):
+        assert parse_workflow_input({"a": 1}) == {"a": 1}
+
+    def test_json_string(self):
+        assert parse_workflow_input('{"a": 1}') == {"a": 1}
+
+    def test_plain_text_becomes_text_field(self):
+        assert parse_workflow_input("hello") == {"text": "hello"}
+
+    def test_none_is_empty_dict(self):
+        assert parse_workflow_input(None) == {}

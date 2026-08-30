@@ -217,7 +217,7 @@ export function FrameCard({
       onChange?.(frame.id, { referenceImages: [...imgs, b64], referencePaths: [...paths, ''] });
       if (projectId) {
         try {
-          const res = await api<{ url: string; path: string }>(`/api/projects/${projectId}/uploads/image-v2`, { method: 'POST', body: { base64Data: b64 } });
+          const res = await api<{ url: string; path: string }>(`/api/projects/${projectId}/uploads/image`, { method: 'POST', body: { base64Data: b64 } });
           const updated = [...imgs, b64]; updated[updated.length - 1] = res.url;
           const updatedP = [...paths, '']; updatedP[updatedP.length - 1] = res.path;
           onChange?.(frame.id, { referenceImages: updated, referencePaths: updatedP });

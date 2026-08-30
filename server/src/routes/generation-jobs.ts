@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
-import { streamSSE } from 'hono/streaming';
-import { GenerationJobService } from '../services/generation-job.service';
+import { JobStoreService } from '../services/job-store.service';
+import { JobRunnerService } from '../services/job-runner.service';
 import { logger } from '../lib/logger';
 import type { AuthEnv } from '../middleware/default-user';
 
 const generationJobs = new Hono<AuthEnv>();
-const jobService = new GenerationJobService();
+const store = new JobStoreService();
+const runner = new JobRunnerService(store);
 
 generationJobs.post('/images/generations', async (c) => {
   const userId = c.get('user').userId;
@@ -19,7 +20,7 @@ generationJobs.post('/images/generations', async (c) => {
   }
 
   try {
-    const job = await jobService.createJob({
+    const job = await runner.createJob({
       userId,
       projectId: body.projectId,
       storyboardId: body.storyboardId,
@@ -27,7 +28,7 @@ generationJobs.post('/images/generations', async (c) => {
       params: body.params,
     });
 
-    await jobService.updateQueuePositions(userId);
+    await store.updateQueuePositions(userId);
 
     return c.json({ jobId: job.id });
   } catch (error: unknown) {
@@ -45,7 +46,7 @@ generationJobs.get('/jobs', async (c) => {
     const statusParams = c.req.queries('status');
     const status = statusParams && statusParams.length > 0 ? statusParams : undefined;
 
-    const result = await jobService.listJobs({
+    const result = await store.listJobs({
       userId,
       status,
       projectId: query.projectId,
@@ -61,82 +62,12 @@ generationJobs.get('/jobs', async (c) => {
   }
 });
 
-/**
- * SSE endpoint for real-time job updates.
- * Polls DB for status changes since serverless can't hold EventEmitter state.
- */
-generationJobs.get('/jobs/stream', async (c) => {
-  const userId = c.get('user')?.userId;
-
-  if (!userId) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-
-  return streamSSE(c, async (stream) => {
-    let lastCheck = new Date();
-
-    // Poll for changes every 2 seconds, up to ~55 seconds (before Vercel timeout)
-    const maxPolls = 27; // ~54 seconds at 2s interval
-    let polls = 0;
-
-    while (polls < maxPolls) {
-      try {
-        // Check for recently updated jobs
-        const { jobs } = await jobService.listJobs({
-          userId,
-          limit: 20,
-        });
-
-        for (const job of jobs) {
-          const jobUpdated = new Date(job.updatedAt);
-          if (jobUpdated > lastCheck) {
-            const eventType =
-              job.status === 'succeeded' ? 'job.completed' :
-              job.status === 'failed' ? 'job.failed' :
-              job.status === 'running' ? 'job.progress' :
-              job.status === 'canceled' ? 'job.canceled' :
-              'job.queued';
-
-            await stream.writeSSE({
-              event: eventType,
-              data: JSON.stringify({
-                jobId: job.id,
-                status: job.status,
-                progress: job.progress,
-                resultUrl: job.resultUrl,
-                error: job.error,
-              }),
-            });
-          }
-        }
-
-        lastCheck = new Date();
-      } catch (err) {
-        logger.error({ err, userId }, 'Job stream poll error');
-      }
-
-      // Heartbeat
-      await stream.writeSSE({ event: 'ping', data: '{}' });
-
-      // Wait 2 seconds
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      polls++;
-    }
-
-    // Signal timeout for reconnection
-    await stream.writeSSE({
-      event: 'timeout',
-      data: JSON.stringify({ message: 'Reconnect to continue receiving updates' }),
-    });
-  });
-});
-
 generationJobs.get('/jobs/:id', async (c) => {
   const userId = c.get('user').userId;
   const id = c.req.param('id');
 
   try {
-    const job = await jobService.getJob(id, userId);
+    const job = await store.getJob(id, userId);
     return c.json(job);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to get job';
@@ -152,7 +83,7 @@ generationJobs.post('/jobs/:id/cancel', async (c) => {
   const id = c.req.param('id');
 
   try {
-    await jobService.cancelJob(id, userId);
+    await runner.cancelJob(id, userId);
     return c.json({ success: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to cancel job';
@@ -167,8 +98,8 @@ generationJobs.post('/jobs/:id/retry', async (c) => {
   const id = c.req.param('id');
 
   try {
-    const newJob = await jobService.retryJob(id, userId);
-    await jobService.updateQueuePositions(userId);
+    const newJob = await runner.retryJob(id, userId);
+    await store.updateQueuePositions(userId);
     return c.json({ jobId: newJob.id });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to retry job';

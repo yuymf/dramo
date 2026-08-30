@@ -2,7 +2,7 @@
 
 > 完整的后端 API 端点列表。**无认证** —— 所有请求自动关联 `default-local-user`。
 
-后端实际挂载在 `/api/v1/*`，前端通过 `/api/*` 访问，由 Next.js API Route 与后端 308 重定向中间件统一重写为 `/api/v1/*`。
+后端实际挂载在 `/api/v1/*`。浏览器走 `/api/*`，生产由 nginx 改写，本地由 Next.js catch-all 转发。
 
 ## 统一错误信封
 
@@ -28,7 +28,7 @@
 | GET | `/api/projects` | 项目列表（分页）|
 | POST | `/api/projects` | 创建项目 |
 | GET | `/api/projects/:id` | 获取项目详情 |
-| PUT/PATCH | `/api/projects/:id` | 更新项目 |
+| PATCH | `/api/projects/:id` | 更新项目 |
 | DELETE | `/api/projects/:id` | 删除项目 |
 
 ## 台本 (`/api/projects/:projectId/script`)
@@ -46,11 +46,11 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `.../characters/extract/stream` | 角色提取（SSE 流）|
-| POST | `.../characters/extract` | 角色提取（JSON）|
-| POST | `.../characters/generate-3view` | 生成角色三视图 |
+| POST | `.../characters/extract` | 从台本提取角色 |
+| POST | `.../characters/generate-image` | 生成角色图 |
 | GET | `.../characters/assets` | 角色资产列表 |
 | POST | `.../characters/assets` | 创建角色资产 |
+| GET | `.../characters/assets/:assetId` | 单个角色资产 |
 | PUT | `.../characters/assets/:assetId` | 更新角色资产 |
 | DELETE | `.../characters/assets/:assetId` | 删除角色资产 |
 
@@ -60,19 +60,17 @@
 |------|------|------|
 | GET | `.../relations` | 获取关系图 |
 | POST | `.../relations` | 创建关系边 |
-| PUT | `.../relations/:relationId` | 更新关系边 |
 | DELETE | `.../relations/:relationId` | 删除关系边 |
-| POST | `.../relations/cleanup` | 自动清理孤立边 |
 
 ## 场景 (`/api/projects/:projectId/locations/`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `.../locations/extract/stream` | 场景提取（SSE 流）|
-| POST | `.../locations/extract` | 场景提取（JSON）|
-| POST | `.../locations/generate-image` | 生成场景图片 |
+| POST | `.../locations/extract` | 从台本提取场景 |
+| POST | `.../locations/generate-image` | 生成场景图 |
 | GET | `.../locations/assets` | 场景资产列表 |
 | POST | `.../locations/assets` | 创建场景资产 |
+| GET | `.../locations/assets/:assetId` | 单个场景资产 |
 | PUT | `.../locations/assets/:assetId` | 更新场景资产 |
 | DELETE | `.../locations/assets/:assetId` | 删除场景资产 |
 
@@ -83,16 +81,15 @@
 | POST | `.../storyboard/import/stream` | 导入分镜（SSE 流）|
 | POST | `.../storyboard/import` | 导入分镜（后台任务，返回 taskId）|
 | GET | `.../storyboard-data` | 获取持久化分镜 |
-| POST | `.../storyboard-data` | 保存分镜帧 |
-| GET | `.../storyboard-data/frames/:frameId` | 获取帧详情 |
-| PATCH | `.../storyboard-data/frames/:frameId` | 更新帧数据 |
+| PUT | `.../storyboard-data` | 保存分镜帧 |
+| GET | `.../storyboard/frames/images` | 获取帧图片 |
+| PUT | `.../storyboard/frames/:frameId/image` | 更新帧图片 |
 
 ## 润色 (`/api/projects/:projectId/polish`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `.../polish/stream` | 台本润色（SSE 流）|
-| POST | `.../polish` | 台本润色（JSON）|
+| POST | `.../polish` | 台本润色 |
 
 ## 对话 (`/api/chat/:projectId/`)
 
@@ -104,7 +101,6 @@
 | GET | `/api/chat/:pid/sessions` | 列出会话 |
 | POST | `/api/chat/:pid/sessions` | 创建新会话 |
 | GET/PUT/DELETE | `/api/chat/:pid/sessions/:sessionId` | 单会话操作 |
-| POST | `/api/chat/:pid/sessions/migrate-legacy` | 迁移旧会话 |
 
 ## 图片生成与任务 (`/api/images/`, `/api/jobs/`)
 
@@ -112,7 +108,6 @@
 |------|------|------|
 | POST | `/api/images/generations` | 创建图片生成任务 |
 | GET | `/api/jobs` | 任务列表 |
-| GET | `/api/jobs/stream` | 任务更新流（SSE，55s 超时 + 自动重连）|
 | GET | `/api/jobs/:jobId` | 任务状态 |
 | POST | `/api/jobs/:jobId/cancel` | 取消任务 |
 | POST | `/api/jobs/:jobId/retry` | 重试任务 |
@@ -128,22 +123,13 @@
 | POST | `/api/llm-configs/:id/set-default` | 设为默认 |
 | POST | `/api/llm-configs/verify` | 验证配置可达性 |
 
-## AI 供应商 (`/api/ai/`)
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/ai/providers` | 可用供应商列表（OpenAI、Hunyuan）|
-| GET | `/api/ai/provider` | 当前活跃供应商 |
-
 ## 灵感 (`/api/inspirations/`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/inspirations` | 全部灵感 |
 | GET | `/api/inspirations/:projectId` | 项目灵感 |
 | POST | `/api/inspirations/:projectId/recommend` | AI 推荐灵感 |
-| POST | `/api/inspirations/favorite` | 收藏 |
-| DELETE | `/api/inspirations/favorites` | 取消收藏 |
+| POST | `/api/inspirations/favorite` | 切换收藏 |
 
 ## 其他
 
@@ -151,5 +137,4 @@
 |------|------|------|
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/tasks/:taskId` | 异步任务状态查询 |
-| POST | `/api/projects/:pid/uploads/image` | 图片上传 |
-| POST | `/api/projects/:pid/uploads/image-v2` | 图片上传 V2（返回 url + path）|
+| POST | `/api/projects/:pid/uploads/image` | 图片上传（返回 url + path）|

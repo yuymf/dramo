@@ -261,22 +261,10 @@ export async function* parseAgentOSSSE(
   }
 }
 
-/**
- * Simple SSE error response — sends a single error event then closes.
- */
-export function streamSSEError(c: Context, code: string, message: string) {
-  return streamSSE(c, async (stream) => {
-    await stream.writeSSE({
-      event: 'error',
-      data: JSON.stringify({ code, message }),
-    });
-  });
-}
-
 // ─── Unified AgentOS stream wrapper ───────────────────────────────────────────
 
 export interface AgentOSStreamOptions {
-  /** AgentOS workflow name, e.g. 'chatworkflow' */
+  /** AgentOS workflow id, e.g. 'clarificationworkflow' */
   endpoint: string;
   /** Payload forwarded to AgentOS */
   payload: Record<string, unknown>;

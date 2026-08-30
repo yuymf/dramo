@@ -27,11 +27,6 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
-// Mock agentos-client
-jest.mock('../../lib/agentos-client', () => ({
-  runImageGeneration: jest.fn(),
-}));
-
 // Mock storage service
 jest.mock('../../services/storage.service', () => ({
   StorageService: jest.fn().mockImplementation(() => ({
@@ -41,11 +36,9 @@ jest.mock('../../services/storage.service', () => ({
 }));
 
 import { prisma } from '../../lib/db';
-import { runImageGeneration } from '../../lib/agentos-client';
 import { CharacterAssetService } from '../../services/character-asset.service';
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>;
-const mockRunImageGeneration = runImageGeneration as jest.MockedFunction<typeof runImageGeneration>;
 
 function makeCharacterAsset(overrides: Record<string, unknown> = {}) {
   return {
@@ -109,7 +102,7 @@ describe('CharacterAssetService', () => {
       const result = await service.listCharacterAssets('proj-1', 'user-1');
 
       expect(result.success).toBe(true);
-      expect(mockStorageService.uploadImageFromBase64).toHaveBeenCalledWith('proj-1', base64Url, { detailed: true });
+      expect(mockStorageService.uploadImageFromBase64).toHaveBeenCalledWith('proj-1', base64Url);
       expect(mockPrisma.characterAsset.update).toHaveBeenCalled();
     });
   });
@@ -266,34 +259,6 @@ describe('CharacterAssetService', () => {
     it('should refuse to wipe the library when extraction is empty', async () => {
       await expect(service.persistExtracted('proj-1', {})).rejects.toThrow('No characters extracted');
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('generateCharacter3View', () => {
-    it('should generate image and return result', async () => {
-      mockRunImageGeneration.mockResolvedValue({ images: [{ url: 'https://img.example.com/char.png' }] } as any);
-      mockStorageService.uploadImageFromUrl.mockResolvedValue('https://cdn.example.com/char.png');
-
-      const result = await service.generateCharacter3View('proj-1', 'user-1', {
-        characterId: 'char-1',
-        name: 'Alice',
-        description: 'A brave hero',
-        style: 'realistic',
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.characterId).toBe('char-1');
-      expect(result.images).toHaveLength(1);
-    });
-
-    it('should throw on generation failure', async () => {
-      mockRunImageGeneration.mockRejectedValue(new Error('AgentOS failure'));
-
-      await expect(service.generateCharacter3View('proj-1', 'user-1', {
-        characterId: 'char-1',
-        name: 'Alice',
-        description: 'desc',
-      })).rejects.toThrow('AgentOS failure');
     });
   });
 

@@ -5,44 +5,49 @@
 ## 数据流总览
 
 ```
-浏览器 (:12323)
+浏览器
   │ HTTP / 相对路径 /api/*
-  ↓
-Next.js API Routes (代理层)
-  │ Server-side fetch → BACKEND_API_URL
-  ↓
-Hono API (:12321)
-  ├── Prisma → 本地 PostgreSQL (容器)
-  ├── 文件存储 (本地 ./uploads，挂载为 Docker volume)
+    ↓
+Nginx (:80)  ──生产──→  /api/* 改写为 /api/v1/* → Hono (:12321)
+  │                    /uploads/* → 共享 volume
+  │                    / → Next.js (:3000)
+    │
+    └── 本地 `npm run dev` 无 nginx 时：
+        Next.js catch-all (`web/app/api/[[...path]]`) → Hono /api/v1/*
+
+Hono API
+  ├── Prisma → 本地 PostgreSQL
+  ├── 文件存储 ./uploads
   └── HTTP/SSE → AgentOS (:12322, 内网)
-                    ├── Agno 工作流 (多智能体)
+                    ├── Agno 工作流
                     ├── LLM API (OpenAI / Hunyuan)
-                    └── 图片生成 (ARK Seedream / Doubao)
+                    └── 图片生成 (ARK Seedream)
 ```
 
-## API 代理模式
+## API 入口
 
-前端所有请求通过 Next.js API Routes (`web/app/api/`) 代理到后端：
+浏览器只认 `/api/*`。Hono 只挂 `/api/v1/*`。中间的改写只做一次：
 
-1. 客户端用 `api<T>()` (`web/lib/api/client.ts`) 调用相对路径 `/api/...`
-2. Next.js Route Handler 调用 `proxyRequest()` (`web/app/api/_utils/proxy.ts`) 把请求 server-side 转发到 `BACKEND_API_URL`
-3. 转发同时把 path 重写为 `/api/v1/...`（后端实际挂载点），并保留 SSE 流式 passthrough
-4. 后端无 cookie/session 概念，**无认证**：`middleware/default-user.ts` 自动注入 `default-local-user`
+| 环境 | 谁改写 |
+|------|--------|
+| Docker / 生产 | nginx `rewrite ^/api/(?!v1/)(.*)$ /api/v1/$1` |
+| `npm run dev` | Next.js `app/api/[[...path]]/route.ts` |
 
 ```
 Browser → fetch('/api/projects')
-        → web/app/api/projects/route.ts
-        → proxyRequest()
+        → nginx 或 Next.js catch-all
         → http://api:12321/api/v1/projects
-        → defaultUserMiddleware 注入用户
+        → defaultUserMiddleware 注入 default-local-user
         → routes/projects.ts
 ```
+
+无认证。`middleware/default-user.ts` 给每个请求挂上本地默认用户。
 
 ## SSE 流式传输
 
 长时间 AI 操作支持 Server-Sent Events：
 
-- **使用场景**：对话、分镜导入、角色/场景提取、台本润色
+- **使用场景**：对话、分镜导入
 - **超时**：55 秒（保守值，nginx `proxy_read_timeout` 设为 600s 兜底）
 - **心跳**：每 15 秒发送保活
 - **重连**：客户端自动重连，从断点续传
@@ -64,7 +69,7 @@ Browser → fetch('/api/projects')
 
 1. 创建 `GenerationJob` (status: queued)
 2. 后端 inline 执行（无独立队列服务）
-3. 客户端通过 SSE 流 `/api/jobs/stream` 或单独 GET 获取进度
+3. 客户端轮询 `GET /api/jobs` 获取进度
 4. 支持取消和重试（仅限可重试错误）
 
 ## 加密方案
@@ -140,6 +145,11 @@ Nginx (`deploy/nginx.conf`) 把 `/api/*` 转给 api、其他转给 web，`/uploa
 
 - 语法、对话、叙事流润色
 
+### 灵感推荐 (InspirationsWorkflow)
+
+- 输入：台本上下文 + 可选分类
+- 输出：短条目数组（quotes / topics / interactions / hotspots）
+
 ### 图片生成 (ImageService)
 
 ```
@@ -155,10 +165,9 @@ POST /api/generate-image → AgentOS 智能模式选择:
 ### AgentOS 与后端通信
 
 - `server/src/lib/agentos-client.ts`：
-  - `startWorkflowRun()` — POST 到 `/workflows/{id}/runs`，返回 raw Response（JSON 或 SSE）
-  - `postAgentOS<T>()` / `getAgentOS<T>()` — 通用 JSON 请求
-  - `runImageGeneration()` — POST 到 `/api/generate-image`
-  - `parseAgentOSSSE()` — SSE 流解析
+  - `startWorkflowRun()` — POST `/workflows/{id}/runs`
+  - `postAgentOS<T>()` / `getAgentOS<T>()` — 通用 JSON
+  - `runImageGeneration()` — POST `/api/generate-image`
 
 ## 前端状态管理
 
@@ -175,4 +184,4 @@ POST /api/generate-image → AgentOS 智能模式选择:
 - `@sidebar` — 持久侧边栏（场景列表、导航）
 - `@content` — 深链接内容区（scripts、characters、storyboard）
 
-Legacy 路由 `/scripts/:id` 通过 `web/next.config.ts` 永久重定向到 `/projects/:id/scripts`。
+`/scripts/:id` 通过 `web/next.config.ts` 永久重定向到 `/projects/:id/scripts`。

@@ -1,21 +1,21 @@
 """
-JSON 容错解析工具
-处理 LLM 输出的常见格式噪声：markdown 代码块、额外空白、单dict包装等
+JSON 容错解析 + AgentOS workflow 入参解析。
 """
 import json
 import re
 import logging
-from typing import Any, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, Type, TypeVar
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
+_PARSE_FAILED = object()
+
 
 def strip_markdown_fences(text: str) -> str:
     """移除 LLM 输出中的 markdown 代码块标记"""
     text = text.strip()
-    # 匹配 ```json ... ``` 或 ``` ... ```
     text = re.sub(r'^```[a-zA-Z]*\s*', '', text)
     text = re.sub(r'\s*```$', '', text)
     return text.strip()
@@ -29,18 +29,7 @@ def safe_parse_json(
     """
     容错解析 LLM 输出的 JSON 字符串。
 
-    处理：
-    - markdown 代码块包裹
-    - 前后多余空白
-    - 期望 list 但收到 dict 时自动包装
-
-    Args:
-        text: LLM 返回的原始字符串
-        expected_type: 期望的顶层类型，list 或 dict
-        fallback: 解析失败时的默认值，默认 None
-
-    Returns:
-        解析结果，失败时返回 fallback
+    处理 markdown 代码块、空白、期望 list 但收到 dict 时自动包装。
     """
     if not isinstance(text, str):
         if isinstance(text, expected_type):
@@ -59,9 +48,20 @@ def safe_parse_json(
             return {}
         return fallback
 
-    # 期望 list 但收到 dict 时自动包装
     if expected_type == list and isinstance(result, dict):
         logger.info("[safe_parse_json] Got dict but expected list, wrapping in list")
         return [result]
 
     return result
+
+
+def parse_workflow_input(raw_input: Any) -> Dict[str, Any]:
+    """Parse Agno workflow input (dict or JSON/text string) into a dict."""
+    if isinstance(raw_input, dict):
+        return raw_input
+    if isinstance(raw_input, str):
+        result = safe_parse_json(raw_input, expected_type=dict, fallback=_PARSE_FAILED)
+        if result is not _PARSE_FAILED and isinstance(result, dict):
+            return result
+        return {"text": raw_input}
+    return {}

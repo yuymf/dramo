@@ -60,6 +60,7 @@ services:
     environment:
       PORT: 12322
       AGENTOS_SECURITY_KEY: ${AGENTOS_KEY:-default_agentos_key}
+      OS_SECURITY_KEY: ${AGENTOS_KEY:-default_agentos_key}
       # AI provider selection — fallback used only when frontend doesn't pass per-user config
       AI_PROVIDER: ${AI_PROVIDER:-openai}
       # OpenAI / OpenAI-compatible

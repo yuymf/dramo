@@ -4,7 +4,8 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from workflows.locations_workflow import LocationsWorkflow, _parse_input
+from workflows.locations_workflow import LocationsWorkflow
+from lib.json_utils import parse_workflow_input
 from unittest.mock import patch, MagicMock
 
 
@@ -24,19 +25,19 @@ class TestLocationsWorkflowInit:
 
 class TestParseInput:
     def test_parses_dict(self):
-        result = _parse_input({"text": "hello"})
+        result = parse_workflow_input({"text": "hello"})
         assert result == {"text": "hello"}
 
     def test_parses_json_string(self):
-        result = _parse_input('{"text": "hello"}')
+        result = parse_workflow_input('{"text": "hello"}')
         assert result == {"text": "hello"}
 
     def test_returns_text_on_invalid_json(self):
-        result = _parse_input("not json")
+        result = parse_workflow_input("not json")
         assert result == {"text": "not json"}
 
     def test_returns_empty_on_none(self):
-        result = _parse_input(None)
+        result = parse_workflow_input(None)
         assert result == {}
 
 

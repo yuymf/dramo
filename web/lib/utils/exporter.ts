@@ -398,12 +398,22 @@ export function exportAsJSON(script: Script): string {
  */
 import type { ImageItem } from "@/lib/models";
 import { api } from "@/lib/api/client";
-import {
-  getProjectCharacterAssets,
-  getProjectLocationAssets,
-  type CharacterImageAssetLocal,
-  type LocationImageAssetLocal,
-} from "@/lib/storage/local";
+
+interface RemoteCharacterAsset {
+  id: string;
+  characterName: string;
+  description?: string;
+  alias?: string;
+  images: ImageItem[];
+}
+
+interface RemoteLocationAsset {
+  id: string;
+  locationName: string;
+  description?: string;
+  alias?: string;
+  images: ImageItem[];
+}
 
 export async function getProjectAssets(
   projectId: string,
@@ -444,16 +454,12 @@ export async function getProjectAssets(
     }>,
   };
 
-  // Load characters if requested
   if (!options?.type || options.type === 'character') {
     try {
-      // Load from API (remote is source of truth)
-      const res = await api<{ dataV2?: CharacterImageAssetLocal[] }>(
+      const res = await api<{ dataV2?: RemoteCharacterAsset[] }>(
         `/api/projects/${projectId}/characters/assets`
       );
-      const remoteAssets = res.dataV2 || [];
-      
-      result.characters = remoteAssets.map((asset) => ({
+      result.characters = (res.dataV2 || []).map((asset) => ({
         id: asset.id,
         name: asset.characterName,
         description: asset.description,
@@ -463,38 +469,16 @@ export async function getProjectAssets(
           : asset.images,
       }));
     } catch (err) {
-      console.error('Failed to load character assets from remote:', err);
-      // Fallback to local cache only
-      const localAssets = getProjectCharacterAssets(projectId);
-      result.characters = localAssets.map((asset) => ({
-        id: asset.id,
-        name: asset.characterName,
-        description: asset.description,
-        alias: asset.alias,
-        images: options?.sourceFilter
-          ? asset.images.filter((img) => img.source === options.sourceFilter)
-          : asset.images,
-      }));
+      console.error('Failed to load character assets:', err);
     }
   }
 
-  // Load locations if requested
   if (!options?.type || options.type === 'location') {
     try {
-      // Load from API
-      const res = await api<{ dataV2?: LocationImageAssetLocal[] }>(
+      const res = await api<{ dataV2?: RemoteLocationAsset[] }>(
         `/api/projects/${projectId}/locations/assets`
       );
-      const remoteAssets = res.dataV2 || [];
-      
-      // Load from local storage
-      const localAssets = getProjectLocationAssets(projectId);
-      
-      // Merge and normalize with deduplication (remote takes precedence)
-      const remoteIds = new Set(remoteAssets.map(a => a.id));
-      const uniqueLocalAssets = localAssets.filter(a => !remoteIds.has(a.id));
-      const allLocations = [...remoteAssets, ...uniqueLocalAssets];
-      result.locations = allLocations.map((asset) => ({
+      result.locations = (res.dataV2 || []).map((asset) => ({
         id: asset.id,
         name: asset.locationName,
         description: asset.description,
@@ -505,17 +489,6 @@ export async function getProjectAssets(
       }));
     } catch (err) {
       console.error('Failed to load location assets:', err);
-      // Fallback to local only
-      const localAssets = getProjectLocationAssets(projectId);
-      result.locations = localAssets.map((asset) => ({
-        id: asset.id,
-        name: asset.locationName,
-        description: asset.description,
-        alias: asset.alias,
-        images: options?.sourceFilter
-          ? asset.images.filter((img) => img.source === options.sourceFilter)
-          : asset.images,
-      }));
     }
   }
 

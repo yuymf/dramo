@@ -17,12 +17,10 @@ import { characters } from './routes/characters';
 import { locations } from './routes/locations';
 import { storyboard } from './routes/storyboard';
 import { storyboardPersistence } from './routes/storyboard-persistence';
-import { aiProviders } from './routes/ai-providers';
 import { relations } from './routes/relations';
 import { uploads } from './routes/uploads';
 import { generationJobs } from './routes/generation-jobs';
 import { llmConfigs } from './routes/llm-config';
-import { director } from './routes/director';
 
 const app = new Hono<AuthEnv>();
 
@@ -30,17 +28,6 @@ const app = new Hono<AuthEnv>();
 app.use('*', cors({
   origin: '*',
 }));
-
-// --- Legacy /api/* → /api/v1/* redirect (308 preserves HTTP method) ---
-app.use('/api/*', async (c, next) => {
-  const path = new URL(c.req.url).pathname;
-  if (!path.startsWith('/api/v1')) {
-    const newPath = path.replace(/^\/api\//, '/api/v1/');
-    const search = new URL(c.req.url).search;
-    return c.redirect(`${newPath}${search}`, 308);
-  }
-  return next();
-});
 
 app.use('*', defaultUserMiddleware);
 
@@ -58,12 +45,10 @@ app.route('/api/v1', characters);
 app.route('/api/v1', locations);
 app.route('/api/v1', storyboard);
 app.route('/api/v1', storyboardPersistence);
-app.route('/api/v1', aiProviders);
 app.route('/api/v1', relations);
 app.route('/api/v1', uploads);
 app.route('/api/v1', generationJobs);
 app.route('/api/v1', llmConfigs);
-app.route('/api/v1', director);
 
 // --- Error handler ---
 app.onError(errorHandler);

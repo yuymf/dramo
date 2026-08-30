@@ -2,14 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { config } from '../config';
 import { logger } from './logger';
 
-/**
- * Singleton Prisma client optimized for serverless.
- * In serverless (Vercel), each cold start creates a new client.
- * We use a global reference to reuse across warm invocations.
- *
- * Important: Use a connection pooler (e.g. PgBouncer) in production
- * to avoid exhausting direct connections.
- */
+/** Singleton Prisma client for the long-running Node process. */
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -26,7 +19,6 @@ function createPrismaClient(): PrismaClient {
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (!config.isDev) {
-  // In production, prevent multiple Prisma instances on warm starts
   globalForPrisma.prisma = prisma;
 }
 
