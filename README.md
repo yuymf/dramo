@@ -96,6 +96,7 @@ npm run dev
 
 ## 文档
 
+- [产品需求：对标 Laper](docs/prd-laper-parity.md)
 - [架构与设计](docs/architecture.md)
 - [API 接口参考](docs/api-reference.md)
 - [数据库模型](docs/database-schema.md)
