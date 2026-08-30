@@ -13,28 +13,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from config import get_model_from_config, get_long_timeout_model
 
-try:
-    from ..env_loader import load_backend_env
-except ImportError:
-    from env_loader import load_backend_env
-
-try:
-    from ..lib.json_utils import safe_parse_json
-except ImportError:
-    from lib.json_utils import safe_parse_json
+from env_loader import load_backend_env
+from lib.json_utils import safe_parse_json, parse_workflow_input
+from lib.prompt_loader import load_prompt as _load_prompt
 
 load_backend_env()
 logger = logging.getLogger(__name__)
 
 _MAX_LLM_CONCURRENCY = 10
 LLM_CONCURRENCY = min(int(os.getenv("LLM_CONCURRENCY", "3")), _MAX_LLM_CONCURRENCY)
-
-# ============ Helpers ============
-
-try:
-    from ..lib.prompt_loader import load_prompt as _load_prompt
-except ImportError:
-    from lib.prompt_loader import load_prompt as _load_prompt
 
 
 def merge_scenes(scene_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
@@ -63,14 +50,7 @@ def merge_scenes(scene_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]
 
 def _parse_input(step_input: StepInput) -> Dict[str, Any]:
     """Parse workflow input from StepInput"""
-    raw_input = getattr(step_input, 'input', None)
-    if raw_input is None:
-        return {}
-    if isinstance(raw_input, str):
-        return safe_parse_json(raw_input, expected_type=dict, fallback={})
-    if isinstance(raw_input, dict):
-        return raw_input
-    return {}
+    return parse_workflow_input(getattr(step_input, 'input', None))
 
 
 def _get_previous_output(step_input: StepInput) -> Dict[str, Any]:

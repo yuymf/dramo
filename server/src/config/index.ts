@@ -10,7 +10,7 @@ export const config = {
   isDev: process.env.NODE_ENV !== 'production',
   port: safeParseInt(process.env.PORT, 12321),
   logLevel: process.env.LOG_LEVEL || 'info',
-  version: '3.0.0',
+  version: '2.0.0',
 
   // Database (local PostgreSQL)
   databaseUrl: process.env.DATABASE_URL || 'postgresql://dramo:dramo_secret@localhost:5432/dramo',

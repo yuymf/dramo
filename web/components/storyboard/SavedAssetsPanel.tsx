@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Upload, ChevronRight, Loader2 } from "lucide-react";
 import { getProjectAssets } from "@/lib/utils/exporter";
-import { addProjectCharacterAsset, addProjectLocationAsset, getProjectGeneratedAssets } from "@/lib/storage/local";
+import { getProjectGeneratedAssets } from "@/lib/storage/local";
 import { useToast } from "@/components/ui/Toast";
 import type { ImageItem } from "@/lib/models";
 import { cn } from "@/lib/utils";
@@ -159,42 +159,8 @@ export function SavedAssetsPanel({
 
       showToast(`已上传 ${images.length} 张图片到云端`, "success");
     } catch (error) {
-      console.error("上传到云端失败，保存到本地:", error);
-      
-      // 降级：保存到本地存储
-      if (isLocation) {
-        const locationAsset = {
-          id: `loc_upload_${Date.now()}`,
-          locationName: uploadName,
-          description: "",
-          images,
-          createdAt: new Date().toISOString(),
-        };
-        addProjectLocationAsset(projectId, locationAsset);
-        setLocations((prev) => [...prev, {
-          id: locationAsset.id,
-          name: locationAsset.locationName,
-          description: locationAsset.description,
-          images: locationAsset.images,
-        }]);
-      } else {
-        const characterAsset = {
-          id: `char_upload_${Date.now()}`,
-          characterName: uploadName,
-          description: "",
-          images,
-          createdAt: new Date().toISOString(),
-        };
-        addProjectCharacterAsset(projectId, characterAsset);
-        setCharacters((prev) => [...prev, {
-          id: characterAsset.id,
-          name: characterAsset.characterName,
-          description: characterAsset.description,
-          images: characterAsset.images,
-        }]);
-      }
-
-      showToast(`已离线保存 ${images.length} 张图片，稍后可同步`, "error");
+      console.error("上传到云端失败:", error);
+      showToast("上传失败，请稍后重试", "error");
     }
 
     if (uploadInputRef.current) {

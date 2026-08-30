@@ -5,7 +5,6 @@ import type { SSEEvent } from '../lib/sse';
 import { AppException, ErrorCode } from '../lib/errors';
 import { logger } from '../lib/logger';
 import { LLMConfigService } from './llm-config.service';
-import { IntentService } from './intent.service';
 import { parseAgentResponse } from '../lib/parse-agent-response';
 import type { ParsedAgentResponse } from '../lib/parse-agent-response';
 
@@ -17,11 +16,9 @@ const CHAT_HISTORY_WINDOW = 20;
  */
 export class ChatService {
   private llmConfigService: LLMConfigService;
-  private intentService: IntentService;
 
   constructor() {
     this.llmConfigService = new LLMConfigService();
-    this.intentService = new IntentService();
   }
 
   /**
@@ -97,8 +94,7 @@ export class ChatService {
   }
 
   /**
-   * Persist the assistant reply and optionally create a PipelineRun when
-   * clarificationComplete is present.
+   * Persist the assistant reply.
    */
   private async persistAssistantReply(
     projectId: string,
@@ -106,7 +102,7 @@ export class ChatService {
     parsed: ParsedAgentResponse,
     rawContent: string
   ) {
-    const assistantMessage = await prisma.chatMessage.create({
+    return prisma.chatMessage.create({
       data: {
         projectId,
         sessionId,
@@ -116,19 +112,6 @@ export class ChatService {
         options: parsed.options ? (parsed.options as object) : undefined,
       },
     });
-
-    if (parsed.clarificationComplete) {
-      await prisma.pipelineRun.create({
-        data: {
-          projectId,
-          status: 'running',
-          requirements: parsed.clarificationComplete as object,
-          currentStep: 'script',
-        },
-      });
-    }
-
-    return assistantMessage;
   }
 
   /**
@@ -143,7 +126,7 @@ export class ChatService {
     messages: Array<{ role: string; content: string }>;
     requestId: string;
   }): AsyncGenerator<SSEEvent, void, unknown> {
-    const { userId, projectId, sessionId, userContent, messages, requestId } = params;
+    const { userId, projectId, sessionId, messages, requestId } = params;
 
     try {
       const llmHeaders = await this.llmConfigService.getLLMHeaders(userId, 'TEXT_LLM');
@@ -200,11 +183,6 @@ export class ChatService {
           const rawContent = fullContent || workflowOutput;
           const parsed = structuredResult || parseAgentResponse(rawContent);
 
-          if (!parsed.clarificationComplete && this.intentService.isGenerationTrigger(userContent)) {
-            logger.info({ projectId, userContent }, 'LLM missed generation trigger — applying server-side fallback');
-            parsed.clarificationComplete = this.intentService.buildFallbackClarificationComplete(messages);
-          }
-
           await this.persistAssistantReply(projectId, sessionId, parsed, rawContent);
 
           yield {
@@ -246,7 +224,7 @@ export class ChatService {
     messages: Array<{ role: string; content: string }>;
     requestId: string;
   }) {
-    const { userId, projectId, sessionId, userContent, userMessageRecord, messages, requestId } = params;
+    const { userId, projectId, sessionId, userMessageRecord, messages, requestId } = params;
 
     try {
       const llmHeaders = await this.llmConfigService.getLLMHeaders(userId, 'TEXT_LLM');
@@ -257,11 +235,6 @@ export class ChatService {
 
       const responseText = await response.text();
       const parsed = parseAgentResponse(responseText);
-
-      if (!parsed.clarificationComplete && this.intentService.isGenerationTrigger(userContent)) {
-        logger.info({ projectId, userContent }, 'LLM missed generation trigger — applying server-side fallback (non-streaming)');
-        parsed.clarificationComplete = this.intentService.buildFallbackClarificationComplete(messages);
-      }
 
       const assistantMessage = await this.persistAssistantReply(projectId, sessionId, parsed, parsed.content);
 

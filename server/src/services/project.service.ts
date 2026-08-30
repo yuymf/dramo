@@ -116,7 +116,6 @@ export class ProjectService {
       prisma.chatMessage.deleteMany({ where: { projectId: id } }),
       prisma.chatSession.deleteMany({ where: { projectId: id } }),
       prisma.generationJob.deleteMany({ where: { projectId: id } }),
-      prisma.pipelineRun.deleteMany({ where: { projectId: id } }),
       prisma.inspiration.deleteMany({ where: { projectId: id } }),
       prisma.project.delete({ where: { id } }),
     ]);

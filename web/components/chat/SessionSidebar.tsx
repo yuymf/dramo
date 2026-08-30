@@ -9,7 +9,6 @@ import {
   createSession,
   deleteSession,
   renameSession,
-  migrateLegacyMessages,
   type ChatSession,
 } from '@/lib/api/chat-sessions';
 
@@ -20,9 +19,6 @@ interface SessionSidebarProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }
-
-/** Track which projects have already been migrated (survives re-mounts). */
-const migratedProjects = new Set<string>();
 
 export function SessionSidebar({
   projectId,
@@ -51,16 +47,6 @@ export function SessionSidebar({
     async function load() {
       setLoading(true);
       try {
-        // Migrate legacy messages only once per project per page session
-        if (!migratedProjects.has(projectId)) {
-          try {
-            await migrateLegacyMessages(projectId);
-            migratedProjects.add(projectId); // Only mark as done on success
-          } catch {
-            // Non-critical — will retry on next mount
-          }
-        }
-
         const data = await listSessions(projectId);
         if (cancelled) return;
         setSessions(data);

@@ -171,15 +171,13 @@ describe('LLMConfigService', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (mockPrisma.$transaction as jest.MockedFunction<any>)
         .mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
-          const tx = {
-            userLLMConfig: {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              updateMany: (jest.fn() as jest.Mock<any>).mockResolvedValue({ count: 1 }),
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              create: (jest.fn() as jest.Mock<any>).mockResolvedValue(createdConfig),
-            },
-          };
-          return fn(tx);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const updateMany: any = jest.fn();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const create: any = jest.fn();
+          updateMany.mockResolvedValue({ count: 1 });
+          create.mockResolvedValue(createdConfig);
+          return fn({ userLLMConfig: { updateMany, create } });
         });
 
       const input = {
@@ -265,14 +263,13 @@ describe('LLMConfigService', () => {
       (mockPrisma.userLLMConfig.findFirst as jest.MockedFunction<typeof mockPrisma.userLLMConfig.findFirst>)
         .mockResolvedValue(mockConfig);
 
-      const mockTx = {
-        userLLMConfig: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          updateMany: (jest.fn() as jest.Mock<any>).mockResolvedValue({ count: 1 }),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          update: (jest.fn() as jest.Mock<any>).mockResolvedValue(mockConfig),
-        },
-      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateMany: any = jest.fn();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const update: any = jest.fn();
+      updateMany.mockResolvedValue({ count: 1 });
+      update.mockResolvedValue(mockConfig);
+      const mockTx = { userLLMConfig: { updateMany, update } };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (mockPrisma.$transaction as jest.MockedFunction<any>)

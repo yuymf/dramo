@@ -9,12 +9,6 @@ interface CreateRelationData {
   notes?: string;
 }
 
-interface UpdateRelationData {
-  type?: string;
-  weight?: number;
-  notes?: string;
-}
-
 /**
  * 角色关系服务
  * 管理角色之间的无向关系（边）
@@ -137,65 +131,6 @@ export class RelationService {
   }
 
   /**
-   * 更新关系信息（仅可更新 type、weight、notes，不可更改节点）
-   */
-  async updateRelation(
-    relationId: string,
-    projectId: string,
-    data: UpdateRelationData
-  ) {
-    try {
-      // 验证关系存在且属于该项目
-      const existing = await prisma.characterRelation.findUnique({
-        where: { id: relationId },
-      });
-
-      if (!existing) {
-        throw new Error('Relation not found');
-      }
-
-      if (existing.projectId !== projectId) {
-        throw new Error('Relation does not belong to this project');
-      }
-
-      // 更新关系
-      const relation = await prisma.characterRelation.update({
-        where: { id: relationId },
-        data: {
-          ...(data.type !== undefined && { type: data.type || null }),
-          ...(data.weight !== undefined && { weight: data.weight !== null ? data.weight : null }),
-          ...(data.notes !== undefined && { notes: data.notes || null }),
-        },
-        include: {
-          nodeA: {
-            select: {
-              id: true,
-              name: true,
-              images: true,
-            },
-          },
-          nodeB: {
-            select: {
-              id: true,
-              name: true,
-              images: true,
-            },
-          },
-        },
-      });
-
-      logger.info(`[RelationService] Updated relation: ${relationId}`);
-      return {
-        success: true,
-        data: relation,
-      };
-    } catch (error) {
-      logger.error(`[RelationService] Failed to update relation: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
    * 删除关系
    */
   async deleteRelation(relationId: string, projectId: string) {
@@ -224,56 +159,6 @@ export class RelationService {
       };
     } catch (error) {
       logger.error(`[RelationService] Failed to delete relation: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * 清理孤儿关系（节点已被删除但关系未级联清除的情况）
-   * 通常不会发生（因为有外键级联），但作为守护任务保底
-   */
-  async cleanupOrphanRelations(projectId?: string) {
-    try {
-      const where = projectId ? { projectId } : {};
-
-      // 查找所有关系
-      const relations = await prisma.characterRelation.findMany({
-        where,
-        select: {
-          id: true,
-          nodeAId: true,
-          nodeBId: true,
-        },
-      });
-
-      const orphanIds: string[] = [];
-
-      for (const rel of relations) {
-        // 检查节点是否存在
-        const [nodeA, nodeB] = await Promise.all([
-          prisma.characterAsset.findUnique({ where: { id: rel.nodeAId } }),
-          prisma.characterAsset.findUnique({ where: { id: rel.nodeBId } }),
-        ]);
-
-        if (!nodeA || !nodeB) {
-          orphanIds.push(rel.id);
-        }
-      }
-
-      if (orphanIds.length > 0) {
-        await prisma.characterRelation.deleteMany({
-          where: { id: { in: orphanIds } },
-        });
-
-        logger.info(`[RelationService] Cleaned up ${orphanIds.length} orphan relations`);
-      }
-
-      return {
-        success: true,
-        cleaned: orphanIds.length,
-      };
-    } catch (error) {
-      logger.error(`[RelationService] Failed to cleanup orphan relations: ${error}`);
       throw error;
     }
   }

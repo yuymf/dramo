@@ -10,7 +10,6 @@ import { api } from "@/lib/api/client";
 import type { LocationImageAssetV2, Script } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/Toast";
-import { addProjectLocationAsset } from "@/lib/storage/local";
 
 interface LocationImageGeneratorProps {
   projectId: string;
@@ -112,25 +111,21 @@ export function LocationImageGenerator({
         createdAt: new Date().toISOString(),
       };
 
-      // Save to local storage first for immediate feedback
-      addProjectLocationAsset(projectId, asset);
-      showToast(`已上传 ${images.length} 张图片到地点 "${locationName}"`, "success");
-      
-      // Also save to backend (backend expects 'name' not 'locationName')
       try {
         await api(`/api/projects/${projectId}/locations/assets`, {
           method: 'POST',
           body: {
-            name: locationName,  // Backend expects 'name'
+            name: locationName,
             description: asset.description,
             alias: asset.alias,
             images: asset.images,
           },
         });
-        console.log('Location asset saved to backend successfully');
+        showToast(`已上传 ${images.length} 张图片到地点 "${locationName}"`, "success");
       } catch (err) {
         console.error('Failed to save location to backend:', err);
-        showToast('保存到服务器失败，仅保存到本地', 'error');
+        showToast('保存到服务器失败', 'error');
+        return;
       }
 
       // Reset form

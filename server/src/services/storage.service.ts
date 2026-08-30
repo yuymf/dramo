@@ -2,22 +2,22 @@ import { config } from '../config';
 import { logger } from '../lib/logger';
 import fs from 'fs/promises';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+
+export interface StoredImage {
+  url: string;
+  path: string;
+}
 
 /**
- * Local filesystem storage service.
- * All images stored in config.storageLocalDir, served via static route.
+ * Local filesystem storage. Files live under config.storageLocalDir
+ * and are served by nginx at /uploads in production.
  */
 export class StorageService {
   constructor() {
     logger.info(`[Storage] Using local storage (dir: ${config.storageLocalDir})`);
   }
 
-  async uploadImageFromUrl(
-    projectId: string,
-    imageUrl: string,
-    opts?: { detailed?: boolean }
-  ): Promise<string | { url: string; path: string }> {
+  async uploadImageFromUrl(projectId: string, imageUrl: string): Promise<string> {
     logger.info(`[Storage] Uploading image from URL for project ${projectId}`);
     try {
       const controller = new AbortController();
@@ -29,9 +29,9 @@ export class StorageService {
       }
       const buffer = Buffer.from(await response.arrayBuffer());
       const ext = this.getExtensionFromUrl(imageUrl) || 'png';
-      const filename = `${uuidv4()}.${ext}`;
+      const filename = `${crypto.randomUUID()}.${ext}`;
       const result = await this.uploadToLocal(projectId, filename, buffer);
-      return opts?.detailed ? result : result.url;
+      return result.url;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         logger.error(`[Storage] Image fetch timeout after 60s`);
@@ -42,33 +42,19 @@ export class StorageService {
     }
   }
 
-  async uploadImageFromBase64(
-    projectId: string,
-    base64Data: string,
-    opts?: { detailed?: boolean }
-  ): Promise<string | { url: string; path: string }> {
+  async uploadImageFromBase64(projectId: string, base64Data: string): Promise<StoredImage> {
     logger.info(`[Storage] Uploading image from base64 for project ${projectId}`);
     try {
       const base64Content = base64Data.replace(/^data:image\/\w+;base64,/, '');
       const buffer = Buffer.from(base64Content, 'base64');
       const formatMatch = base64Data.match(/^data:image\/(\w+);base64,/);
       const ext = formatMatch ? formatMatch[1] : 'png';
-      const filename = `${uuidv4()}.${ext}`;
-      const result = await this.uploadToLocal(projectId, filename, buffer);
-      return opts?.detailed ? result : result.url;
+      const filename = `${crypto.randomUUID()}.${ext}`;
+      return this.uploadToLocal(projectId, filename, buffer);
     } catch (error) {
       logger.error(`[Storage] Failed to upload image from base64: ${error}`);
       throw error;
     }
-  }
-
-  async getSignedUrl(filePath: string, _expiresInSec?: number): Promise<string> {
-    const publicUrl = `${config.storageBaseUrl}/${filePath}`;
-    return publicUrl;
-  }
-
-  async getSignedUrls(filePaths: string[], expiresInSec?: number): Promise<string[]> {
-    return Promise.all(filePaths.map(fp => this.getSignedUrl(fp, expiresInSec)));
   }
 
   private assertSafeProjectId(projectId: string): void {
@@ -77,7 +63,7 @@ export class StorageService {
     }
   }
 
-  private async uploadToLocal(projectId: string, filename: string, buffer: Buffer): Promise<{ url: string; path: string }> {
+  private async uploadToLocal(projectId: string, filename: string, buffer: Buffer): Promise<StoredImage> {
     this.assertSafeProjectId(projectId);
 
     const root = path.resolve(config.storageLocalDir, 'projects');

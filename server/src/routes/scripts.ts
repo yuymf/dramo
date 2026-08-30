@@ -20,9 +20,6 @@ scripts.get('/projects/:projectId/script', async (c) => {
   return c.json(script);
 });
 
-/**
- * Script generation — synchronous via AgentOS (no BullMQ).
- */
 scripts.post('/projects/:projectId/script', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = c.get('user').userId;

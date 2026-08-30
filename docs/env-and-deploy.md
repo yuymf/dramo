@@ -70,9 +70,8 @@ LLM_CONCURRENCY=3                                  # 并行 LLM 调用 (最大 1
 ## 前端环境变量 (web/.env.local)
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:12321
-BACKEND_API_URL=<可选服务端覆盖, 优先于 NEXT_PUBLIC_API_URL>
-NEXT_PUBLIC_APP_MODE=development|production
+NEXT_PUBLIC_API_URL=/api
+BACKEND_API_URL=http://localhost:12321   # 仅本地 Next.js catch-all 使用
 ```
 
 ---

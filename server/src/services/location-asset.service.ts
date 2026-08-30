@@ -95,8 +95,7 @@ export class LocationAssetService implements AssetAdapter {
                   const { url, path } = await this.storageService.uploadImageFromBase64(
                     projectId,
                     img.url,
-                    { detailed: true }
-                  ) as { url: string; path: string };
+                  );
                   return { ...img, url, path };
                 } catch (error) {
                   logger.error(`[LocationAssetService] Failed to convert base64 for location asset ${asset.id}: ${error}`);
@@ -148,9 +147,8 @@ export class LocationAssetService implements AssetAdapter {
             logger.info('[LocationAssetService] Converting base64 to storage URL for location asset');
             const { url, path } = await this.storageService.uploadImageFromBase64(
               projectId,
-              img.url,
-              { detailed: true }
-            ) as { url: string; path: string };
+              img.url
+            );
             return { ...img, url, path };
           }
           return img;
@@ -307,7 +305,7 @@ export class LocationAssetService implements AssetAdapter {
       throw new Error('No locations extracted');
     }
 
-    await prisma.$transaction(async (tx: typeof prisma) => {
+    await prisma.$transaction(async (tx) => {
       await tx.locationAsset.deleteMany({ where: { projectId } });
 
       for (const loc of rawLocs) {

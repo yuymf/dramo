@@ -1,5 +1,6 @@
 import { prisma } from '../lib/db';
-import { postAgentOS } from '../lib/agentos-client';
+import { startWorkflowRun } from '../lib/agentos-client';
+import { unwrapWorkflowJson } from '../lib/workflow-json';
 import { AppException, ErrorCode } from '../lib/errors';
 
 export class InspirationService {
@@ -12,16 +13,11 @@ export class InspirationService {
       throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
     }
 
-    const where: any = {
-      OR: [{ projectId }, { projectId: null }],
-    };
-
-    if (category) {
-      where.category = category;
-    }
-
     const inspirations = await prisma.inspiration.findMany({
-      where,
+      where: {
+        OR: [{ projectId }, { projectId: null }],
+        ...(category ? { category } : {}),
+      },
       orderBy: [{ relevance: 'desc' }, { createdAt: 'desc' }],
       take: 20,
     });
@@ -33,8 +29,8 @@ export class InspirationService {
     projectId: string,
     userId: string,
     params?: {
-      script?: any;
-      position?: any;
+      script?: unknown;
+      position?: unknown;
       category?: string;
     },
     llmHeaders?: Record<string, string>
@@ -47,29 +43,31 @@ export class InspirationService {
       throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
     }
 
-    // Generate AI recommendations via AgentOS
-    const aiInspirations = await postAgentOS<
-      Array<{ text: string; category?: string }>
-    >('/agentos/generate_inspirations', {
+    const response = await startWorkflowRun('inspirationsworkflow', {
       projectId,
       script: params?.script,
       category: params?.category,
-    }, { llmHeaders });
+    }, { stream: false, llmHeaders });
 
-    // Store in database
+    const parsed = unwrapWorkflowJson(await response.json());
+    const items = Array.isArray(parsed.inspirations) ? parsed.inspirations : [];
+
     const stored = await Promise.all(
-      aiInspirations.map((insp) =>
-        prisma.inspiration.create({
-          data: {
-            text: insp.text,
-            category: insp.category || 'topics',
-            projectId,
-            userId,
-            relevance: 0.8,
-            source: 'ai',
-          },
-        })
-      )
+      items
+        .filter((item): item is { text?: string; category?: string } => typeof item === 'object' && item !== null)
+        .filter((item) => typeof item.text === 'string' && item.text.trim().length > 0)
+        .map((insp) =>
+          prisma.inspiration.create({
+            data: {
+              text: insp.text!.trim(),
+              category: insp.category || params?.category || 'topics',
+              projectId,
+              userId,
+              relevance: 0.8,
+              source: 'ai',
+            },
+          })
+        )
     );
 
     return {
@@ -93,23 +91,12 @@ export class InspirationService {
 
     const updated = await prisma.inspiration.update({
       where: { id: inspirationId },
-      data: {
-        isFavorite: !inspiration.isFavorite,
-      },
+      data: { isFavorite: !inspiration.isFavorite },
     });
 
     return {
       inspirationId,
       isFavorite: updated.isFavorite,
     };
-  }
-
-  async getFavorites(userId: string) {
-    const inspirations = await prisma.inspiration.findMany({
-      where: { userId, isFavorite: true },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return { data: inspirations };
   }
 }

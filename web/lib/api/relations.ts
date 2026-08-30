@@ -30,12 +30,6 @@ export interface CreateRelationData {
   notes?: string;
 }
 
-export interface UpdateRelationData {
-  type?: string;
-  weight?: number;
-  notes?: string;
-}
-
 /**
  * 获取项目的所有角色关系
  */
@@ -61,24 +55,6 @@ export async function createRelation(projectId: string, data: CreateRelationData
 }
 
 /**
- * 更新关系信息
- */
-export async function updateRelation(
-  projectId: string,
-  relationId: string,
-  data: UpdateRelationData
-) {
-  return api<{ success: boolean; data: CharacterRelation }>(
-    `/api/projects/${projectId}/characters/relations/${relationId}`,
-    {
-      method: 'PATCH',
-      body: data,
-      noCache: true,
-    }
-  );
-}
-
-/**
  * 删除关系
  */
 export async function deleteRelation(projectId: string, relationId: string) {
@@ -91,16 +67,4 @@ export async function deleteRelation(projectId: string, relationId: string) {
   );
 }
 
-/**
- * 清理孤儿关系（守护端点）
- */
-export async function cleanupOrphanRelations(projectId: string) {
-  return api<{ success: boolean; cleaned: number }>(
-    `/api/projects/${projectId}/characters/relations/cleanup`,
-    {
-      method: 'POST',
-      noCache: true,
-    }
-  );
-}
 

@@ -1,6 +1,5 @@
 /**
- * AgentOS HTTP/SSE Client — simplified for Vercel serverless.
- * Uses native fetch (no node-fetch dependency).
+ * AgentOS HTTP/SSE client. Workflows go through POST /workflows/{id}/runs.
  */
 import { config } from '../config';
 import { logger } from './logger';
@@ -33,7 +32,7 @@ export async function startWorkflowRun(
   opts?: AgentOSCallOptions
 ): Promise<Response> {
   const url = `${AGENTOS_BASE}/workflows/${workflowId}/runs`;
-  const timeoutMs = opts?.timeoutMs ?? 55000; // 55s default (within Vercel 60s)
+  const timeoutMs = opts?.timeoutMs ?? 180_000;
   const startTime = Date.now();
 
   // Embed _llm_config directly in the message payload so AgentOS workflow steps
@@ -190,28 +189,6 @@ export async function checkAgentOSHealth(): Promise<boolean> {
     logger.warn({ err }, 'AgentOS health check failed');
     return false;
   }
-}
-
-/**
- * Map AgentOS errors to unified error codes.
- */
-export function mapAgentOSError(err: Error): { code: string; retryable: boolean } {
-  const msg = err.message;
-
-  if (/AGENTOS_400|AGENTOS_422/.test(msg)) {
-    return { code: 'INVALID_INPUT', retryable: false };
-  }
-  if (/AGENTOS_404/.test(msg)) {
-    return { code: 'NOT_FOUND', retryable: false };
-  }
-  if (/AGENTOS_429/.test(msg)) {
-    return { code: 'RATE_LIMITED', retryable: true };
-  }
-  if (/AGENTOS_TIMEOUT|AGENTOS_5\d\d/.test(msg)) {
-    return { code: 'UPSTREAM_TIMEOUT', retryable: true };
-  }
-
-  return { code: 'INTERNAL_ERROR', retryable: true };
 }
 
 /**

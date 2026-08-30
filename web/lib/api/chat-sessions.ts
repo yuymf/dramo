@@ -65,16 +65,3 @@ export async function deleteSession(
   });
 }
 
-/**
- * Migrate orphaned messages (no sessionId) into a "历史对话" session.
- * Returns the created session and count, or null if no orphans.
- */
-export async function migrateLegacyMessages(
-  projectId: string
-): Promise<{ session: ChatSession | null; migrated: number }> {
-  const res = await api<{ data: ChatSession | null; migrated: number }>(
-    `/api/chat/${projectId}/sessions/migrate-legacy`,
-    { method: 'POST' }
-  );
-  return { session: res.data, migrated: res.migrated };
-}

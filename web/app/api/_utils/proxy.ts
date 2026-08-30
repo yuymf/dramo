@@ -5,33 +5,10 @@ const backendBaseUrl =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:12321";
 
-/**
- * Validate a route parameter to prevent path traversal / SSRF.
- * Returns true if the param is safe (alphanumeric, hyphens, underscores, dots).
- */
-const SAFE_PARAM_RE = /^[a-zA-Z0-9_\-\.]+$/;
+/** Local-dev proxy timeout — matches nginx proxy_read_timeout (600s). */
+const DEFAULT_TIMEOUT_MS = 600_000;
 
-export function isValidRouteParam(param: string): boolean {
-  return SAFE_PARAM_RE.test(param) && !param.includes("..");
-}
-
-export function validateRouteParam(param: string, paramName: string): NextResponse | null {
-  if (!isValidRouteParam(param)) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "INVALID_PARAMETER",
-          message: `Invalid ${paramName}`,
-          retryable: false,
-        },
-      },
-      { status: 400 }
-    );
-  }
-  return null;
-}
-
-function resolveBackendUrl(targetPath: string, request: Request, appendIncomingQuery: boolean) {
+function resolveBackendUrl(targetPath: string, request: Request) {
   const normalizedBase = backendBaseUrl.replace(/\/$/, "");
   const incomingUrl = new URL(request.url);
 
@@ -41,10 +18,7 @@ function resolveBackendUrl(targetPath: string, request: Request, appendIncomingQ
 
   const finalUrl = new URL(rawTarget);
 
-  if (appendIncomingQuery && incomingUrl.search) {
-    const separator = finalUrl.search ? "&" : "?";
-    finalUrl.search += `${separator}${incomingUrl.search.slice(1)}`;
-  } else if (!appendIncomingQuery && !rawTarget.includes("?") && incomingUrl.search) {
+  if (incomingUrl.search) {
     finalUrl.search = incomingUrl.search;
   }
 
@@ -53,40 +27,16 @@ function resolveBackendUrl(targetPath: string, request: Request, appendIncomingQ
 
 interface ProxyOptions {
   method?: string;
-  headers?: Record<string, string>;
-  cache?: RequestCache;
-  body?: BodyInit | Record<string, unknown> | null;
-  appendQuery?: boolean;
   timeoutMs?: number;
 }
 
 async function resolveRequestBody(
   request: Request,
   method: string,
-  explicitBody: ProxyOptions["body"],
   headers: Headers
 ): Promise<BodyInit | undefined> {
   if (method === "GET" || method === "HEAD") {
     return undefined;
-  }
-
-  if (explicitBody !== undefined) {
-    if (
-      explicitBody instanceof FormData ||
-      explicitBody instanceof Blob ||
-      explicitBody instanceof ArrayBuffer ||
-      explicitBody instanceof Uint8Array
-    ) {
-      headers.delete("Content-Type");
-      return explicitBody as BodyInit;
-    }
-
-    if (typeof explicitBody === "string") {
-      return explicitBody;
-    }
-
-    headers.set("Content-Type", "application/json");
-    return JSON.stringify(explicitBody);
   }
 
   const originalContentType = request.headers.get("content-type") ?? "";
@@ -120,7 +70,6 @@ export async function proxyRequest(
   targetPath: string,
   options: ProxyOptions = {}
 ) {
-  // Guard against path traversal in interpolated route parameters
   if (targetPath.includes("..") || targetPath.includes("//") || /%2[eEfF]/i.test(targetPath)) {
     return NextResponse.json(
       {
@@ -135,32 +84,26 @@ export async function proxyRequest(
   }
 
   const method = options.method ?? request.method;
-  const headers = new Headers(options.headers ?? {});
+  const headers = new Headers();
 
-  if (!headers.has("Content-Type")) {
-    const incomingContentType = request.headers.get("content-type");
-    if (incomingContentType) {
-      headers.set("Content-Type", incomingContentType);
-    }
+  const incomingContentType = request.headers.get("content-type");
+  if (incomingContentType) {
+    headers.set("Content-Type", incomingContentType);
   }
 
-  const body = await resolveRequestBody(request, method, options.body, headers);
-  const targetUrl = resolveBackendUrl(
-    targetPath,
-    request,
-    options.appendQuery ?? false
-  );
+  const body = await resolveRequestBody(request, method, headers);
+  const targetUrl = resolveBackendUrl(targetPath, request);
 
   try {
     const controller = new AbortController();
-    const timeoutMs = options.timeoutMs ?? 30000; // default 30s
+    const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const backendResponse = await fetch(targetUrl, {
       method,
       headers,
       body,
-      cache: options.cache ?? "no-store",
+      cache: "no-store",
       signal: controller.signal,
     });
 
@@ -176,7 +119,6 @@ export async function proxyRequest(
 
     const contentType = backendResponse.headers.get("content-type") ?? "";
 
-    // SSE streaming passthrough — pipe the stream directly to the client
     if (contentType.includes("text/event-stream")) {
       responseHeaders.set("Content-Type", "text/event-stream");
       responseHeaders.set("Cache-Control", "no-cache");
@@ -188,7 +130,6 @@ export async function proxyRequest(
     }
 
     if (contentType.includes("application/json")) {
-      // Read body as text first, then parse — avoids double-consumption of response stream
       const text = await backendResponse.text();
       try {
         const data = JSON.parse(text);
@@ -231,4 +172,3 @@ export async function proxyRequest(
     );
   }
 }
-

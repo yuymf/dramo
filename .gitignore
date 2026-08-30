@@ -71,6 +71,7 @@ blob-report/
 *.pyc
 __pycache__/
 .venv/
+.coverage
 
 # Misc
 .turbo/

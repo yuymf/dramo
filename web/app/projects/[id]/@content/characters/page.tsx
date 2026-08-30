@@ -10,12 +10,6 @@ import { CharacterAssetsList } from "@/components/characters/CharacterAssetsList
 import { CharacterRelationPanel } from "@/components/characters/CharacterRelationPanel";
 import { api } from "@/lib/api/client";
 import type { Script, CharacterImageAsset } from "@/lib/models";
-import {
-  getProjectCharacterAssets,
-  addProjectCharacterAsset,
-  updateProjectCharacterAsset,
-  type CharacterImageAssetLocal,
-} from "@/lib/storage/local";
 import { listRelations, createRelation, deleteRelation } from "@/lib/api/relations";
 import { getProjectAssets } from "@/lib/utils/exporter";
 import { useToast } from "@/components/ui/Toast";
@@ -222,9 +216,6 @@ export default function CharactersPage() {
     const characterName = prompt("请输入角色名称：");
     if (!characterName?.trim()) return;
 
-    let assetId = `char_manual_${Date.now()}`;
-    
-    // Try to create on backend first
     try {
       const result = await api<{ id: string; name: string; description?: string; images: unknown[] }>(`/api/projects/${projectId}/characters/assets`, {
         method: "POST",
@@ -234,50 +225,28 @@ export default function CharactersPage() {
           images: [],
         },
       });
-      
-      // Use backend ID if successful
-      if (result.id) {
-        assetId = result.id;
-      }
+
+      const newNode: Node = {
+        id: result.id,
+        characterId: result.id,
+        characterName: characterName.trim(),
+        description: result.description,
+        imageUrl: undefined,
+        x: pos?.x ?? 100 + Math.random() * 200,
+        y: pos?.y ?? 100 + Math.random() * 200,
+      };
+      setNodes((prevNodes) => {
+        if (prevNodes.some(n => n.characterId === newNode.characterId)) {
+          return prevNodes;
+        }
+        return [...prevNodes, newNode];
+      });
+      setRefreshTrigger((prev) => prev + 1);
+      showToast(`角色 "${characterName}" 已创建并添加到关系图`, "success");
     } catch (err) {
-      console.error("Failed to create character asset on backend:", err);
-      // Continue with local ID
+      console.error("Failed to create character asset:", err);
+      showToast("创建角色失败", "error");
     }
-
-    // Create local asset with the correct ID
-    const newAsset: CharacterImageAssetLocal = {
-      id: assetId,
-      characterName: characterName.trim(),
-      description: "手动创建",
-      images: [],
-      createdAt: new Date().toISOString(),
-    };
-
-    // Save to local storage
-    addProjectCharacterAsset(projectId, newAsset);
-
-    // Add to relation panel - use functional update to avoid stale closure
-    const newNode: Node = {
-      id: newAsset.id, // Use characterId as node ID
-      characterId: newAsset.id,
-      characterName: newAsset.characterName,
-      description: newAsset.description,
-      alias: newAsset.alias,
-      imageUrl: newAsset.images && newAsset.images.length > 0 ? newAsset.images[0].url : undefined,
-      x: pos?.x ?? 100 + Math.random() * 200,
-      y: pos?.y ?? 100 + Math.random() * 200,
-    };
-    setNodes((prevNodes) => {
-      // Check if node already exists
-      if (prevNodes.some(n => n.characterId === newAsset.id)) {
-        return prevNodes;
-      }
-      const updatedNodes = [...prevNodes, newNode];
-      console.log('Adding new node:', newNode, 'Total nodes:', updatedNodes.length);
-      return updatedNodes;
-    });
-    setRefreshTrigger((prev) => prev + 1);
-    showToast(`角色 "${characterName}" 已创建并添加到关系图`, "success");
   };
 
   // Handle delete character from library - deletes from backend (cascades to relations)
@@ -330,66 +299,22 @@ export default function CharactersPage() {
 
   // Handle rename character - sync between library and graph
   const handleRenameCharacter = useCallback(async (characterId: string, newName: string) => {
-    // Update nodes
-    const updatedNodes = nodes.map((n) =>
-      n.characterId === characterId ? { ...n, characterName: newName } : n
+    setNodes((prev) =>
+      prev.map((n) => (n.characterId === characterId ? { ...n, characterName: newName } : n))
     );
-    setNodes(updatedNodes);
-    
-    // Update local asset
-    const assets = getProjectCharacterAssets(projectId);
-    const asset = assets.find((a) => a.id === characterId);
-    if (asset) {
-      const updatedAsset = {
-        ...asset,
-        characterName: newName,
-      };
-      updateProjectCharacterAsset(projectId, updatedAsset);
-      
-      // Update backend
-      try {
-        await api(`/api/projects/${projectId}/characters/assets/${characterId}`, {
-          method: "PUT",
-          body: {
-            name: newName,
-            description: asset.description,
-            alias: asset.alias,
-            images: asset.images,
-          },
-        });
-      } catch (err) {
-        console.error("Failed to update backend:", err);
-      }
+    setCharacters((prev) =>
+      prev.map((c) => (c.id === characterId ? { ...c, characterName: newName } : c))
+    );
+    try {
+      await api(`/api/projects/${projectId}/characters/assets/${characterId}`, {
+        method: "PUT",
+        body: { name: newName },
+      });
+    } catch (err) {
+      console.error("Failed to update backend:", err);
     }
-    
-    // Trigger refresh to update library
     setRefreshTrigger((prev) => prev + 1);
-  }, [projectId, nodes]);
-
-  // Sync node metadata from assets whenever refreshTrigger changes
-  useEffect(() => {
-    if (nodes.length === 0) return;
-    
-    const assets = getProjectCharacterAssets(projectId);
-    const updatedNodes = nodes.map((node) => {
-      const asset = assets.find((a) => a.id === node.characterId);
-      if (asset) {
-        return {
-          ...node,
-          characterName: asset.characterName,
-          description: asset.description,
-          alias: asset.alias,
-          imageUrl: asset.images && asset.images.length > 0 ? asset.images[0].url : undefined,
-        };
-      }
-      return node;
-    });
-    
-    // Only update if there are actual changes
-    if (JSON.stringify(updatedNodes) !== JSON.stringify(nodes)) {
-      setNodes(updatedNodes);
-    }
-  }, [refreshTrigger, projectId, nodes]);
+  }, [projectId]);
 
   // 注册到AI聊天上下文：当characters变化时更新JSON数据
   useEffect(() => {

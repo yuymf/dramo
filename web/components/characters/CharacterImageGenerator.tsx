@@ -12,7 +12,6 @@ import type { CharacterImageAsset, Script } from "@/lib/models";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/Toast";
 // import { cn } from "@/lib/utils";
-import { addProjectCharacterAsset } from "@/lib/storage/local";
 
 // ---------------------------------------------------------------------------
 // Fetcher for useSWRMutation — defined outside component for stable reference
@@ -164,48 +163,29 @@ export function CharacterImageGenerator({
         createdAt: new Date().toISOString(),
       };
 
-      // Save to local storage first for immediate feedback
-      const localAssetId = finalAsset.id;
-      addProjectCharacterAsset(projectId, finalAsset);
       showToast(`正在上传 ${images.length} 张图片到角色 "${characterName}"...`, "info");
-      
-      // Also save to backend (backend expects 'name' not 'characterName')
+
       try {
         const backendResponse = await api<{ id: string; name: string; description?: string; images: unknown[] }>(`/api/projects/${projectId}/characters/assets`, {
           method: 'POST',
           body: {
-            name: characterName,  // Backend expects 'name'
+            name: characterName,
             description: finalAsset.description,
             alias: finalAsset.alias,
             images: finalAsset.images,
           },
         });
-        console.log('Asset saved to backend successfully', backendResponse);
-        
-        // Update asset with backend ID if different - delete old local entry and add new one
-        if (backendResponse.id && backendResponse.id !== localAssetId) {
-          finalAsset = {
-            ...finalAsset,
-            id: backendResponse.id,
-          };
-          // Replace local storage: delete old temp ID, save with backend ID
-          const { deleteProjectCharacterAsset, addProjectCharacterAsset: addAsset } = await import('@/lib/storage/local');
-          deleteProjectCharacterAsset(projectId, localAssetId);
-          addAsset(projectId, finalAsset);
-          console.log(`Replaced local asset ${localAssetId} with backend ID ${backendResponse.id}`);
+        if (backendResponse.id) {
+          finalAsset = { ...finalAsset, id: backendResponse.id };
         }
         showToast(`已上传 ${images.length} 张图片到角色 "${characterName}"`, "success");
       } catch (err) {
         console.error('Failed to save to backend:', err);
-        // Rollback: delete temporary local entry on failure
-        const { deleteProjectCharacterAsset } = await import('@/lib/storage/local');
-        deleteProjectCharacterAsset(projectId, localAssetId);
         showToast('上传失败，请检查网络后重试', 'error');
-        // Reset input to allow retry
         if (uploadInputRef.current) {
           uploadInputRef.current.value = "";
         }
-        return; // Don't proceed with onUploaded callback
+        return;
       }
       
       // Reset form

@@ -37,7 +37,7 @@ import { useAutosave } from "@/lib/hooks/useAutosave";
 import { useScriptAutosave } from "@/lib/hooks/useScriptAutosave";
 import { useKeyboardShortcuts } from "@/lib/hooks/useKeyboardShortcuts";
 import { useIsLargeScreen } from "@/lib/hooks/useIsLargeScreen";
-import { readJSON, saveJSON, addFavorite, saveVersion, remove as removeLocal } from "@/lib/storage/local";
+import { readJSON, saveJSON, remove as removeLocal } from "@/lib/storage/local";
 import { exportAsText, downloadTextFile, exportAsPDF, exportAsSRT, exportAsTeleprompter, exportAsMarkdown, exportAsDOCX, exportAsJSON } from "@/lib/utils/exporter";
 import { useAIChat } from "@/app/ai-chat-provider";
 import { extractScriptJson } from "@/lib/utils/json-context-extractor";
@@ -619,7 +619,6 @@ export function ScriptEditorClient() {
             body: { inspirationId },
           }
         );
-        addFavorite(inspirationId, "Favorited inspiration", "quotes");
         showToast("已添加到收藏！", "success");
       } catch (err) {
         showToast((err as Error).message, "error");
@@ -640,7 +639,6 @@ export function ScriptEditorClient() {
   const handleManualSave = useCallback(async () => {
     if (!script || !projectId) return;
     await saveNow({ scenes: script.scenes, acts: script.acts });
-    saveVersion(script.id, script, "Manual save via Ctrl+S");
     showToast("Script saved successfully!", "success");
   }, [script, projectId, saveNow, showToast]);
 
@@ -879,7 +877,11 @@ export function ScriptEditorClient() {
     }
 
     try {
-      const res = await api<import('@/lib/models').PolishResponse>('/api/polish', {
+      if (!projectId) {
+        showToast("缺少项目信息", "error");
+        return;
+      }
+      const res = await api<import('@/lib/models').PolishResponse>(`/api/projects/${projectId}/polish`, {
         method: 'POST',
         body: {
           text: block.text,
@@ -915,7 +917,7 @@ export function ScriptEditorClient() {
     } catch (err) {
       showToast((err as Error).message, "error");
     }
-  }, [activeSceneId, showToast]);
+  }, [activeSceneId, projectId, showToast]);
 
   const handleGenerateBlock = useCallback((block: Block) => {
     // 生成接口占位

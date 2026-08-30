@@ -13,32 +13,12 @@ import json
 
 from config import get_model_from_config
 
-try:
-    from ..env_loader import load_backend_env
-except ImportError:
-    from env_loader import load_backend_env
-
-try:
-    from ..lib.prompt_loader import load_prompt as _load_prompt
-except ImportError:
-    from lib.prompt_loader import load_prompt as _load_prompt
-
-try:
-    from ..lib.json_utils import safe_parse_json
-except ImportError:
-    from lib.json_utils import safe_parse_json
+from env_loader import load_backend_env
+from lib.prompt_loader import load_prompt as _load_prompt
+from lib.json_utils import safe_parse_json, parse_workflow_input
 
 load_backend_env()
 logger = logging.getLogger(__name__)
-
-
-def _parse_input(raw_input: Any) -> Dict[str, Any]:
-    """Parse input from Agno workflow runner (string JSON or dict)"""
-    if isinstance(raw_input, dict):
-        return raw_input
-    if isinstance(raw_input, str):
-        return safe_parse_json(raw_input, expected_type=dict, fallback={})
-    return {}
 
 
 class ScriptWorkflow(Workflow):
@@ -57,7 +37,7 @@ class ScriptWorkflow(Workflow):
 
     def _generate_script(self, workflow: "ScriptWorkflow", execution_input: WorkflowExecutionInput, **kwargs: Any) -> str:
         """Generate script via LLM"""
-        params = _parse_input(execution_input.input)
+        params = parse_workflow_input(execution_input.input)
         project_id = params.get("projectId", "")
         llm_config = params.get("_llm_config")
 

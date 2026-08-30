@@ -10,12 +10,6 @@ import { api } from "@/lib/api/client";
 import type { CharacterImageAsset } from "@/lib/models";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/Toast";
-import {
-  getProjectCharacterAssets,
-  deleteProjectCharacterAsset,
-  updateProjectCharacterAsset,
-  setProjectCharacterAssets,
-} from "@/lib/storage/local";
 import { cn } from "@/lib/utils";
 
 interface CharacterAssetsListProps {
@@ -57,18 +51,10 @@ export function CharacterAssetsList({
         `/api/projects/${projectId}/characters/assets`
       );
 
-      const remoteAssets = res.dataV2 || [];
-      
-      // Online: Use remote as source of truth and update local cache
-      setAssets(remoteAssets);
-      setProjectCharacterAssets(projectId, remoteAssets);
-      console.log(`[Online] Loaded ${remoteAssets.length} assets from remote and synced to local cache`);
+      setAssets(res.dataV2 || []);
     } catch (err) {
-      console.error("Failed to load character assets from remote:", err);
-      // Offline: Fallback to local cache only
-      const localAssets = getProjectCharacterAssets(projectId);
-      setAssets(localAssets);
-      console.log(`[Offline] Loaded ${localAssets.length} assets from local cache`);
+      console.error("Failed to load character assets:", err);
+      setAssets([]);
     } finally {
       setLoading(false);
     }
@@ -131,8 +117,6 @@ export function CharacterAssetsList({
           method: 'DELETE',
         });
         
-        // Only update local and UI after backend success
-        deleteProjectCharacterAsset(projectId, assetId);
         setAssets((prev) => prev.filter((a) => a.id !== assetId));
         showToast("资产已删除", "success");
         
@@ -172,7 +156,6 @@ export function CharacterAssetsList({
         characterName: newName.trim(),
       };
 
-      updateProjectCharacterAsset(projectId, updatedAsset);
       setAssets((prev) =>
         prev.map((a) => (a.id === assetId ? updatedAsset : a))
       );
@@ -226,7 +209,6 @@ export function CharacterAssetsList({
         alias: newAlias.trim() || undefined,
       };
 
-      updateProjectCharacterAsset(projectId, updatedAsset);
       setAssets((prev) =>
         prev.map((a) => (a.id === assetId ? updatedAsset : a))
       );
@@ -263,7 +245,6 @@ export function CharacterAssetsList({
         description: newDescription.trim() || undefined,
       };
 
-      updateProjectCharacterAsset(projectId, updatedAsset);
       setAssets((prev) =>
         prev.map((a) => (a.id === assetId ? updatedAsset : a))
       );
@@ -288,11 +269,7 @@ export function CharacterAssetsList({
     }
 
     const updatedAsset = { ...asset, images: updatedImages };
-    
-    // Update local storage
-    updateProjectCharacterAsset(projectId, updatedAsset);
-    
-    // Update state
+
     setAssets((prev) => prev.map((a) => (a.id === assetId ? updatedAsset : a)));
     
     showToast("图片已删除", "success");
@@ -339,10 +316,6 @@ export function CharacterAssetsList({
       images: [...asset.images, ...newImages],
     };
 
-    // Update local storage
-    updateProjectCharacterAsset(projectId, updatedAsset);
-    
-    // Update state
     setAssets((prev) => prev.map((a) => (a.id === assetId ? updatedAsset : a)));
     
     showToast(`已添加 ${newImages.length} 张图片`, "success");

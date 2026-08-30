@@ -2,13 +2,11 @@ import { StorageService } from '../../services/storage.service';
 import fs from 'fs/promises';
 import path from 'path';
 
-// Mock the filesystem to avoid actual writes
 jest.mock('fs/promises', () => ({
   mkdir: jest.fn().mockResolvedValue(undefined),
   writeFile: jest.fn().mockResolvedValue(undefined),
 }));
 
-// Stub fetch globally
 global.fetch = jest.fn().mockResolvedValue({
   ok: true,
   arrayBuffer: async () => Buffer.from('fake-image-bytes'),
@@ -19,20 +17,13 @@ describe('StorageService.uploadImageFromUrl', () => {
     jest.clearAllMocks();
   });
 
-  it('returns URL string when detailed is false (default)', async () => {
+  it('returns a public URL string', async () => {
     const svc = new StorageService();
     const result = await svc.uploadImageFromUrl('proj-1', 'http://example.com/img.png');
     expect(typeof result).toBe('string');
     expect(result).toContain('http');
     expect(fs.mkdir).toHaveBeenCalled();
     expect(fs.writeFile).toHaveBeenCalled();
-  });
-
-  it('returns {url, path} object when detailed is true', async () => {
-    const svc = new StorageService();
-    const result = await svc.uploadImageFromUrl('proj-1', 'http://example.com/img.png', { detailed: true });
-    expect(result).toHaveProperty('url');
-    expect(result).toHaveProperty('path');
   });
 
   it('stores file under the correct project directory', async () => {
@@ -50,15 +41,9 @@ describe('StorageService.uploadImageFromBase64', () => {
     jest.clearAllMocks();
   });
 
-  it('returns URL string when detailed is false (default)', async () => {
+  it('returns {url, path}', async () => {
     const svc = new StorageService();
     const result = await svc.uploadImageFromBase64('proj-1', validBase64);
-    expect(typeof result).toBe('string');
-  });
-
-  it('returns {url, path} object when detailed is true', async () => {
-    const svc = new StorageService();
-    const result = await svc.uploadImageFromBase64('proj-1', validBase64, { detailed: true });
     expect(result).toHaveProperty('url');
     expect(result).toHaveProperty('path');
   });

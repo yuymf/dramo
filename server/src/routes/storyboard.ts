@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { StoryboardService } from '../services/storyboard.service';
 import { StoryboardDataService } from '../services/storyboard-data.service';
 import type { FrameData } from '../services/storyboard-data.service';
-import { AssetService } from '../services/asset.service';
+import { CharacterAssetService } from '../services/character-asset.service';
+import { LocationAssetService } from '../services/location-asset.service';
 import { TaskService } from '../services/task.service';
 import { startWorkflowRun } from '../lib/agentos-client';
 import { logger } from '../lib/logger';
@@ -14,7 +15,8 @@ import { prisma } from '../lib/db';
 const storyboard = new Hono<AuthEnv>();
 const storyboardService = new StoryboardService();
 const storyboardDataService = new StoryboardDataService();
-const assetService = new AssetService();
+const characterAssetService = new CharacterAssetService();
+const locationAssetService = new LocationAssetService();
 const llmConfigService = new LLMConfigService();
 const taskService = new TaskService();
 
@@ -29,8 +31,8 @@ const ESTIMATED_PIPELINE_SECONDS = 300;
  */
 async function fetchProjectAssets(projectId: string) {
   return Promise.all([
-    assetService.getCharacterLibItems(projectId),
-    assetService.getLocationLibItems(projectId),
+    characterAssetService.getCharacterLibItems(projectId),
+    locationAssetService.getLocationLibItems(projectId),
   ]);
 }
 
@@ -263,14 +265,6 @@ storyboard.put('/projects/:projectId/storyboard/frames/:frameId/image', async (c
   const { image } = await c.req.json();
 
   await storyboardService.setFrameImage(projectId, frameId, image);
-  return c.json({ success: true });
-});
-
-storyboard.delete('/projects/:projectId/storyboard/frames/:frameId/image', async (c) => {
-  const projectId = c.req.param('projectId');
-  const frameId = c.req.param('frameId');
-
-  await storyboardService.deleteFrameImage(projectId, frameId);
   return c.json({ success: true });
 });
 

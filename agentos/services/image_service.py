@@ -11,10 +11,7 @@ from openai import OpenAI
 import logging
 import json
 
-try:
-    from ..env_loader import load_backend_env
-except ImportError:
-    from env_loader import load_backend_env
+from env_loader import load_backend_env
 
 load_backend_env()
 logger = logging.getLogger(__name__)
@@ -421,18 +418,4 @@ class ImageGenerationService:
                     }
 
 
-# Thread-safe singleton with double-checked locking
-import threading as _threading
-
-_image_service: 'ImageGenerationService | None' = None
-_image_service_lock = _threading.Lock()
-
-def get_image_service() -> 'ImageGenerationService':
-    """获取图像生成服务单例（线程安全）"""
-    global _image_service
-    if _image_service is None:
-        with _image_service_lock:
-            if _image_service is None:
-                _image_service = ImageGenerationService()
-    return _image_service
 
