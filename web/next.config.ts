@@ -2,9 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  devIndicators: {
-    position: "top-right",
-  },
+  devIndicators: false,
   async redirects() {
     return [
       {
@@ -24,6 +22,11 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/projects/:id/scripts/script',
+        destination: '/projects/:id/screenplay',
+        permanent: false,
+      },
+      {
+        source: '/projects/:id/storyboard',
         destination: '/projects/:id/screenplay',
         permanent: false,
       },
