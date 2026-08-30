@@ -164,7 +164,7 @@ function ensureConsistency(raw: Script): Script {
     if (Array.isArray(scene.content) && (scene.content as unknown[]).length > 0) {
       const legacyContent = (scene.content as Block[]).map((block) => ({
         id: block.id,
-        label: block.label || '정文',
+        label: block.label || '正文',
         text: block.text || '',
       }));
       return {
@@ -1135,19 +1135,17 @@ export function ScriptEditorClient() {
                 <h1 className="text-sm font-semibold text-[var(--at-text)]">场景列表</h1>
                 <span className="text-xs font-medium text-[var(--at-accent)] bg-[var(--at-accent-light)] px-2 py-0.5 rounded-full">{currentActScenes.length}</span>
               </div>
-              {currentActScenes.length > 0 && (
-                <SceneList
-                  key={activeActId}
-                  scenes={currentActScenes}
-                  activeSceneId={activeSceneId}
-                  scrollToSceneId={scrollToSceneId}
-                  onSceneClick={handleSceneClick}
-                  onReorder={handleSceneReorder}
-                  onAddScene={handleAddScene}
-                  onDeleteScene={handleDeleteScene}
-                  onEditSceneTitle={handleEditSceneTitle}
-                />
-              )}
+              <SceneList
+                key={activeActId}
+                scenes={currentActScenes}
+                activeSceneId={activeSceneId}
+                scrollToSceneId={scrollToSceneId}
+                onSceneClick={handleSceneClick}
+                onReorder={handleSceneReorder}
+                onAddScene={handleAddScene}
+                onDeleteScene={handleDeleteScene}
+                onEditSceneTitle={handleEditSceneTitle}
+              />
             </aside>
           <main aria-label="Script editor" className="border-r border-[var(--at-border)] overflow-y-auto relative bg-[var(--at-surface)]">
         {isDialogueMode ? (

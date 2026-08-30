@@ -1,5 +1,6 @@
 import { prisma } from '../lib/db';
 import { AppException, ErrorCode } from '../lib/errors';
+import { buildEmptyDraftScript } from './script.service';
 
 export class ProjectService {
   async listProjects(userId: string, page = 1, limit = 20, search?: string) {
@@ -58,14 +59,23 @@ export class ProjectService {
   }
 
   async createProject(userId: string, data: { name: string; description?: string }) {
-    const project = await prisma.project.create({
-      data: {
-        ...data,
-        userId,
-      },
-    });
+    return prisma.$transaction(async (tx) => {
+      const project = await tx.project.create({
+        data: {
+          ...data,
+          userId,
+        },
+      });
 
-    return project;
+      await tx.script.create({
+        data: {
+          projectId: project.id,
+          ...buildEmptyDraftScript(data.name),
+        },
+      });
+
+      return project;
+    });
   }
 
   async updateProject(

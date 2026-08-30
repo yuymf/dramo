@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-test.describe.configure({ mode: 'serial' });
-
 test.describe('Dramo 核心页面', () => {
   test('落地页渲染，CTA 进入项目列表', async ({ page }) => {
     const errors: string[] = [];
@@ -34,9 +32,10 @@ test.describe('Dramo 核心页面', () => {
     await expect(page).toHaveURL(/\/projects$/);
   });
 
-  test('项目列表空态与新建对话框校验', async ({ page }) => {
+  test('新建对话框校验：空名称不可提交，取消可关闭', async ({ page }) => {
     await page.goto('/projects');
-    await expect(page.getByText('还没有项目，点击上方卡片创建第一个项目吧')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '我的项目' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /新建项目/ })).toBeVisible();
 
     await page.getByRole('button', { name: /新建项目/ }).click();
     const dialog = page.getByRole('dialog', { name: '新建项目' });
@@ -90,18 +89,19 @@ test.describe('项目工作区', () => {
 
     await page.getByRole('link', { name: '角色' }).click();
     await expect(page).toHaveURL(/\/characters/);
-    await expect(page.locator('body')).not.toHaveText(/Application error/i);
+    await expect(page.getByRole('heading', { name: '角色管理' })).toBeVisible();
 
     await page.getByRole('link', { name: '地点' }).click();
     await expect(page).toHaveURL(/\/locations/);
-    await expect(page.locator('body')).not.toHaveText(/Application error/i);
+    await expect(page.getByRole('heading', { name: '地点管理' })).toBeVisible();
 
     await page.getByRole('link', { name: '分镜' }).click();
     await expect(page).toHaveURL(/\/storyboard/);
-    await expect(page.locator('body')).not.toHaveText(/Application error/i);
+    await expect(page.getByText('分镜').first()).toBeVisible();
 
     await page.getByRole('link', { name: '台本' }).click();
     await expect(page).toHaveURL(/\/scripts/);
+    await expect(page.getByRole('heading', { name: '场景列表' })).toBeVisible();
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
@@ -127,5 +127,57 @@ test.describe('项目工作区', () => {
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/projects\/[^/]+\/scripts/, { timeout: 15_000 });
     await expect(page.getByText(name)).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('新项目带空白台本，编辑后刷新仍在', async ({ page }) => {
+    const name = `E2E 编辑 ${Date.now()}`;
+    const marker = `落库对白 ${Date.now()}`;
+    await page.goto('/projects');
+    await page.getByRole('button', { name: /新建项目/ }).click();
+    const dialog = page.getByRole('dialog', { name: '新建项目' });
+    await dialog.getByLabel('项目名称').fill(name);
+    await dialog.getByRole('button', { name: '创建' }).click();
+    await expect(page).toHaveURL(/\/scripts/, { timeout: 15_000 });
+
+    await expect(page.getByText('场景1')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('开场暖场')).toBeVisible();
+    await expect(page.getByRole('button', { name: /添加场景/ })).toBeVisible();
+
+    const editor = page.locator('.ProseMirror').first();
+    await expect(editor).toBeVisible();
+    const saved = page.waitForResponse(
+      (res) => res.url().includes('/script/content') && res.request().method() === 'PATCH' && res.ok(),
+      { timeout: 15_000 },
+    );
+    await editor.click();
+    await page.keyboard.type(marker);
+    await saved;
+
+    await page.reload();
+    await expect(page.getByText(marker)).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('工作区「全部项目」回到列表', async ({ page }) => {
+    const name = `E2E 返回 ${Date.now()}`;
+    await page.goto('/projects');
+    await page.getByRole('button', { name: /新建项目/ }).click();
+    const dialog = page.getByRole('dialog', { name: '新建项目' });
+    await dialog.getByLabel('项目名称').fill(name);
+    await dialog.getByRole('button', { name: '创建' }).click();
+    await expect(page).toHaveURL(/\/scripts/, { timeout: 15_000 });
+
+    await page.getByRole('link', { name: '全部项目' }).click();
+    await expect(page).toHaveURL(/\/projects$/);
+    await expect(page.getByRole('heading', { name: name })).toBeVisible();
+  });
+});
+
+test.describe('设置', () => {
+  test('可以打开新建模型配置表单', async ({ page }) => {
+    await page.goto('/settings');
+    await expect(page.getByRole('heading', { name: 'AI 模型配置' })).toBeVisible();
+    await page.getByRole('button', { name: '新建配置' }).click();
+    await expect(page.getByRole('heading', { name: '新建配置' })).toBeVisible();
+    await expect(page.getByLabel(/API Key|密钥|Key/i).or(page.locator('input[type="password"]')).first()).toBeVisible();
   });
 });

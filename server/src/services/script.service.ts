@@ -1,6 +1,38 @@
 import { prisma } from '../lib/db';
 import { startWorkflowRun } from '../lib/agentos-client';
 
+export function buildEmptyDraftScript(title: string) {
+  const ts = Date.now();
+  const sceneId = `scene_${ts}`;
+  return {
+    title: title || '未命名剧本',
+    type: 'drama',
+    style: 'casual',
+    form: 'linear',
+    contentType: 'short_video',
+    status: 'draft',
+    scenes: [
+      {
+        id: sceneId,
+        title: '场景1',
+        order: 1,
+        content: [
+          { id: `block_${ts}_1`, label: '开场暖场', text: '' },
+          { id: `block_${ts}_2`, label: '主题陈述', text: '' },
+          { id: `block_${ts}_3`, label: '核心环节', text: '' },
+          { id: `block_${ts}_4`, label: '互动', text: '' },
+          { id: `block_${ts}_5`, label: '收尾', text: '' },
+        ],
+      },
+    ],
+    acts: [
+      { id: `act_${ts}_1`, name: '幕一·开场画面', order: 1, sceneIds: [sceneId] },
+      { id: `act_${ts}_2`, name: '幕二·冲突升级', order: 2, sceneIds: [] },
+      { id: `act_${ts}_3`, name: '幕三·结局点题', order: 3, sceneIds: [] },
+    ],
+  };
+}
+
 export class ScriptService {
   async getProjectScript(projectId: string, userId: string) {
     const project = await prisma.project.findFirst({
@@ -16,7 +48,16 @@ export class ScriptService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return script;
+    if (script) {
+      return script;
+    }
+
+    return prisma.script.create({
+      data: {
+        projectId,
+        ...buildEmptyDraftScript(project.name),
+      },
+    });
   }
 
   async createScript(
