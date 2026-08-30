@@ -183,6 +183,44 @@ test.describe('剧本工作区', () => {
     await expect(page.getByText('口播工作区')).toBeVisible();
 
     await expect(page.getByRole('link', { name: '分镜' })).toHaveCount(0);
+    await page.goto(`/projects/${projectId}/storyboard`);
+    await expect(page).toHaveURL(/\/screenplay/);
+  });
+
+  test('选区 AI 无模型时只写回范围内节点，导出 TXT 含场次', async ({ page }) => {
+    await signUp(page);
+    await createScriptProject(page, `E2E 修订导出 ${Date.now()}`);
+    await writeTwoScenes(page);
+
+    const dialogue = page.getByRole('list', { name: '剧本正文' }).getByRole('textbox', { name: '对白' });
+    await expect(dialogue).toHaveValue('末班车要到了。');
+    await dialogue.click();
+
+    await page.getByLabel('AI 指令').fill('把这句改短一点');
+    await page.getByRole('button', { name: '发送' }).click();
+    await expect(page.getByText(/已按选区写回|请先在剧本里选中/)).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(dialogue).toHaveValue('末班车要到了。');
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: '导出 TXT PDF DOCX' }).click();
+    await page.getByRole('menuitem', { name: 'TXT' }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.txt$/i);
+  });
+
+  test('无 SD worker 时生成肖像给出中文失败原因', async ({ page }) => {
+    await signUp(page);
+    await createScriptProject(page, `E2E 出图 ${Date.now()}`);
+    await writeTwoScenes(page);
+
+    await page.getByRole('link', { name: '角色' }).click();
+    await expect(page.getByRole('heading', { name: '林晚' })).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: '生成肖像' }).first().click();
+    await expect(page.getByText('没有可用的 Stable Diffusion worker')).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test('创建后回到项目列表能看到该项目', async ({ page }) => {

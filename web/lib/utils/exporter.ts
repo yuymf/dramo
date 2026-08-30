@@ -394,25 +394,18 @@ export function exportAsJSON(script: Script): string {
 }
 
 /**
- * Get all project assets (characters + locations) for storyboard use
+ * 封面卡用：从剧本推导实体拉角色/地点图，不再打已删除的 /assets 接口。
  */
 import type { ImageItem } from "@/lib/models";
-import { api } from "@/lib/api/client";
+import { imageUrls, listDerivedEntities } from "@/lib/api/entities";
 
-interface RemoteCharacterAsset {
-  id: string;
-  characterName: string;
-  description?: string;
-  alias?: string;
-  images: ImageItem[];
-}
-
-interface RemoteLocationAsset {
-  id: string;
-  locationName: string;
-  description?: string;
-  alias?: string;
-  images: ImageItem[];
+function toCoverImages(images: unknown): ImageItem[] {
+  return imageUrls(images).map((url, index) => ({
+    id: `${index}`,
+    url,
+    source: "generated",
+    createdAt: "",
+  }));
 }
 
 export async function getProjectAssets(
@@ -456,39 +449,29 @@ export async function getProjectAssets(
 
   if (!options?.type || options.type === 'character') {
     try {
-      const res = await api<{ dataV2?: RemoteCharacterAsset[] }>(
-        `/api/projects/${projectId}/characters/assets`
-      );
-      result.characters = (res.dataV2 || []).map((asset) => ({
-        id: asset.id,
-        name: asset.characterName,
-        description: asset.description,
-        alias: asset.alias,
-        images: options?.sourceFilter
-          ? asset.images.filter((img) => img.source === options.sourceFilter)
-          : asset.images,
+      const rows = await listDerivedEntities('character', projectId);
+      result.characters = rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description ?? undefined,
+        images: toCoverImages(row.images),
       }));
     } catch (err) {
-      console.error('Failed to load character assets:', err);
+      console.error('Failed to load characters:', err);
     }
   }
 
   if (!options?.type || options.type === 'location') {
     try {
-      const res = await api<{ dataV2?: RemoteLocationAsset[] }>(
-        `/api/projects/${projectId}/locations/assets`
-      );
-      result.locations = (res.dataV2 || []).map((asset) => ({
-        id: asset.id,
-        name: asset.locationName,
-        description: asset.description,
-        alias: asset.alias,
-        images: options?.sourceFilter
-          ? asset.images.filter((img) => img.source === options.sourceFilter)
-          : asset.images,
+      const rows = await listDerivedEntities('location', projectId);
+      result.locations = rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description ?? undefined,
+        images: toCoverImages(row.images),
       }));
     } catch (err) {
-      console.error('Failed to load location assets:', err);
+      console.error('Failed to load locations:', err);
     }
   }
 
