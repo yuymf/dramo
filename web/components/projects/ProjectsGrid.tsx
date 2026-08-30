@@ -63,7 +63,7 @@ export function ProjectsGrid({ initialProjects }: ProjectsGridProps) {
           >
             <div className="flex flex-col items-center justify-center p-8 min-h-[260px]">
               <div
-                className="w-14 h-14 rounded-full flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110"
+                className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
                 style={{ background: "var(--rice-warm)" }}
               >
                 <Plus
@@ -73,17 +73,11 @@ export function ProjectsGrid({ initialProjects }: ProjectsGridProps) {
                 />
               </div>
               <h3
-                className="text-base font-medium mb-1 ink-body"
+                className="text-base font-medium mb-1"
                 style={{ color: "var(--ink-wash)" }}
               >
                 新建项目
               </h3>
-              <p
-                className="text-xs ink-ui text-center"
-                style={{ color: "var(--ink-light)" }}
-              >
-                点击创建新的剧本项目
-              </p>
             </div>
           </div>
         </button>
@@ -99,24 +93,6 @@ export function ProjectsGrid({ initialProjects }: ProjectsGridProps) {
           </div>
         ))}
       </div>
-
-      {/* Empty state */}
-      {!loading && projects.length === 0 && (
-        <div className="mt-16 text-center ink-reveal ink-reveal-2">
-          <p
-            className="text-sm mb-2 ink-body"
-            style={{ color: "var(--ink-wash)" }}
-          >
-            还没有项目，点击上方卡片创建第一个项目吧
-          </p>
-          <p
-            className="text-xs ink-ui"
-            style={{ color: "var(--ink-light)" }}
-          >
-            每个项目可以包含台本、角色、场景等丰富内容
-          </p>
-        </div>
-      )}
 
       {/* Loading state */}
       {loading && (

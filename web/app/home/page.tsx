@@ -1,11 +1,10 @@
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { CreativeInput } from "@/components/home/CreativeInput";
-import { QuickActions } from "@/components/home/QuickActions";
 import { RecentProjects } from "@/components/home/RecentProjects";
 
 export const metadata = {
   title: "主页 - DRAMO",
-  description: "你的AI创作伙伴",
+  description: "写下今天的故事",
 };
 
 export default function HomePage() {
@@ -14,20 +13,16 @@ export default function HomePage() {
       <AppSidebar />
 
       <main className="flex-1 relative z-10 overflow-y-auto">
-        {/* Hero creative section */}
         <div className="px-8 lg:px-20 pt-20 pb-12">
           <div className="max-w-5xl mx-auto">
-            <CreativeInput userName={undefined} />
-            <QuickActions />
+            <CreativeInput />
           </div>
         </div>
 
-        {/* Divider */}
         <div className="max-w-5xl mx-auto px-8 lg:px-20">
           <div className="ink-divider" />
         </div>
 
-        {/* Recent projects */}
         <div className="px-8 lg:px-20 pb-20">
           <div className="max-w-5xl mx-auto">
             <RecentProjects />

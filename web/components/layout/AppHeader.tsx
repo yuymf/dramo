@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Lightbulb, History, Globe } from "lucide-react";
-import { useTranslation, type Locale } from "@/lib/i18n";
+import { Lightbulb, History } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 interface AppHeaderProps {
   projectName?: string;
@@ -24,8 +22,7 @@ export function AppHeader({
   onToggleHistoryPanel,
 }: AppHeaderProps) {
   void _projectName;
-  const [locale, setLocale] = useState<Locale>("zh");
-  const { t } = useTranslation(locale);
+  const { t } = useTranslation("zh");
   const router = useRouter();
   const params = useParams();
   const pathname = usePathname();
@@ -39,10 +36,6 @@ export function AppHeader({
 
   const currentMode = getCurrentMode();
   const projectId = params?.id as string | undefined;
-
-  const toggleLocale = () => {
-    setLocale((prev) => (prev === "zh" ? "en" : "zh"));
-  };
 
   const handleModeChange = (newMode: string) => {
     if (onModeChange) {
@@ -115,16 +108,6 @@ export function AppHeader({
           >
             <History size={14} />
             {t("history")}
-          </Button>
-          <Separator orientation="vertical" className="h-4 mx-1" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleLocale}
-            className="text-xs h-7 px-2"
-          >
-            <Globe size={14} />
-            {locale === "zh" ? "EN" : "中"}
           </Button>
         </div>
       </div>
