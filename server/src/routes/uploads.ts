@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { StorageService } from '../services/storage.service';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/default-user';
+import type { AuthEnv } from '../middleware/session';
 
 const uploads = new Hono<AuthEnv>();
 const storageService = new StorageService();

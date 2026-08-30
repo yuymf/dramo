@@ -1,0 +1,464 @@
+/* Track D：语义剧本排版。好莱坞用 Courier；亚洲用中文缩进，不用等宽。 */
+
+@import url("https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Serif+SC:wght@400;500;700&display=swap");
+
+.sp-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--at-bg);
+  color: var(--at-text);
+}
+
+.sp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--at-border);
+  background: var(--at-surface);
+}
+
+.sp-toolbar-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sp-toolbar-title h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.sp-toolbar-meta {
+  font-size: 12px;
+  color: var(--at-text-tertiary);
+}
+
+.sp-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.sp-save-status {
+  font-size: 11px;
+  color: var(--at-text-tertiary);
+}
+
+.sp-export-slot {
+  opacity: 1;
+}
+
+.sp-hint {
+  font-size: 11px;
+  color: var(--at-text-tertiary);
+}
+
+.sp-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.sp-stage {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 28px 20px 48px;
+}
+
+.sp-paper {
+  margin: 0 auto;
+  background: #fffdf8;
+  box-shadow: var(--at-shadow-md);
+  border: 1px solid var(--at-border-light);
+}
+
+.sp-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sp-row {
+  position: relative;
+  min-height: 1.4em;
+}
+
+.sp-gutter {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 2px;
+  width: max-content;
+  max-width: 4.8rem;
+  border: 0;
+  padding: 0;
+  background: none;
+  font-size: 10px;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  color: var(--at-text-tertiary);
+  text-align: right;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.sp-row:hover .sp-gutter,
+.sp-row.is-active .sp-gutter,
+.sp-row.is-selected .sp-gutter {
+  opacity: 1;
+}
+
+.sp-gutter:hover,
+.sp-gutter:focus-visible {
+  color: var(--at-accent);
+  outline: none;
+}
+
+.sp-node-input {
+  display: block;
+  width: 100%;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  background: transparent;
+  padding: 1px 4px;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  font-weight: inherit;
+  font-style: inherit;
+  line-height: inherit;
+  box-sizing: border-box;
+}
+
+.sp-node-input::placeholder {
+  color: var(--at-text-tertiary);
+  opacity: 0.7;
+  text-transform: none;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: normal;
+}
+
+.sp-row.is-active .sp-node-input,
+.sp-row.is-selected .sp-node-input {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--at-accent) 28%, transparent);
+  border-radius: 2px;
+}
+
+/* ——— 好莱坞：Courier 等宽 + 行业缩进 ——— */
+
+.sp-format-hollywood .sp-paper {
+  max-width: 8.5in;
+  padding: 0.9in 1in 1in 1.5in;
+}
+
+.sp-format-hollywood .sp-editor {
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+  font-size: 16px;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.sp-format-hollywood .sp-node-scene_heading .sp-node-input {
+  width: 60ch;
+  max-width: 100%;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sp-format-hollywood .sp-node-action .sp-node-input {
+  width: 60ch;
+  max-width: 100%;
+}
+
+.sp-format-hollywood .sp-node-character .sp-node-input {
+  width: 28ch;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.sp-format-hollywood .sp-node-dialogue .sp-node-input {
+  width: 35ch;
+  max-width: 100%;
+  margin-left: 10ch;
+}
+
+.sp-format-hollywood .sp-node-parenthetical .sp-node-input {
+  width: 25ch;
+  max-width: 100%;
+  margin-left: 16ch;
+  font-style: italic;
+}
+
+.sp-format-hollywood .sp-node-transition .sp-node-input {
+  width: 20ch;
+  max-width: 100%;
+  margin-left: auto;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.sp-format-hollywood .sp-node-comment .sp-node-input {
+  width: 60ch;
+  max-width: 100%;
+  color: var(--at-text-secondary);
+  font-style: italic;
+}
+
+.sp-format-hollywood .sp-node-subtitle .sp-node-input {
+  width: 40ch;
+  max-width: 100%;
+  margin-left: 10ch;
+  text-align: center;
+}
+
+/* ——— 亚洲：中文缩进，不用 Courier ——— */
+
+.sp-format-asian .sp-paper {
+  max-width: 42rem;
+  padding: 2.4rem 2.6rem 3rem;
+}
+
+.sp-format-asian .sp-editor {
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  font-size: 16px;
+  line-height: 1.85;
+}
+
+.sp-format-asian .sp-node-scene_heading .sp-node-input {
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.sp-format-asian .sp-node-action .sp-node-input {
+  text-indent: 2em;
+}
+
+.sp-format-asian .sp-node-character .sp-node-input {
+  padding-left: 4em;
+  font-weight: 500;
+}
+
+.sp-format-asian .sp-node-dialogue .sp-node-input {
+  padding-left: 4em;
+  padding-right: 3em;
+}
+
+.sp-format-asian .sp-node-parenthetical .sp-node-input {
+  padding-left: 6em;
+  padding-right: 4em;
+  color: var(--at-text-secondary);
+}
+
+.sp-format-asian .sp-node-transition .sp-node-input {
+  text-align: right;
+}
+
+.sp-format-asian .sp-node-comment .sp-node-input {
+  color: var(--at-text-secondary);
+  font-style: italic;
+}
+
+.sp-format-asian .sp-node-subtitle .sp-node-input {
+  padding-left: 4em;
+  padding-right: 4em;
+  text-align: center;
+}
+
+/* ——— 封面 ——— */
+
+.sp-cover-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  min-height: 28rem;
+}
+
+.sp-format-hollywood .sp-cover-page {
+  font-family: "Courier Prime", "Courier New", Courier, monospace;
+  align-items: center;
+  text-align: center;
+  padding-top: 3.5rem;
+}
+
+.sp-format-asian .sp-cover-page {
+  font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
+  padding-top: 2rem;
+}
+
+.sp-cover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 28rem;
+}
+
+.sp-format-hollywood .sp-cover-field {
+  align-items: center;
+}
+
+.sp-cover-field label {
+  font-size: 12px;
+  color: var(--at-text-secondary);
+  letter-spacing: 0.08em;
+}
+
+.sp-cover-input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--at-border);
+  background: transparent;
+  padding: 8px 2px;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  outline: none;
+}
+
+.sp-cover-input:focus {
+  border-bottom-color: var(--at-accent);
+}
+
+.sp-cover-title {
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.sp-format-asian .sp-cover-title {
+  font-size: 2rem;
+  letter-spacing: 0.28em;
+}
+
+/* ——— 页数轴 ——— */
+
+.sp-timeline {
+  width: 168px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--at-border);
+  background: var(--at-surface);
+  overflow: auto;
+  padding: 14px 12px 24px;
+}
+
+.sp-timeline h2 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sp-timeline-summary {
+  font-size: 11px;
+  color: var(--at-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.sp-timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sp-timeline-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  border: 0;
+  border-left: 2px solid var(--at-border);
+  background: transparent;
+  padding: 6px 8px;
+  text-align: left;
+  color: var(--at-text-secondary);
+  font-size: 11px;
+  cursor: default;
+}
+
+.sp-timeline-item.is-current {
+  border-left-color: var(--at-accent);
+  color: var(--at-text);
+  background: var(--at-accent-light);
+}
+
+.sp-timeline-item-title {
+  font-weight: 600;
+}
+
+.sp-timeline-item-scene {
+  color: var(--at-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-empty,
+.sp-error,
+.sp-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 12rem;
+  font-size: 13px;
+  color: var(--at-text-secondary);
+}
+
+@media (max-width: 860px) {
+  .sp-body {
+    flex-direction: column;
+  }
+
+  .sp-timeline {
+    width: 100%;
+    border-left: 0;
+    border-top: 1px solid var(--at-border);
+    max-height: 160px;
+  }
+
+  .sp-timeline-list {
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .sp-gutter {
+    display: none;
+  }
+
+  .sp-format-hollywood .sp-paper,
+  .sp-format-asian .sp-paper {
+    padding: 1.2rem 1rem 1.6rem;
+  }
+
+  .sp-format-hollywood .sp-node-character .sp-node-input,
+  .sp-format-hollywood .sp-node-dialogue .sp-node-input,
+  .sp-format-hollywood .sp-node-parenthetical .sp-node-input,
+  .sp-format-hollywood .sp-node-transition .sp-node-input,
+  .sp-format-hollywood .sp-node-subtitle .sp-node-input {
+    margin-left: 0;
+    width: 100%;
+  }
+}

@@ -1,23 +1,19 @@
 import { prisma } from '../lib/db';
 import type { AppError } from '../lib/errors';
 
-export interface ImageGenerationParams {
-  name: string;
-  description: string;
-  style?: string;
-  referenceImages?: string[];
-  mode?: 'single' | 'sequence';
-  assetType?: 'character' | 'location';
+export interface GenerationTaskUpdate {
+  status?: string;
+  progress?: number;
+  workerId?: string;
+  resultUrl?: string;
+  error?: AppError;
+  retryCount?: number;
 }
 
 /**
- * Job Store Service — pure DB access for GenerationJob records.
- * No external dependencies beyond Prisma.
+ * Job Store Service — DB access for GenerationTask records.
  */
 export class JobStoreService {
-  /**
-   * List jobs with optional filtering and pagination
-   */
   async listJobs(params: {
     userId: string;
     status?: string | string[];
@@ -42,23 +38,20 @@ export class JobStoreService {
     }
 
     const [jobs, total] = await Promise.all([
-      prisma.generationJob.findMany({
+      prisma.generationTask.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         take: params.limit ?? 50,
         skip: params.offset ?? 0,
       }),
-      prisma.generationJob.count({ where }),
+      prisma.generationTask.count({ where }),
     ]);
 
     return { jobs, total };
   }
 
-  /**
-   * Get a single job, throwing if not found or not owned by userId
-   */
   async getJob(jobId: string, userId: string) {
-    const job = await prisma.generationJob.findFirst({
+    const job = await prisma.generationTask.findFirst({
       where: { id: jobId, userId },
     });
 
@@ -69,73 +62,33 @@ export class JobStoreService {
     return job;
   }
 
-  /**
-   * Update job status / progress / result / error
-   */
-  async updateJob(
-    jobId: string,
-    data: {
-      status?: string;
-      progress?: number;
-      queuePosition?: number;
-      resultUrl?: string;
-      error?: AppError;
-    }
-  ) {
+  async updateJob(jobId: string, data: GenerationTaskUpdate) {
     const { error, ...rest } = data;
-    return prisma.generationJob.update({
+    return prisma.generationTask.update({
       where: { id: jobId },
       data: {
         ...rest,
-        error: error ? (error as any) : undefined,
+        error: error ? (error as object) : undefined,
         updatedAt: new Date(),
       },
     });
   }
 
   /**
-   * Update only if the job is still queued/running.
-   * Returns the updated row, or null if the job was canceled / already terminal.
+   * Update only if the task is still queued/running.
+   * Returns the updated row, or null if canceled / already terminal.
    */
-  async updateJobIfActive(
-    jobId: string,
-    data: {
-      status?: string;
-      progress?: number;
-      queuePosition?: number;
-      resultUrl?: string;
-      error?: AppError;
-    }
-  ) {
+  async updateJobIfActive(jobId: string, data: GenerationTaskUpdate) {
     const { error, ...rest } = data;
-    const result = await prisma.generationJob.updateMany({
+    const result = await prisma.generationTask.updateMany({
       where: { id: jobId, status: { in: ['queued', 'running'] } },
       data: {
         ...rest,
-        error: error ? (error as any) : undefined,
+        error: error ? (error as object) : undefined,
         updatedAt: new Date(),
       },
     });
     if (result.count === 0) return null;
-    return prisma.generationJob.findFirst({ where: { id: jobId } });
-  }
-
-  /**
-   * Update queue positions for all queued jobs owned by userId
-   */
-  async updateQueuePositions(userId: string) {
-    const queuedJobs = await prisma.generationJob.findMany({
-      where: { userId, status: 'queued' },
-      orderBy: { createdAt: 'asc' },
-    });
-
-    await Promise.all(
-      queuedJobs.map((job: { id: string }, index: number) =>
-        prisma.generationJob.update({
-          where: { id: job.id },
-          data: { queuePosition: index + 1 },
-        })
-      )
-    );
+    return prisma.generationTask.findFirst({ where: { id: jobId } });
   }
 }

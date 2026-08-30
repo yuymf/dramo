@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import type { AuthEnv } from '../middleware/default-user';
+import type { AuthEnv } from '../middleware/session';
 import { config } from '../config';
 import { checkAgentOSHealth } from '../lib/agentos-client';
 

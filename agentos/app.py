@@ -17,6 +17,7 @@ from workflows.polish_workflow import PolishWorkflow
 from workflows.script_workflow import ScriptWorkflow
 from workflows.clarification_workflow import ClarificationWorkflow
 from workflows.inspirations_workflow import InspirationsWorkflow
+from workflows.revise_workflow import ReviseWorkflow
 from services.image_service import ImageGenerationService
 from middleware.llm_context import LLMContextMiddleware, get_llm_config
 
@@ -30,6 +31,7 @@ polish_workflow = PolishWorkflow()
 script_workflow = ScriptWorkflow()
 clarification_workflow = ClarificationWorkflow()
 inspirations_workflow = InspirationsWorkflow()
+revise_workflow = ReviseWorkflow()
 
 custom_app = FastAPI(title="Dramo AgentOS", version="2.0.0")
 
@@ -120,6 +122,7 @@ agent_os = AgentOS(
         script_workflow,
         clarification_workflow,
         inspirations_workflow,
+        revise_workflow,
     ],
     base_app=custom_app,
     telemetry=False,

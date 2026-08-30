@@ -1,40 +1,35 @@
 import { Hono } from 'hono';
 import { prisma } from '../lib/db';
 import { AppException, ErrorCode } from '../lib/errors';
-import type { AuthEnv } from '../middleware/default-user';
+import type { AuthEnv } from '../middleware/session';
 
 const chatSessions = new Hono<AuthEnv>();
 
 const DEFAULT_SESSION_TITLE = '新对话';
-const ORPHAN_SESSION_TITLE = '历史对话';
 
-async function adoptOrphanMessages(projectId: string): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    const orphanCount = await tx.chatMessage.count({
-      where: { projectId, sessionId: null },
-    });
-    if (orphanCount === 0) return;
+function requireUser(c: { get: (key: 'user') => AuthEnv['Variables']['user'] | undefined }) {
+  const user = c.get('user');
+  if (!user) {
+    throw new AppException(ErrorCode.UNAUTHORIZED, '未登录');
+  }
+  return user;
+}
 
-    const session = await tx.chatSession.create({
-      data: { projectId, title: ORPHAN_SESSION_TITLE },
-    });
-    await tx.chatMessage.updateMany({
-      where: { projectId, sessionId: null },
-      data: { sessionId: session.id },
-    });
+async function requireProjectMember(projectId: string, userId: string) {
+  const member = await prisma.projectMember.findUnique({
+    where: { projectId_userId: { projectId, userId } },
   });
+  if (!member) {
+    throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
+  }
+  return member;
 }
 
 chatSessions.get('/chat/:projectId/sessions', async (c) => {
   const projectId = c.req.param('projectId');
-  const userId = c.get('user').userId;
+  const userId = requireUser(c).userId;
 
-  const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
-  if (!project) {
-    throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
-  }
-
-  await adoptOrphanMessages(projectId);
+  await requireProjectMember(projectId, userId);
 
   const sessions = await prisma.chatSession.findMany({
     where: { projectId },
@@ -64,13 +59,10 @@ chatSessions.get('/chat/:projectId/sessions', async (c) => {
  */
 chatSessions.post('/chat/:projectId/sessions', async (c) => {
   const projectId = c.req.param('projectId');
-  const userId = c.get('user').userId;
+  const userId = requireUser(c).userId;
   const body = await c.req.json<{ title?: string }>().catch(() => ({} as { title?: string }));
 
-  const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
-  if (!project) {
-    throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
-  }
+  await requireProjectMember(projectId, userId);
 
   const session = await prisma.chatSession.create({
     data: {
@@ -88,14 +80,11 @@ chatSessions.post('/chat/:projectId/sessions', async (c) => {
 chatSessions.patch('/chat/:projectId/sessions/:sessionId', async (c) => {
   const projectId = c.req.param('projectId');
   const sessionId = c.req.param('sessionId');
-  const userId = c.get('user').userId;
+  const userId = requireUser(c).userId;
   const requestId = c.get('requestId');
   const body = await c.req.json<{ title?: string }>().catch(() => ({} as { title?: string }));
 
-  const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
-  if (!project) {
-    throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
-  }
+  await requireProjectMember(projectId, userId);
 
   if (!body.title?.trim()) {
     return c.json({
@@ -127,12 +116,9 @@ chatSessions.patch('/chat/:projectId/sessions/:sessionId', async (c) => {
 chatSessions.delete('/chat/:projectId/sessions/:sessionId', async (c) => {
   const projectId = c.req.param('projectId');
   const sessionId = c.req.param('sessionId');
-  const userId = c.get('user').userId;
+  const userId = requireUser(c).userId;
 
-  const project = await prisma.project.findFirst({ where: { id: projectId, userId } });
-  if (!project) {
-    throw new AppException(ErrorCode.NOT_FOUND, 'Project not found');
-  }
+  await requireProjectMember(projectId, userId);
 
   // Bind sessionId to projectId — prevents IDOR
   const existing = await prisma.chatSession.findFirst({

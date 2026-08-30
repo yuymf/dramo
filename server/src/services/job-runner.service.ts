@@ -1,54 +1,88 @@
 import { prisma } from '../lib/db';
-import { runImageGeneration } from '../lib/agentos-client';
 import { logger } from '../lib/logger';
-import { LLMConfigService } from './llm-config.service';
+import { AppException, ErrorCode } from '../lib/errors';
 import { JobStoreService } from './job-store.service';
-import type { ImageGenerationParams } from './job-store.service';
+import { StorageService } from './storage.service';
+import {
+  getSdPool,
+  isUnreachableError,
+  NO_SD_WORKER_MESSAGE,
+  SD_DEFAULT_STEPS,
+  type SdPoolService,
+} from './sd-pool.service';
+
+export type GenerationKind = 'portrait' | 'location';
+
+export interface CreateGenerationInput {
+  userId: string;
+  projectId: string;
+  kind: GenerationKind;
+  entityId: string;
+  prompt: string;
+  aspectRatio?: string;
+}
+
+const KIND_ENTITY: Record<GenerationKind, 'character' | 'location'> = {
+  portrait: 'character',
+  location: 'location',
+};
+
+const ASPECT_SIZES: Record<string, { width: number; height: number }> = {
+  '1:1': { width: 512, height: 512 },
+  '16:9': { width: 768, height: 432 },
+  '9:16': { width: 432, height: 768 },
+  '4:3': { width: 640, height: 480 },
+  '3:4': { width: 480, height: 640 },
+  '3:2': { width: 768, height: 512 },
+  '2:3': { width: 512, height: 768 },
+};
+
+export function resolveTxt2ImgSize(aspectRatio?: string): { width: number; height: number } {
+  if (!aspectRatio) return ASPECT_SIZES['1:1'];
+  const key = aspectRatio.trim().replace('/', ':');
+  return ASPECT_SIZES[key] ?? ASPECT_SIZES['1:1'];
+}
 
 /**
- * Job Runner Service — handles fire-and-forget execution and retry lifecycle.
- * Delegates all DB mutations to JobStoreService.
+ * Job Runner — creates GenerationTask rows and executes them via the SD pool.
+ * Seedream / AgentOS runImageGeneration is not used.
  */
 export class JobRunnerService {
   private store: JobStoreService;
+  private pool: SdPoolService;
+  private storage: StorageService;
 
-  constructor(store?: JobStoreService) {
+  constructor(store?: JobStoreService, pool?: SdPoolService, storage?: StorageService) {
     this.store = store ?? new JobStoreService();
+    this.pool = pool ?? getSdPool();
+    this.storage = storage ?? new StorageService();
   }
 
-  /**
-   * Create a new generation job record and kick off async execution.
-   */
-  async createJob(data: {
-    userId: string;
-    projectId: string;
-    storyboardId?: string;
-    frameId?: string;
-    params: ImageGenerationParams;
-  }) {
-    const job = await prisma.generationJob.create({
+  async createJob(data: CreateGenerationInput) {
+    await this.assertEntity(data);
+
+    const entityType = KIND_ENTITY[data.kind];
+    const task = await prisma.generationTask.create({
       data: {
         userId: data.userId,
         projectId: data.projectId,
-        storyboardId: data.storyboardId,
-        frameId: data.frameId,
-        params: data.params as any,
+        kind: data.kind,
+        entityType,
+        entityId: data.entityId,
+        prompt: data.prompt,
+        aspectRatio: data.aspectRatio ?? null,
         status: 'queued',
         progress: 0,
       },
     });
 
-    // Fire-and-forget: run image generation via AgentOS
-    this.executeGeneration(job.id, data).catch((err) => {
-      logger.error({ err, jobId: job.id }, 'Background image generation failed');
+    this.executeGeneration(task.id, data).catch((err) => {
+      logger.error({ err, taskId: task.id }, 'Background SD generation failed');
     });
 
-    return job;
+    return task;
   }
 
-  /**
-   * Cancel a queued or running job.
-   */
   async cancelJob(jobId: string, userId: string) {
     const job = await this.store.getJob(jobId, userId);
 
@@ -56,7 +90,7 @@ export class JobRunnerService {
       return job;
     }
 
-    if (job.status === 'succeeded' || job.status === 'failed') {
+    if (job.status === 'completed' || job.status === 'failed') {
       throw new Error('Job cannot be canceled');
     }
 
@@ -67,9 +101,6 @@ export class JobRunnerService {
     return this.store.updateJob(jobId, { status: 'canceled' });
   }
 
-  /**
-   * Retry a failed job by creating a new one with the same params.
-   */
   async retryJob(jobId: string, userId: string) {
     const job = await this.store.getJob(jobId, userId);
 
@@ -82,59 +113,157 @@ export class JobRunnerService {
       throw new Error('Job is not retryable');
     }
 
-    const params = job.params as unknown as ImageGenerationParams;
+    if (job.kind !== 'portrait' && job.kind !== 'location') {
+      throw new Error('Job is not retryable');
+    }
+    if (!job.entityId) {
+      throw new Error('Job is not retryable');
+    }
+
     return this.createJob({
       userId: job.userId,
       projectId: job.projectId,
-      storyboardId: job.storyboardId ?? undefined,
-      frameId: job.frameId ?? undefined,
-      params,
+      kind: job.kind,
+      entityId: job.entityId,
+      prompt: job.prompt,
+      aspectRatio: job.aspectRatio ?? undefined,
     });
   }
 
-  /**
-   * Execute image generation via AgentOS and update job status throughout.
-   */
-  private async executeGeneration(
-    jobId: string,
-    data: {
-      userId: string;
-      projectId: string;
-      params: ImageGenerationParams;
+  private async assertEntity(data: CreateGenerationInput) {
+    if (data.kind === 'portrait') {
+      const character = await prisma.character.findFirst({
+        where: { id: data.entityId, projectId: data.projectId },
+      });
+      if (!character) {
+        throw new AppException(ErrorCode.NOT_FOUND, 'Character not found');
+      }
+      return;
     }
-  ) {
+
+    const location = await prisma.location.findFirst({
+      where: { id: data.entityId, projectId: data.projectId },
+    });
+    if (!location) {
+      throw new AppException(ErrorCode.NOT_FOUND, 'Location not found');
+    }
+  }
+
+  private async executeGeneration(taskId: string, data: CreateGenerationInput) {
+    const worker = await this.pool.pickWorker({
+      capability: 'txt2img',
+      stickyKey: data.entityId,
+    });
+
+    if (!worker) {
+      await this.store.updateJobIfActive(taskId, {
+        status: 'failed',
+        error: {
+          code: 'NO_SD_WORKER',
+          message: NO_SD_WORKER_MESSAGE,
+          retryable: true,
+        },
+      });
+      return;
+    }
+
     try {
-      const started = await this.store.updateJobIfActive(jobId, { status: 'running', progress: 10 });
+      const started = await this.store.updateJobIfActive(taskId, {
+        status: 'running',
+        progress: 10,
+        workerId: worker.id,
+      });
       if (!started) {
-        logger.info({ jobId }, 'Skip generation — job is no longer active');
+        logger.info({ taskId }, 'Skip generation — task is no longer active');
         return;
       }
 
-      const llmHeaders = await new LLMConfigService().getLLMHeaders(data.userId, 'IMAGE_GEN');
+      const size = resolveTxt2ImgSize(data.aspectRatio);
+      const base64 = await this.pool.txt2img(worker, {
+        prompt: data.prompt,
+        width: size.width,
+        height: size.height,
+        steps: SD_DEFAULT_STEPS,
+      });
 
-      const result = await runImageGeneration({
-        prompt: data.params.description,
-        style: data.params.style,
-        referenceImages: data.params.referenceImages,
-      }, { llmHeaders });
+      const stored = await this.storage.uploadImageFromBase64(
+        data.projectId,
+        base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`
+      );
 
-      const firstImageUrl = result.images[0]?.url;
+      await prisma.asset.create({
+        data: {
+          projectId: data.projectId,
+          kind: data.kind,
+          entityType: KIND_ENTITY[data.kind],
+          entityId: data.entityId,
+          url: stored.url,
+          taskId,
+        },
+      });
 
-      const finished = await this.store.updateJobIfActive(jobId, {
-        status: 'succeeded',
+      await this.appendEntityImage(data, stored.url);
+
+      const finished = await this.store.updateJobIfActive(taskId, {
+        status: 'completed',
         progress: 100,
-        resultUrl: firstImageUrl,
+        resultUrl: stored.url,
+        workerId: worker.id,
       });
       if (!finished) {
-        logger.info({ jobId }, 'Skip success write — job was canceled during generation');
+        logger.info({ taskId }, 'Skip success write — task was canceled during generation');
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Image generation failed';
-      logger.error({ err, jobId }, 'Image generation failed');
-      await this.store.updateJobIfActive(jobId, {
+      logger.error({ err, taskId }, 'SD image generation failed');
+      await this.store.updateJobIfActive(taskId, {
         status: 'failed',
-        error: { code: 'GENERATION_ERROR', message, retryable: true },
+        error: generationFailure(err),
       });
+    } finally {
+      this.pool.release(worker.id);
     }
   }
+
+  private async appendEntityImage(data: CreateGenerationInput, url: string) {
+    if (data.kind === 'portrait') {
+      const character = await prisma.character.findFirst({
+        where: { id: data.entityId, projectId: data.projectId },
+      });
+      if (!character) return;
+      const images = appendImage(character.images, url);
+      await prisma.character.update({
+        where: { id: character.id },
+        data: { images: images as object },
+      });
+      return;
+    }
+
+    const location = await prisma.location.findFirst({
+      where: { id: data.entityId, projectId: data.projectId },
+    });
+    if (!location) return;
+    const images = appendImage(location.images, url);
+    await prisma.location.update({
+      where: { id: location.id },
+      data: { images: images as object },
+    });
+  }
+}
+
+export function generationFailure(err: unknown): {
+  code: string;
+  message: string;
+  retryable: boolean;
+} {
+  const message = err instanceof Error ? err.message : 'Image generation failed';
+  if (message === NO_SD_WORKER_MESSAGE || isUnreachableError(err)) {
+    return { code: 'NO_SD_WORKER', message: NO_SD_WORKER_MESSAGE, retryable: true };
+  }
+  return { code: 'GENERATION_ERROR', message, retryable: true };
+}
+
+function appendImage(current: unknown, url: string): Array<{ url: string }> {
+  const list = Array.isArray(current) ? [...current] : [];
+  list.push({ url });
+  return list as Array<{ url: string }>;
 }

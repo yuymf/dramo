@@ -40,10 +40,31 @@ export function NewProjectDialog({
     setError(null);
 
     try {
-      const project = await createProject(name.trim());
+      const project = await createProject(name.trim(), { type: "script" });
       onSuccess?.(project.id);
       onClose();
-      router.replace(`/projects/${project.id}/scripts`);
+      router.replace(`/projects/${project.id}/screenplay`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "创建项目失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateSpoken = async () => {
+    if (!name.trim()) {
+      setError("请输入项目名称");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const project = await createProject(name.trim(), { type: "spoken" });
+      onSuccess?.(project.id);
+      onClose();
+      router.replace(`/projects/${project.id}/spoken`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "创建项目失败");
     } finally {
@@ -145,10 +166,25 @@ export function NewProjectDialog({
               disabled={loading || !name.trim()}
               className="ink-button ink-ui text-sm disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              {loading ? "创建中..." : "创建"}
+              {loading ? "创建中..." : "创建剧本项目"}
             </button>
           </div>
         </form>
+
+        <div
+          className="mt-6 pt-4 text-center"
+          style={{ borderTop: "1px solid rgba(26, 26, 24, 0.06)" }}
+        >
+          <button
+            type="button"
+            onClick={() => void handleCreateSpoken()}
+            disabled={loading}
+            className="text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+            style={{ color: "#a8a29e" }}
+          >
+            创建口播项目
+          </button>
+        </div>
       </div>
     </div>
   );

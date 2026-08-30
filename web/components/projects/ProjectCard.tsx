@@ -51,7 +51,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   };
 
   return (
-    <Link href={`/projects/${project.id}/scripts`} className="group block">
+    <Link href={`/projects/${project.id}/screenplay`} className="group block">
       <div className="ink-card overflow-hidden">
         {/* Cover area — 16:9 */}
         <div

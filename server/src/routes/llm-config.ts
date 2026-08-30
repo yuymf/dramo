@@ -4,7 +4,7 @@ import { validateBaseUrl, validateResolvedIPs } from '../lib/url-validator';
 import { sanitizeHeaderValue } from '../lib/crypto';
 import { AppException, ErrorCode } from '../lib/errors';
 import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/default-user';
+import type { AuthEnv } from '../middleware/session';
 
 const llmConfigs = new Hono<AuthEnv>();
 const llmConfigService = new LLMConfigService();
@@ -52,9 +52,9 @@ llmConfigs.post('/llm-configs', async (c) => {
       400
     );
   }
-  if (!body.type || !['TEXT_LLM', 'IMAGE_GEN'].includes(body.type)) {
+  if (body.type && body.type !== 'TEXT_LLM') {
     return c.json(
-      { error: { code: 'INVALID_INPUT', message: 'type must be TEXT_LLM or IMAGE_GEN', retryable: false }, requestId },
+      { error: { code: 'INVALID_INPUT', message: 'type must be TEXT_LLM', retryable: false }, requestId },
       400
     );
   }
@@ -95,7 +95,7 @@ llmConfigs.post('/llm-configs', async (c) => {
   try {
     const result = await llmConfigService.createConfig(userId, {
       name: body.name.trim(),
-      type: body.type,
+      type: 'TEXT_LLM',
       baseUrl: body.baseUrl.trim(),
       apiKey: body.apiKey,
       modelId: body.modelId.trim(),
@@ -204,36 +204,21 @@ llmConfigs.post('/llm-configs/verify', async (c) => {
 
   try {
     const baseUrl = sanitizeHeaderValue(body.baseUrl.trim());
-    const isImageGen = body.type === 'IMAGE_GEN';
 
-    let testResponse: Response;
-    if (isImageGen) {
-      // 图片生成模型：调用 /models 端点验证连通性（不消耗生成额度）
-      testResponse = await fetch(`${baseUrl}/models`, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${sanitizeHeaderValue(body.apiKey)}`,
-        },
-        signal: AbortSignal.timeout(10_000),
-        redirect: 'error',
-      });
-    } else {
-      // 文本生成模型：调用 /chat/completions 测试端点
-      testResponse = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sanitizeHeaderValue(body.apiKey)}`,
-        },
-        body: JSON.stringify({
-          model: sanitizeHeaderValue(body.modelId.trim()),
-          messages: [{ role: 'user', content: 'say hi' }],
-          max_tokens: 5,
-        }),
-        signal: AbortSignal.timeout(10_000),
-        redirect: 'error',
-      });
-    }
+    const testResponse = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${sanitizeHeaderValue(body.apiKey)}`,
+      },
+      body: JSON.stringify({
+        model: sanitizeHeaderValue(body.modelId.trim()),
+        messages: [{ role: 'user', content: 'say hi' }],
+        max_tokens: 5,
+      }),
+      signal: AbortSignal.timeout(10_000),
+      redirect: 'error',
+    });
 
     if (testResponse.ok) {
       return c.json({ success: true });
@@ -245,11 +230,6 @@ llmConfigs.post('/llm-configs/verify', async (c) => {
         ? 'API key 认证失败（该 API 可能仅限内网访问，在外网无法验证）'
         : 'API key 无效或无访问权限';
       return c.json({ success: false, error: hint });
-    }
-
-    // IMAGE_GEN 其他 4xx（400/404 等）表示可以连通，key 可能有效
-    if (isImageGen && testResponse.status >= 400 && testResponse.status < 500) {
-      return c.json({ success: true });
     }
 
     logger.warn({ status: testResponse.status, userId }, 'LLM config verify failed');
