@@ -404,6 +404,51 @@ test.describe('剧本工作区', () => {
     await page.reload();
     await expect(page.getByText(marker)).toBeVisible({ timeout: 10_000 });
   });
+
+  test('分享、评论、命名版本和公开库能走通', async ({ page, browser }) => {
+    test.setTimeout(90_000);
+    await signUp(page);
+    await createScriptProject(page, `E2E 协作 ${Date.now()}`);
+    await writeTwoScenes(page);
+
+    await expect(page.getByLabel('分享模式')).toBeVisible();
+    await page.getByLabel('分享模式').selectOption('anyone_view');
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.getByRole('button', { name: '复制分享链接' }).click();
+    await expect(page.getByText('分享链接已复制')).toBeVisible({ timeout: 10_000 });
+
+    const dialogue = page.getByRole('list', { name: '剧本正文' }).getByRole('textbox', { name: '对白' });
+    await dialogue.click();
+    await page.getByLabel('节点评论').fill('这句可以再压一点。');
+    await page.getByRole('button', { name: '评论' }).click();
+    await expect(page.getByText('这句可以再压一点。')).toBeVisible({ timeout: 10_000 });
+
+    await page.getByLabel('版本名称').fill('第一稿');
+    await page.getByRole('button', { name: '保存版本' }).click();
+    await expect(page.getByText('版本已保存')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('第一稿')).toBeVisible();
+
+    await page.getByRole('button', { name: '发布到公开库' }).click();
+    await expect(page.getByText('已发布到公开库')).toBeVisible({ timeout: 10_000 });
+
+    const context = await browser.newContext();
+    const other = await context.newPage();
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    await other.goto('/register');
+    await other.getByLabel('名称').fill('读者');
+    await other.getByLabel('邮箱').fill(`e2e.reader.${stamp}@example.com`);
+    await other.getByLabel('密码').fill('password1');
+    await other.getByRole('button', { name: '注册' }).click();
+    await expect(other).toHaveURL(/\/home/, { timeout: 15_000 });
+    await other.getByRole('link', { name: '公开库' }).click();
+    await expect(other).toHaveURL(/\/library/);
+    await expect(other.getByRole('heading', { name: '公开库' })).toBeVisible();
+    await other.getByRole('link', { name: /E2E 协作/ }).first().click();
+    await expect(other.getByText('公开阅读，不能直接编辑这份稿')).toBeVisible();
+    await other.getByRole('button', { name: '复制到我的工作区' }).click();
+    await expect(other).toHaveURL(/\/projects\/[^/]+\/screenplay/, { timeout: 15_000 });
+    await context.close();
+  });
 });
 
 async function createCinemaProject(page: Page, name: string) {

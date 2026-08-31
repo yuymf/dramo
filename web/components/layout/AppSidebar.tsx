@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, FolderOpen, Settings } from "lucide-react";
+import { BookOpen, FolderOpen, Home, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/home", icon: Home, label: "主页" },
   { href: "/projects", icon: FolderOpen, label: "项目" },
+  { href: "/library", icon: BookOpen, label: "公开库" },
   { href: "/settings", icon: Settings, label: "设置" },
 ];
 

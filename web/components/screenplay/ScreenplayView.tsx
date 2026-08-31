@@ -8,6 +8,7 @@ import { ExportSlot } from "./ExportSlot";
 import { formatLabel } from "./nodeMeta";
 import { saveStatusLabel, useScreenplayDoc } from "./useScreenplayDoc";
 import { firstEpisodeId, getDoctor, requestMicroContinue, type DoctorNote } from "@/lib/api/assist";
+import { addComment, listComments } from "@/lib/api/collab";
 import { Button } from "@/components/ui/button";
 import "./screenplay.css";
 
@@ -19,6 +20,8 @@ export function ScreenplayView() {
   const [notes, setNotes] = useState<DoctorNote[] | null>(null);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [comments, setComments] = useState<Array<{ id: string; body: string; user: { email: string } }>>([]);
+  const [commentDraft, setCommentDraft] = useState("");
 
   const active = nodes.find((node) => node.id === activeNodeId);
   const emptyActive = !!active && !active.text.trim();
@@ -51,6 +54,16 @@ export function ScreenplayView() {
       window.clearTimeout(timer);
     };
   }, [activeNodeId, emptyActive, episodeId, projectId]);
+
+  useEffect(() => {
+    if (!projectId || !activeNodeId) {
+      setComments([]);
+      return;
+    }
+    void listComments(projectId, { anchorType: "screenplay", anchorId: activeNodeId }).then((doc) => {
+      setComments(doc.comments);
+    });
+  }, [projectId, activeNodeId]);
 
   const runDoctor = async () => {
     if (!projectId) return;
@@ -152,6 +165,46 @@ export function ScreenplayView() {
         </div>
         <PageTimeline nodes={nodes} activeNodeId={activeNodeId} />
       </div>
+      {activeNodeId && projectId ? (
+        <aside className="px-5 py-3 border-t border-[var(--at-border)] bg-[var(--at-surface)]">
+          <p className="text-xs font-medium mb-2">本段评论</p>
+          <ul className="space-y-1 mb-2">
+            {comments.map((item) => (
+              <li key={item.id} className="text-xs">
+                <span style={{ color: "#78716c" }}>{item.user.email}：</span>
+                {item.body}
+              </li>
+            ))}
+          </ul>
+          <div className="flex gap-2">
+            <input
+              aria-label="节点评论"
+              value={commentDraft}
+              onChange={(e) => setCommentDraft(e.target.value)}
+              className="flex-1 rounded-md border px-2 py-1 text-xs"
+              placeholder="Viewer 可评不可改稿"
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={async () => {
+                if (!commentDraft.trim()) return;
+                await addComment(projectId, {
+                  anchorType: "screenplay",
+                  anchorId: activeNodeId,
+                  body: commentDraft.trim(),
+                  episodeId: episodeId ?? undefined,
+                });
+                setCommentDraft("");
+                const doc = await listComments(projectId, { anchorType: "screenplay", anchorId: activeNodeId });
+                setComments(doc.comments);
+              }}
+            >
+              评论
+            </Button>
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }

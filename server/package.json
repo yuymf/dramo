@@ -18,13 +18,18 @@
     "@hono/node-server": "^1.19.11",
     "@prisma/client": "^5.10.2",
     "hono": "^4.12.7",
+    "lib0": "^0.2.117",
     "pino": "^8.19.0",
-    "pino-pretty": "^10.3.1"
+    "pino-pretty": "^10.3.1",
+    "ws": "^8.21.3",
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.32"
   },
   "devDependencies": {
     "@jest/globals": "^30.3.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.11.19",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^7.0.1",
     "@typescript-eslint/parser": "^7.0.1",
     "eslint": "^8.56.0",

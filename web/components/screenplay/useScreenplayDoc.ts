@@ -9,6 +9,9 @@ import {
   type ScreenplayFormat,
   type ScreenplayNode,
 } from "@/lib/types/screenplay";
+import * as Y from "yjs";
+import { WebsocketProvider } from "y-websocket";
+import { IndexeddbPersistence } from "y-indexeddb";
 import { createNode } from "./nodeMeta";
 import {
   SCREENPLAY_FLUSH_EVENT,
@@ -93,6 +96,8 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
   const dirtyRef = useRef(false);
   const payloadRef = useRef({ title, cover, nodes, episodeId, projectId });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ynodesRef = useRef<Y.Array<Y.Map<string>> | null>(null);
+  const ydocRef = useRef<Y.Doc | null>(null);
 
   payloadRef.current = { title, cover, nodes, episodeId, projectId };
 
@@ -193,6 +198,50 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
   }, [projectId, putNow]);
 
   useEffect(() => {
+    if (!ready || !episodeId) return;
+    const ydoc = new Y.Doc();
+    const ynodes = ydoc.getArray<Y.Map<string>>("nodes");
+    ydocRef.current = ydoc;
+    ynodesRef.current = ynodes;
+    const persist = new IndexeddbPersistence(`episode:${episodeId}`, ydoc);
+    const wsUrl =
+      typeof window === "undefined"
+        ? "ws://localhost:12321/collab"
+        : `ws://${window.location.hostname}:12321/collab`;
+    const provider = new WebsocketProvider(wsUrl, `episode/${episodeId}`, ydoc);
+    const applyRemote = () => {
+      const next: ScreenplayNode[] = [];
+      ynodes.forEach((map) => {
+        const id = String(map.get("id") ?? "");
+        if (!id) return;
+        next.push({
+          id,
+          type: (map.get("type") as ScreenplayNode["type"]) ?? "action",
+          text: String(map.get("text") ?? ""),
+        });
+      });
+      if (next.length === 0) return;
+      const current = payloadRef.current.nodes;
+      const same =
+        current.length === next.length &&
+        current.every((node, i) => node.id === next[i].id && node.text === next[i].text && node.type === next[i].type);
+      if (same) return;
+      dirtyRef.current = false;
+      setNodesState(next);
+    };
+    ynodes.observe(applyRemote);
+    persist.once("synced", applyRemote);
+    return () => {
+      ynodes.unobserve(applyRemote);
+      provider.destroy();
+      void persist.destroy();
+      ydoc.destroy();
+      ydocRef.current = null;
+      ynodesRef.current = null;
+    };
+  }, [ready, episodeId]);
+
+  useEffect(() => {
     const onFlush = (event: Event) => {
       const detail = (event as CustomEvent<ScreenplayFlushDetail>).detail;
       if (timerRef.current) {
@@ -245,7 +294,22 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
 
   const setNodes = useCallback(
     (next: ScreenplayNode[]) => {
-      setNodesState(next.length > 0 ? next : [createNode("action")]);
+      const nodes = next.length > 0 ? next : [createNode("action")];
+      setNodesState(nodes);
+      const ydoc = ydocRef.current;
+      const ynodes = ynodesRef.current;
+      if (ydoc && ynodes) {
+        ydoc.transact(() => {
+          ynodes.delete(0, ynodes.length);
+          for (const node of nodes) {
+            const map = new Y.Map<string>();
+            map.set("id", node.id);
+            map.set("type", node.type);
+            map.set("text", node.text);
+            ynodes.push([map]);
+          }
+        });
+      }
       scheduleSave();
     },
     [scheduleSave]

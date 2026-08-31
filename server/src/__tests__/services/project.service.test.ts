@@ -70,6 +70,7 @@ describe('ProjectService', () => {
             cameraStyle: '',
             artStyle: '',
           },
+          shareToken: expect.any(String),
           members: { create: { userId: 'user-1', role: 'OWNER' } },
           episodes: {
             create: expect.objectContaining({
@@ -127,15 +128,32 @@ describe('ProjectService', () => {
     expect(arg.data.episodes.create.screenplay).toBeUndefined();
   });
 
-  it('getProject 404s when the user is not a member', async () => {
+  it('getProject forbids non-members when share is invite-only', async () => {
+    mocked(prisma.project.findUnique).mockResolvedValue({
+      id: 'p1',
+      type: 'script',
+      format: 'hollywood',
+      shareMode: 'invite',
+      shareToken: 'tok',
+      published: false,
+      allowCopy: true,
+    });
     mocked(prisma.projectMember.findUnique).mockResolvedValue(null);
     await expect(service.getProject('p1', 'user-1')).rejects.toMatchObject({
-      code: ErrorCode.NOT_FOUND,
+      code: ErrorCode.FORBIDDEN,
     });
-    expect(prisma.project.findUnique).not.toHaveBeenCalled();
   });
 
   it('updateProject forbids viewers', async () => {
+    mocked(prisma.project.findUnique).mockResolvedValue({
+      id: 'p1',
+      type: 'script',
+      format: 'hollywood',
+      shareMode: 'invite',
+      shareToken: 'tok',
+      published: false,
+      allowCopy: true,
+    });
     mocked(prisma.projectMember.findUnique).mockResolvedValue({
       role: 'VIEWER',
     });
