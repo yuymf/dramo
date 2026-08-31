@@ -26,20 +26,14 @@ export default function BeatsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const refreshCoverage = useCallback(
+  const loadCoverage = useCallback(
     async (eid: string, current: Beat[]) => {
-      try {
-        const covered = await getBeatCoverage(projectId, eid);
-        const byId = new Map(covered.beats.map((row) => [row.id, row.covered]));
-        setBeats(
-          current.map((beat) => ({
-            ...beat,
-            covered: beat.id ? byId.get(beat.id) : false,
-          }))
-        );
-      } catch {
-        setBeats(current);
-      }
+      const covered = await getBeatCoverage(projectId, eid);
+      const byId = new Map(covered.beats.map((row) => [row.id, row.covered]));
+      return current.map((beat) => ({
+        ...beat,
+        covered: beat.id ? Boolean(byId.get(beat.id)) : false,
+      }));
     },
     [projectId]
   );
@@ -54,7 +48,7 @@ export default function BeatsPage() {
         const doc = await getBeats(projectId, eid);
         if (cancelled) return;
         setEpisodeId(eid);
-        await refreshCoverage(eid, doc.beats);
+        setBeats(await loadCoverage(eid, doc.beats));
       } catch (err) {
         if (!cancelled) {
           showToast(err instanceof Error ? err.message : "加载 Beats 失败", "error");
@@ -67,35 +61,28 @@ export default function BeatsPage() {
     return () => {
       cancelled = true;
     };
-  }, [projectId, refreshCoverage, showToast]);
+  }, [loadCoverage, projectId, showToast]);
 
-  const persist = useCallback(
-    async (next: Beat[]) => {
-      if (!episodeId || saving) return;
-      setSaving(true);
-      try {
-        const saved = await putBeats(
-          projectId,
-          episodeId,
-          next.map((beat) => ({
-            id: beat.id,
-            action: beat.action,
-            intent: beat.intent,
-            outcome: beat.outcome,
-          }))
-        );
-        await refreshCoverage(episodeId, saved.beats);
-      } catch (err) {
-        showToast(err instanceof Error ? err.message : "保存 Beats 失败", "error");
-      } finally {
-        setSaving(false);
-      }
-    },
-    [episodeId, projectId, refreshCoverage, saving, showToast]
-  );
-
-  const updateField = (index: number, field: keyof Beat, value: string) => {
-    setBeats((prev) => prev.map((beat, i) => (i === index ? { ...beat, [field]: value } : beat)));
+  const persist = async () => {
+    if (!episodeId || saving) return;
+    setSaving(true);
+    try {
+      const saved = await putBeats(
+        projectId,
+        episodeId,
+        beats.map((beat) => ({
+          id: beat.id,
+          action: beat.action,
+          intent: beat.intent,
+          outcome: beat.outcome,
+        }))
+      );
+      setBeats(await loadCoverage(episodeId, saved.beats));
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "保存 Beats 失败", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -105,15 +92,21 @@ export default function BeatsPage() {
           <h1 className="m-0 text-[15px] font-semibold tracking-wide">Beats</h1>
           <span className="text-xs text-[var(--at-text-tertiary)]">动作 / 意图 / 结果，对照正文看是否兑现</span>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="accent"
-          onClick={() => setBeats((prev) => [...prev, emptyBeat()])}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          添加 Beat
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={loading}
+            onClick={() => setBeats((prev) => [...prev, emptyBeat()])}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            添加 Beat
+          </Button>
+          <Button type="button" size="sm" variant="accent" disabled={loading || saving} onClick={() => void persist()}>
+            {saving ? "保存中…" : "保存 Beats"}
+          </Button>
+        </div>
       </header>
       <div className="flex-1 min-h-0 overflow-auto px-5 py-6">
         {loading ? (
@@ -147,11 +140,7 @@ export default function BeatsPage() {
                       type="button"
                       aria-label={`删除 Beat ${index + 1}`}
                       className="text-[var(--at-text-tertiary)] hover:text-[var(--at-error)]"
-                      onClick={() => {
-                        const next = beats.filter((_, i) => i !== index);
-                        setBeats(next);
-                        void persist(next);
-                      }}
+                      onClick={() => setBeats((prev) => prev.filter((_, i) => i !== index))}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -170,8 +159,11 @@ export default function BeatsPage() {
                       aria-label={`${label} ${index + 1}`}
                       value={beat[field] ?? ""}
                       placeholder={placeholder}
-                      onChange={(e) => updateField(index, field, e.target.value)}
-                      onBlur={() => void persist(beats)}
+                      onChange={(e) =>
+                        setBeats((prev) =>
+                          prev.map((row, i) => (i === index ? { ...row, [field]: e.target.value } : row))
+                        )
+                      }
                       className="mt-1 w-full rounded-lg border border-[var(--at-border)] bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
                     />
                   </label>
@@ -180,9 +172,6 @@ export default function BeatsPage() {
             ))}
           </ol>
         )}
-        {saving ? (
-          <p className="max-w-3xl mx-auto mt-3 text-[11px] text-[var(--at-text-tertiary)]">保存中…</p>
-        ) : null}
       </div>
     </div>
   );

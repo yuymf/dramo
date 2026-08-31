@@ -15,43 +15,35 @@ export default function WorldviewPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!projectId) return;
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        const doc = await getWorldview(projectId);
-        if (!cancelled) setRules(doc.rules);
-      } catch (err) {
-        if (!cancelled) {
-          showToast(err instanceof Error ? err.message : "加载世界观失败", "error");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    setLoading(true);
+    try {
+      const doc = await getWorldview(projectId);
+      setRules(doc.rules);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "加载世界观失败", "error");
+    } finally {
+      setLoading(false);
     }
-    void load();
-    return () => {
-      cancelled = true;
-    };
   }, [projectId, showToast]);
 
-  const persist = useCallback(
-    async (next: WorldviewRule[]) => {
-      if (saving) return;
-      setSaving(true);
-      try {
-        const saved = await putWorldview(projectId, next);
-        setRules(saved.rules);
-      } catch (err) {
-        showToast(err instanceof Error ? err.message : "保存世界观失败", "error");
-      } finally {
-        setSaving(false);
-      }
-    },
-    [projectId, saving, showToast]
-  );
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const persist = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const saved = await putWorldview(projectId, rules);
+      setRules(saved.rules);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "保存世界观失败", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
@@ -60,15 +52,21 @@ export default function WorldviewPage() {
           <h1 className="m-0 text-[15px] font-semibold tracking-wide">世界观</h1>
           <span className="text-xs text-[var(--at-text-tertiary)]">扁平规则，AI 未获授权不得改</span>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="accent"
-          onClick={() => setRules((prev) => [...prev, { key: "", value: "" }])}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          添加规则
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={loading}
+            onClick={() => setRules((prev) => [...prev, { key: "", value: "" }])}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            添加规则
+          </Button>
+          <Button type="button" size="sm" variant="accent" disabled={loading || saving} onClick={() => void persist()}>
+            {saving ? "保存中…" : "保存世界观"}
+          </Button>
+        </div>
       </header>
       <div className="flex-1 min-h-0 overflow-auto px-5 py-6">
         {loading ? (
@@ -84,7 +82,7 @@ export default function WorldviewPage() {
           <ul className="max-w-3xl mx-auto space-y-3">
             {rules.map((rule, index) => (
               <li
-                key={`${rule.key}-${index}`}
+                key={`rule-${index}`}
                 className="rounded-xl border border-[var(--at-border)] bg-[var(--at-surface)] p-4 flex gap-3"
               >
                 <input
@@ -96,7 +94,6 @@ export default function WorldviewPage() {
                       prev.map((row, i) => (i === index ? { ...row, key: e.target.value } : row))
                     )
                   }
-                  onBlur={() => void persist(rules)}
                   className="w-36 shrink-0 rounded-lg border border-[var(--at-border)] bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
                 />
                 <input
@@ -108,18 +105,13 @@ export default function WorldviewPage() {
                       prev.map((row, i) => (i === index ? { ...row, value: e.target.value } : row))
                     )
                   }
-                  onBlur={() => void persist(rules)}
                   className="flex-1 rounded-lg border border-[var(--at-border)] bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
                 />
                 <button
                   type="button"
                   aria-label={`删除规则 ${index + 1}`}
                   className="text-[var(--at-text-tertiary)] hover:text-[var(--at-error)]"
-                  onClick={() => {
-                    const next = rules.filter((_, i) => i !== index);
-                    setRules(next);
-                    void persist(next);
-                  }}
+                  onClick={() => setRules((prev) => prev.filter((_, i) => i !== index))}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -127,9 +119,6 @@ export default function WorldviewPage() {
             ))}
           </ul>
         )}
-        {saving ? (
-          <p className="max-w-3xl mx-auto mt-3 text-[11px] text-[var(--at-text-tertiary)]">保存中…</p>
-        ) : null}
       </div>
     </div>
   );
