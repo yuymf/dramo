@@ -504,7 +504,7 @@ export class ScreenplayService {
       summary: '保存',
     });
 
-    await deriveFromNodes(projectId, nodes);
+    await deriveFromNodes(projectId, nodes, episodeId);
     return toDoc(screenplay, loaded.access.format);
   }
 
@@ -561,7 +561,7 @@ export class ScreenplayService {
       summary: `回滚到 v${version.version}`,
     });
 
-    await deriveFromNodes(projectId, nodes);
+    await deriveFromNodes(projectId, nodes, episodeId);
     return toDoc(screenplay, loaded.access.format);
   }
 
@@ -602,7 +602,7 @@ export class ScreenplayService {
       summary: '修订',
     });
 
-    await deriveFromNodes(projectId, nodes);
+    await deriveFromNodes(projectId, nodes, episodeId);
     return toDoc(screenplay, loaded.access.format);
   }
 

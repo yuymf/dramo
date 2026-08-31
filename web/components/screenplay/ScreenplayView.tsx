@@ -8,7 +8,6 @@ import { ExportSlot } from "./ExportSlot";
 import { formatLabel } from "./nodeMeta";
 import { saveStatusLabel, useScreenplayDoc } from "./useScreenplayDoc";
 import { firstEpisodeId, getDoctor, requestMicroContinue, type DoctorNote } from "@/lib/api/assist";
-import { requestScreenplayFlush } from "./scope";
 import { Button } from "@/components/ui/button";
 import "./screenplay.css";
 

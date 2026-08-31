@@ -182,9 +182,10 @@ test.describe('剧本工作区', () => {
     await expect(page).toHaveURL(/\/spoken/);
     await expect(page.getByText('口播工作区')).toBeVisible();
 
-    await expect(page.getByRole('link', { name: '分镜' })).toHaveCount(0);
-    await page.goto(`/projects/${projectId}/storyboard`);
-    await expect(page).toHaveURL(/\/screenplay/);
+    await expect(page.getByRole('link', { name: '分镜' })).toBeVisible();
+    await page.getByRole('link', { name: '分镜' }).click();
+    await expect(page).toHaveURL(/\/storyboard/);
+    await expect(page.getByRole('heading', { name: '分镜', exact: true })).toBeVisible();
   });
 
   test('选区 AI 无模型时只写回范围内节点，导出 TXT 含场次', async ({ page }) => {
@@ -207,6 +208,7 @@ test.describe('剧本工作区', () => {
     await expect(page.getByRole('menuitem', { name: 'TXT' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'PDF' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'DOCX' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'FDX' })).toBeVisible();
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('menuitem', { name: 'TXT' }).click();
     const download = await downloadPromise;
@@ -348,6 +350,41 @@ test.describe('剧本工作区', () => {
     await page.getByRole('button', { name: '采纳' }).click();
     await expect(editor.getByRole('textbox').first()).not.toHaveValue('');
     await expect(page.getByText('已保存')).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('分镜镜头可保存，FDX 能导出再导入成新项目', async ({ page }) => {
+    test.setTimeout(90_000);
+    await signUp(page);
+    await createScriptProject(page, `E2E 分镜 ${Date.now()}`);
+    await writeTwoScenes(page);
+
+    await page.getByRole('link', { name: '分镜' }).click();
+    await expect(page.getByRole('heading', { name: '分镜', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '添加镜头' }).click();
+    await page.getByLabel('镜头 1 描述').fill('近景，旧怀表停在掌心');
+    await page.getByLabel('镜头 1 机位').fill('特写');
+    await page.getByLabel('镜头 1 设计').fill('暖灯，金属反光');
+    await page.getByRole('button', { name: '保存镜头' }).click();
+    await page.reload();
+    await expect(page.getByLabel('镜头 1 描述')).toHaveValue('近景，旧怀表停在掌心', { timeout: 15_000 });
+
+    await page.getByRole('link', { name: '剧本' }).click();
+    await page.getByRole('button', { name: '导出 TXT PDF DOCX' }).click();
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('menuitem', { name: 'FDX' }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.fdx$/i);
+    const fdxPath = await download.path();
+    expect(fdxPath).toBeTruthy();
+
+    await page.goto('/projects');
+    await page.getByRole('button', { name: /新建项目/ }).click();
+    const dialog = page.getByRole('dialog', { name: '新建项目' });
+    await dialog.getByLabel('导入 FDX').setInputFiles(fdxPath!);
+    await expect(page).toHaveURL(/\/projects\/[^/]+\/screenplay/, { timeout: 15_000 });
+    await expect(page.getByRole('list', { name: '剧本正文' }).getByRole('textbox', { name: '场次标题' }).first()).toHaveValue(
+      'INT. 地铁车厢 - NIGHT'
+    );
   });
 
   test('编辑后刷新剧本仍在', async ({ page }) => {

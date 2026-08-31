@@ -5,9 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
+  Clapperboard,
   Compass,
   FileText,
   Globe,
+  Images,
   Layers,
   ListTree,
   MapPin,
@@ -26,6 +28,8 @@ type DimId =
   | "characters"
   | "locations"
   | "props"
+  | "storyboard"
+  | "assets"
   | "worldview"
   | "knowledge"
   | "advisors"
@@ -44,6 +48,8 @@ const PRIMARY: Array<{
   { id: "characters", label: "角色", href: (id) => `/projects/${id}/characters`, icon: Users },
   { id: "locations", label: "地点", href: (id) => `/projects/${id}/locations`, icon: MapPin },
   { id: "props", label: "道具", href: (id) => `/projects/${id}/props`, icon: Package },
+  { id: "storyboard", label: "分镜", href: (id) => `/projects/${id}/storyboard`, icon: Clapperboard },
+  { id: "assets", label: "资产", href: (id) => `/projects/${id}/assets`, icon: Images },
 ];
 
 function activeDim(pathname: string | null): DimId | null {
@@ -56,6 +62,8 @@ function activeDim(pathname: string | null): DimId | null {
   if (pathname.includes("/characters")) return "characters";
   if (pathname.includes("/locations")) return "locations";
   if (pathname.includes("/props")) return "props";
+  if (pathname.includes("/storyboard")) return "storyboard";
+  if (pathname.includes("/assets")) return "assets";
   if (pathname.includes("/outline")) return "outline";
   if (pathname.includes("/beats")) return "beats";
   if (

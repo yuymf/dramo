@@ -126,9 +126,47 @@ model Episode {
   screenplay Screenplay?
   outline    Outline?
   beats      Beat[]
+  scenes     Scene[]
+  shots      Shot[]
   coldStart  Json      @default("{}")
 
   @@index([projectId, sortOrder])
+}
+
+model Scene {
+  id           String   @id @default(cuid())
+  episodeId    String
+  heading      String
+  locationName String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  shots   Shot[]
+
+  @@unique([episodeId, heading])
+  @@index([episodeId, sortOrder])
+}
+
+model Shot {
+  id          String   @id @default(cuid())
+  episodeId   String
+  sceneId     String
+  sortOrder   Int      @default(0)
+  description String   @default("")
+  camera      String   @default("")
+  design      String   @default("")
+  stale       Boolean  @default(false)
+  images      Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  scene   Scene   @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@index([episodeId, sortOrder])
+  @@index([sceneId])
 }
 
 model Outline {
