@@ -89,7 +89,9 @@ model Project {
   characters      Character[]
   locations       Location[]
   props           Prop[]
+  advisorId       String?
   worldviewRules  WorldviewRule[]
+  knowledgeFiles  KnowledgeFile[]
   assets          Asset[]
   generationTasks GenerationTask[]
   chatSessions    ChatSession[]
@@ -124,6 +126,7 @@ model Episode {
   screenplay Screenplay?
   outline    Outline?
   beats      Beat[]
+  coldStart  Json      @default("{}")
 
   @@index([projectId, sortOrder])
 }
@@ -228,6 +231,20 @@ model Prop {
 
   @@unique([projectId, name])
   @@index([projectId])
+}
+
+model KnowledgeFile {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  filename  String
+  mime      String   @default("text/plain")
+  text      String   @default("")
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
 }
 
 model WorldviewRule {

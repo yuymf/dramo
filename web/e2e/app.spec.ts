@@ -308,6 +308,48 @@ test.describe('剧本工作区', () => {
     await expect(page.getByLabel('规则内容 1')).toHaveValue('地铁夜里不会再来一班车');
   });
 
+  test('知识库、顾问、冷启动、剧本医生和微续写能用', async ({ page }) => {
+    test.setTimeout(90_000);
+    await signUp(page);
+    await createScriptProject(page, `E2E 协助 ${Date.now()}`);
+
+    await page.getByRole('button', { name: '更多' }).click();
+    await page.getByRole('menuitem', { name: '知识库' }).click();
+    await expect(page).toHaveURL(/\/knowledge/);
+    await page.getByLabel('资料名称').fill('地铁守则');
+    await page.getByLabel('资料正文').fill('夜里没有下一班车。');
+    await page.getByRole('button', { name: '加入知识库' }).click();
+    await expect(page.getByRole('heading', { name: '地铁守则' })).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole('button', { name: '更多' }).click();
+    await page.getByRole('menuitem', { name: '顾问' }).click();
+    await expect(page.getByRole('heading', { name: '三幕' })).toBeVisible();
+    await page.getByRole('button', { name: '雇用' }).first().click();
+    await expect(page.getByText('当前顾问')).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole('button', { name: '更多' }).click();
+    await page.getByRole('menuitem', { name: '冷启动' }).click();
+    await expect(page.getByRole('heading', { name: '冷启动' })).toBeVisible();
+    await page.getByLabel('人物').fill('林晚');
+    await page.getByLabel('欲望').fill('离开这座站');
+    await page.getByRole('button', { name: '保存进度' }).click();
+    await expect(page.getByRole('button', { name: '保存进度' })).toBeEnabled({ timeout: 10_000 });
+    await page.reload();
+    await expect(page.getByLabel('人物')).toHaveValue('林晚', { timeout: 15_000 });
+
+    await page.getByRole('link', { name: '剧本' }).click();
+    await page.getByRole('button', { name: '剧本医生' }).click();
+    await expect(page.getByText('诊断（只读，不改稿）')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('大纲是空的')).toBeVisible();
+
+    const editor = page.getByRole('list', { name: '剧本正文' });
+    await editor.getByRole('textbox').first().click();
+    await expect(page.getByRole('button', { name: '采纳' })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: '采纳' }).click();
+    await expect(editor.getByRole('textbox').first()).not.toHaveValue('');
+    await expect(page.getByText('已保存')).toBeVisible({ timeout: 15_000 });
+  });
+
   test('编辑后刷新剧本仍在', async ({ page }) => {
     await signUp(page);
     await createScriptProject(page, `E2E 编辑 ${Date.now()}`);
