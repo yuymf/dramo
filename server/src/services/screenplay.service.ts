@@ -34,6 +34,7 @@ export interface CharacterRecord {
   name: string;
   description: string | null;
   images: unknown;
+  castingNotes: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,6 +45,8 @@ export interface LocationRecord {
   name: string;
   description: string | null;
   images: unknown;
+  storyPlace: string | null;
+  shootPlace: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -370,6 +373,7 @@ function toCharacterRecord(row: {
   name: string;
   description: string | null;
   images: Prisma.JsonValue;
+  castingNotes: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): CharacterRecord {
@@ -379,6 +383,7 @@ function toCharacterRecord(row: {
     name: row.name,
     description: row.description,
     images: row.images,
+    castingNotes: row.castingNotes,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -390,6 +395,8 @@ function toLocationRecord(row: {
   name: string;
   description: string | null;
   images: Prisma.JsonValue;
+  storyPlace: string | null;
+  shootPlace: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): LocationRecord {
@@ -399,6 +406,8 @@ function toLocationRecord(row: {
     name: row.name,
     description: row.description,
     images: row.images,
+    storyPlace: row.storyPlace,
+    shootPlace: row.shootPlace,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -610,7 +619,7 @@ export class ScreenplayService {
     projectId: string,
     characterId: string,
     userId: string,
-    description: string | null
+    input: { description?: string | null; castingNotes?: string | null }
   ): Promise<CharacterRecord> {
     await this.requireAccess(projectId, userId, { write: true });
     const existing = await prisma.character.findFirst({
@@ -621,7 +630,10 @@ export class ScreenplayService {
     }
     const updated = await prisma.character.update({
       where: { id: characterId },
-      data: { description },
+      data: {
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.castingNotes !== undefined ? { castingNotes: input.castingNotes } : {}),
+      },
     });
     return toCharacterRecord(updated);
   }
@@ -639,7 +651,11 @@ export class ScreenplayService {
     projectId: string,
     locationId: string,
     userId: string,
-    description: string | null
+    input: {
+      description?: string | null;
+      storyPlace?: string | null;
+      shootPlace?: string | null;
+    }
   ): Promise<LocationRecord> {
     await this.requireAccess(projectId, userId, { write: true });
     const existing = await prisma.location.findFirst({
@@ -650,7 +666,11 @@ export class ScreenplayService {
     }
     const updated = await prisma.location.update({
       where: { id: locationId },
-      data: { description },
+      data: {
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.storyPlace !== undefined ? { storyPlace: input.storyPlace } : {}),
+        ...(input.shootPlace !== undefined ? { shootPlace: input.shootPlace } : {}),
+      },
     });
     return toLocationRecord(updated);
   }

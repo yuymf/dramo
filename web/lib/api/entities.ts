@@ -10,6 +10,9 @@ export interface DerivedEntity {
   name: string;
   description: string | null;
   images: unknown;
+  castingNotes?: string | null;
+  storyPlace?: string | null;
+  shootPlace?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,9 +70,23 @@ export async function patchEntityDescription(
   entityId: string,
   description: string
 ): Promise<DerivedEntity> {
+  return patchEntity(kind, projectId, entityId, { description });
+}
+
+export async function patchEntity(
+  kind: DerivedEntityKind,
+  projectId: string,
+  entityId: string,
+  body: {
+    description?: string | null;
+    castingNotes?: string | null;
+    storyPlace?: string | null;
+    shootPlace?: string | null;
+  }
+): Promise<DerivedEntity> {
   return api<DerivedEntity>(patchPath(kind, projectId, entityId), {
     method: "PATCH",
-    body: { description },
+    body,
     noCache: true,
   });
 }

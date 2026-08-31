@@ -14,6 +14,30 @@ function requireUser(c: { get: (key: 'user') => AuthEnv['Variables']['user'] | u
   return user;
 }
 
+function asObject(body: unknown): Record<string, unknown> {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new AppException(ErrorCode.INVALID_INPUT, '请求体必须是对象');
+  }
+  return body as Record<string, unknown>;
+}
+
+function optionalNullableString(value: unknown, field: string): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') {
+    throw new AppException(ErrorCode.INVALID_INPUT, `${field} 必须是字符串`);
+  }
+  return value;
+}
+
+async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<unknown> {
+  try {
+    return await c.req.json();
+  } catch {
+    throw new AppException(ErrorCode.INVALID_INPUT, '请求体必须是 JSON');
+  }
+}
+
 entities.get('/projects/:projectId/characters', async (c) => {
   const projectId = c.req.param('projectId');
   const userId = requireUser(c).userId;
@@ -25,13 +49,16 @@ entities.patch('/projects/:projectId/characters/:characterId', async (c) => {
   const projectId = c.req.param('projectId');
   const characterId = c.req.param('characterId');
   const userId = requireUser(c).userId;
-  const description = await readDescription(c);
-  const result = await screenplayService.updateCharacter(
-    projectId,
-    characterId,
-    userId,
-    description
-  );
+  const body = asObject(await readJson(c));
+  const description = optionalNullableString(body.description, 'description');
+  const castingNotes = optionalNullableString(body.castingNotes, 'castingNotes');
+  if (description === undefined && castingNotes === undefined) {
+    throw new AppException(ErrorCode.MISSING_REQUIRED_FIELD, '至少提供一个可更新字段');
+  }
+  const result = await screenplayService.updateCharacter(projectId, characterId, userId, {
+    description,
+    castingNotes,
+  });
   return c.json(result);
 });
 
@@ -46,32 +73,19 @@ entities.patch('/projects/:projectId/locations/:locationId', async (c) => {
   const projectId = c.req.param('projectId');
   const locationId = c.req.param('locationId');
   const userId = requireUser(c).userId;
-  const description = await readDescription(c);
-  const result = await screenplayService.updateLocation(
-    projectId,
-    locationId,
-    userId,
-    description
-  );
+  const body = asObject(await readJson(c));
+  const description = optionalNullableString(body.description, 'description');
+  const storyPlace = optionalNullableString(body.storyPlace, 'storyPlace');
+  const shootPlace = optionalNullableString(body.shootPlace, 'shootPlace');
+  if (description === undefined && storyPlace === undefined && shootPlace === undefined) {
+    throw new AppException(ErrorCode.MISSING_REQUIRED_FIELD, '至少提供一个可更新字段');
+  }
+  const result = await screenplayService.updateLocation(projectId, locationId, userId, {
+    description,
+    storyPlace,
+    shootPlace,
+  });
   return c.json(result);
 });
-
-async function readDescription(c: { req: { json: () => Promise<unknown> } }): Promise<string | null> {
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    throw new AppException(ErrorCode.INVALID_INPUT, '请求体必须是 JSON');
-  }
-  if (!body || typeof body !== 'object' || Array.isArray(body) || !('description' in body)) {
-    throw new AppException(ErrorCode.MISSING_REQUIRED_FIELD, 'description 不能为空');
-  }
-  const description = (body as { description: unknown }).description;
-  if (description === null) return null;
-  if (typeof description !== 'string') {
-    throw new AppException(ErrorCode.INVALID_INPUT, 'description 必须是字符串');
-  }
-  return description;
-}
 
 export { entities };

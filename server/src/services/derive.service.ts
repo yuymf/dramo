@@ -30,6 +30,22 @@ export function parseLocationName(text: string): string | null {
  * Character cue: trim, drop parenthetical performance marks
  * (V.O.) / (CONT'D) / （画外音） / etc. Leading @ and trailing colons are ignored.
  */
+const PROP_MENTION = /#([^\s#，。！？,.!?;；：:]{1,32})/g;
+
+export function parsePropNames(text: string): string[] {
+  const names: string[] = [];
+  const seen = new Set<string>();
+  PROP_MENTION.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = PROP_MENTION.exec(text)) !== null) {
+    const name = match[1].trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    names.push(name);
+  }
+  return names;
+}
+
 export function parseCharacterName(text: string): string | null {
   let value = text.trim();
   if (!value) return null;
@@ -51,6 +67,7 @@ export async function deriveFromNodes(
 ): Promise<void> {
   const locationNames = new Set<string>();
   const characterNames = new Set<string>();
+  const propNames = new Set<string>();
 
   for (const node of nodes) {
     if (node.type === 'scene_heading') {
@@ -59,6 +76,9 @@ export async function deriveFromNodes(
     } else if (node.type === 'character') {
       const name = parseCharacterName(node.text);
       if (name) characterNames.add(name);
+    }
+    for (const name of parsePropNames(node.text)) {
+      propNames.add(name);
     }
   }
 
@@ -77,6 +97,16 @@ export async function deriveFromNodes(
   for (const name of characterNames) {
     writes.push(
       prisma.character.upsert({
+        where: { projectId_name: { projectId, name } },
+        create: { projectId, name },
+        update: {},
+      })
+    );
+  }
+
+  for (const name of propNames) {
+    writes.push(
+      prisma.prop.upsert({
         where: { projectId_name: { projectId, name } },
         create: { projectId, name },
         update: {},

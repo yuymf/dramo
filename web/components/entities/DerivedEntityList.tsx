@@ -12,6 +12,7 @@ import {
   imageUrls,
   isTerminalStatus,
   listDerivedEntities,
+  patchEntity,
   patchEntityDescription,
   taskJobId,
   type DerivedEntity,
@@ -316,6 +317,39 @@ function EntityCard({
         </span>
       </label>
 
+      {kind === "character" ? (
+        <NoteField
+          label="选角备注"
+          value={entity.castingNotes ?? ""}
+          onSave={async (value) => {
+            const updated = await patchEntity(kind, projectId, entity.id, { castingNotes: value });
+            onPatched(updated);
+          }}
+          showToast={showToast}
+        />
+      ) : (
+        <>
+          <NoteField
+            label="故事地点"
+            value={entity.storyPlace ?? ""}
+            onSave={async (value) => {
+              const updated = await patchEntity(kind, projectId, entity.id, { storyPlace: value });
+              onPatched(updated);
+            }}
+            showToast={showToast}
+          />
+          <NoteField
+            label="实拍地"
+            value={entity.shootPlace ?? ""}
+            onSave={async (value) => {
+              const updated = await patchEntity(kind, projectId, entity.id, { shootPlace: value });
+              onPatched(updated);
+            }}
+            showToast={showToast}
+          />
+        </>
+      )}
+
       <div className="mt-4">
         <p className="text-xs text-[var(--at-text-secondary)] mb-2">图片</p>
         {urls.length === 0 ? (
@@ -339,6 +373,52 @@ function EntityCard({
         )}
       </div>
     </article>
+  );
+}
+
+function NoteField({
+  label,
+  value,
+  onSave,
+  showToast,
+}: {
+  label: string;
+  value: string;
+  onSave: (value: string) => Promise<void>;
+  showToast: (message: string, type?: "success" | "error" | "info") => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    if (!dirty) setDraft(value);
+  }, [value, dirty]);
+
+  return (
+    <label className="block mt-3">
+      <span className="text-xs text-[var(--at-text-secondary)]">{label}</span>
+      <input
+        aria-label={label}
+        value={draft}
+        onChange={(e) => {
+          setDraft(e.target.value);
+          setDirty(true);
+        }}
+        onBlur={async () => {
+          if (!dirty || draft === value) {
+            setDirty(false);
+            return;
+          }
+          try {
+            await onSave(draft);
+            setDirty(false);
+          } catch (err) {
+            showToast(err instanceof Error ? err.message : `保存${label}失败`, "error");
+          }
+        }}
+        className="mt-1.5 w-full rounded-lg border border-[var(--at-border)] bg-transparent px-3 py-2 text-sm text-[var(--at-text)] placeholder:text-[var(--at-text-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
+      />
+    </label>
   );
 }
 
