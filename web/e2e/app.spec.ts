@@ -438,7 +438,7 @@ test.describe('第四期 Cinema', () => {
     await expect(page.getByRole('link', { name: '任务' })).toBeVisible();
     await expect(page.getByRole('link', { name: '剧本' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: '分镜' })).toHaveCount(0);
-    await expect(page.getByText('9:16')).toBeVisible();
+    await expect(page.getByLabel('画幅')).toHaveValue('9:16');
 
     await page.getByRole('button', { name: '生成文字分镜' }).click();
     await expect(page.getByText('没有表演不能出文字分镜')).toBeVisible({ timeout: 10_000 });
