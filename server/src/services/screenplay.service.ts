@@ -5,6 +5,8 @@ import { AppException, ErrorCode } from '../lib/errors';
 import { logger } from '../lib/logger';
 import { unwrapWorkflowJson } from '../lib/workflow-json';
 import { LLMConfigService } from './llm-config.service';
+import { mergeNodesIntoCrdt } from '../lib/crdt';
+import { resolveAccess } from './access.service';
 import { deriveFromNodes } from './derive.service';
 import {
   EMPTY_COVER,
@@ -16,7 +18,6 @@ import {
   type ScreenplayNode,
 } from '../types/screenplay';
 
-const WRITE_ROLES = new Set<MemberRole>(['OWNER', 'ADMIN', 'EDITOR']);
 const REVISE_WORKFLOW_ID = 'reviseworkflow';
 const NODE_TYPE_SET = new Set<string>(NODE_TYPES);
 const llmConfigService = new LLMConfigService();
@@ -67,6 +68,7 @@ interface LoadedEpisode {
     title: string;
     cover: Prisma.JsonValue;
     nodes: Prisma.JsonValue;
+    crdt?: string;
     updatedAt: Date;
   } | null;
 }
@@ -419,25 +421,8 @@ export class ScreenplayService {
     userId: string,
     options?: { write?: boolean }
   ): Promise<AccessContext> {
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { id: true, format: true },
-    });
-    if (!project) {
-      throw new AppException(ErrorCode.NOT_FOUND, '项目不存在');
-    }
-
-    const member = await prisma.projectMember.findUnique({
-      where: { projectId_userId: { projectId, userId } },
-    });
-    if (!member) {
-      throw new AppException(ErrorCode.FORBIDDEN, '不是该项目成员');
-    }
-    if (options?.write && !WRITE_ROLES.has(member.role)) {
-      throw new AppException(ErrorCode.FORBIDDEN, 'Viewer 不可调用');
-    }
-
-    return { projectId: project.id, format: project.format, role: member.role };
+    const access = await resolveAccess(projectId, userId, options);
+    return { projectId: access.projectId, format: access.format, role: access.role };
   }
 
   private async loadEpisode(
@@ -718,6 +703,7 @@ export class ScreenplayService {
   }) {
     const coverJson = input.cover as unknown as Prisma.InputJsonValue;
     const nodesJson = input.nodes as unknown as Prisma.InputJsonValue;
+    const crdt = mergeNodesIntoCrdt(input.existing?.crdt ?? '', input.nodes);
     let existing = input.existing;
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -727,7 +713,7 @@ export class ScreenplayService {
           const screenplay = current
             ? await tx.screenplay.update({
                 where: { id: current.id },
-                data: { title: input.title, cover: coverJson, nodes: nodesJson },
+                data: { title: input.title, cover: coverJson, nodes: nodesJson, crdt },
               })
             : await tx.screenplay.create({
                 data: {
@@ -735,6 +721,7 @@ export class ScreenplayService {
                   title: input.title,
                   cover: coverJson,
                   nodes: nodesJson,
+                  crdt,
                 },
               });
 

@@ -4,6 +4,7 @@ import app from './app';
 import { config } from './config';
 import { logger } from './lib/logger';
 import { initPrisma } from './lib/db';
+import { attachCollabWs } from './lib/collab-ws';
 
 const port = config.port;
 
@@ -33,6 +34,7 @@ const server = serve({
 });
 
 const httpServer = server as unknown as Server;
+attachCollabWs(httpServer);
 httpServer.headersTimeout = SERVER_HEADERS_TIMEOUT_MS;
 httpServer.requestTimeout = SERVER_REQUEST_TIMEOUT_MS;
 httpServer.keepAliveTimeout = SERVER_KEEP_ALIVE_TIMEOUT_MS;

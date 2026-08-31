@@ -25,6 +25,7 @@
     "clsx": "^2.1.1",
     "docx": "^8.5.0",
     "jspdf": "^3.0.3",
+    "lib0": "^0.2.117",
     "lucide-react": "^0.545.0",
     "nanoid": "^5.0.9",
     "next": "15.5.9",
@@ -36,6 +37,10 @@
     "remark-gfm": "^4.0.1",
     "swr": "^2.4.1",
     "tailwind-merge": "^3.3.1",
+    "y-indexeddb": "^9.0.12",
+    "y-protocols": "^1.0.7",
+    "y-websocket": "^3.1.0",
+    "yjs": "^13.6.32",
     "zustand": "^4.5.7"
   },
   "devDependencies": {

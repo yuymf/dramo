@@ -3,11 +3,10 @@ import { prisma } from '../lib/db';
 import { AppException, ErrorCode } from '../lib/errors';
 import { EMPTY_COVER } from '../types/screenplay';
 import { DEFAULT_CINEMA_SETTINGS, normalizeCinemaSettings, type CinemaSettings } from '../types/cinema';
+import { resolveAccess } from './access.service';
 
 const PROJECT_TYPES: ProjectType[] = ['script', 'cinema', 'spoken'];
 const SCREENPLAY_FORMATS: ScreenplayFormat[] = ['hollywood', 'asian'];
-
-const WRITE_ROLES: MemberRole[] = ['OWNER', 'ADMIN', 'EDITOR'];
 
 export class ProjectService {
   private async requireMember(projectId: string, userId: string, roles?: MemberRole[]) {
@@ -72,7 +71,7 @@ export class ProjectService {
   }
 
   async getProject(id: string, userId: string) {
-    await this.requireMember(id, userId);
+    await resolveAccess(id, userId);
 
     const project = await prisma.project.findUnique({
       where: { id },
@@ -126,6 +125,7 @@ export class ProjectService {
           type,
           format,
           cinemaSettings: cinemaSettings as unknown as Prisma.InputJsonValue,
+          shareToken: crypto.randomUUID().replace(/-/g, ''),
           members: {
             create: { userId, role: 'OWNER' },
           },
@@ -165,7 +165,7 @@ export class ProjectService {
     userId: string,
     data: { name?: string; format?: ScreenplayFormat; cinemaSettings?: CinemaSettings }
   ) {
-    await this.requireMember(id, userId, WRITE_ROLES);
+    await resolveAccess(id, userId, { write: true });
 
     if (data.format && !SCREENPLAY_FORMATS.includes(data.format)) {
       throw new AppException(ErrorCode.INVALID_INPUT, '无效的剧本格式');

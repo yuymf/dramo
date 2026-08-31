@@ -6,6 +6,15 @@ import { usePathname, useRouter } from "next/navigation";
 import { FolderOpen } from "lucide-react";
 import { getProject, updateProject } from "@/lib/api/projects";
 import {
+  createVersion,
+  getShare,
+  listVersions,
+  publishProject,
+  restoreVersion,
+  updateShare,
+  type ShareMode,
+} from "@/lib/api/collab";
+import {
   CINEMA_ASPECT_RATIOS,
   DEFAULT_CINEMA_SETTINGS,
   type CinemaSettings,
@@ -297,7 +306,126 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
             </div>
           </div>
         )}
+
+        <ShareAndVersions projectId={projectId} />
       </div>
     </aside>
+  );
+}
+
+function ShareAndVersions({ projectId }: { projectId: string }) {
+  const { showToast } = useToast();
+  const [shareMode, setShareMode] = useState<ShareMode>("invite");
+  const [sharePath, setSharePath] = useState("");
+  const [published, setPublished] = useState(false);
+  const [versions, setVersions] = useState<Array<{ id: string; name: string | null; automatic: boolean }>>([]);
+  const [versionName, setVersionName] = useState("");
+
+  useEffect(() => {
+    void Promise.all([getShare(projectId), listVersions(projectId)])
+      .then(([share, vers]) => {
+        setShareMode(share.shareMode);
+        setSharePath(share.sharePath);
+        setPublished(share.published);
+        setVersions(vers.versions);
+      })
+      .catch(() => undefined);
+  }, [projectId]);
+
+  return (
+    <div className="mt-6 px-2 space-y-4">
+      <div>
+        <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
+          分享
+        </p>
+        <select
+          aria-label="分享模式"
+          value={shareMode}
+          onChange={(e) => {
+            const next = e.target.value as ShareMode;
+            setShareMode(next);
+            void updateShare(projectId, next).catch(() => showToast("更新分享失败", "error"));
+          }}
+          className="w-full rounded-md px-2 py-1.5 text-xs"
+          style={{ background: "#f5f5f4" }}
+        >
+          <option value="invite">仅邀请</option>
+          <option value="anyone_view">任何人可看</option>
+          <option value="anyone_edit">任何人可编</option>
+        </select>
+        {sharePath && (
+          <button
+            type="button"
+            className="mt-2 text-[11px] underline"
+            style={{ color: "#c2410c" }}
+            onClick={() => {
+              void navigator.clipboard.writeText(`${window.location.origin}${sharePath}`);
+              showToast("分享链接已复制", "success");
+            }}
+          >
+            复制分享链接
+          </button>
+        )}
+        <button
+          type="button"
+          className="mt-2 block text-[11px]"
+          style={{ color: "#78716c" }}
+          onClick={() => {
+            void (published ? Promise.resolve() : publishProject(projectId)).then(() => {
+              setPublished(true);
+              showToast("已发布到公开库", "success");
+            });
+          }}
+        >
+          {published ? "已在公开库" : "发布到公开库"}
+        </button>
+      </div>
+      <div>
+        <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
+          版本
+        </p>
+        <input
+          aria-label="版本名称"
+          value={versionName}
+          onChange={(e) => setVersionName(e.target.value)}
+          placeholder="命名快照"
+          className="w-full rounded-md px-2 py-1.5 text-xs mb-2"
+          style={{ background: "#f5f5f4" }}
+        />
+        <button
+          type="button"
+          className="text-[11px] font-medium"
+          style={{ color: "#c2410c" }}
+          onClick={() => {
+            void createVersion(projectId, versionName.trim() || undefined).then(async () => {
+              setVersionName("");
+              setVersions((await listVersions(projectId)).versions);
+              showToast("版本已保存", "success");
+            });
+          }}
+        >
+          保存版本
+        </button>
+        <ul className="mt-2 space-y-1">
+          {versions.slice(0, 6).map((row) => (
+            <li key={row.id} className="flex items-center justify-between gap-1 text-[11px]">
+              <span className="truncate">{row.name || (row.automatic ? "自动点" : "未命名")}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!window.confirm("恢复会整档回滚，确定？")) return;
+                  void restoreVersion(projectId, row.id).then(() => {
+                    showToast("已恢复版本", "success");
+                    window.location.reload();
+                  });
+                }}
+              >
+                恢复
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
