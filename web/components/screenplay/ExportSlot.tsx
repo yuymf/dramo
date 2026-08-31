@@ -11,6 +11,8 @@ import {
 import { useScriptExport } from "@/lib/hooks/useScriptExport";
 import type { ScreenplayDoc } from "@/lib/types/screenplay";
 import { SCRIPT_EXPORT_KINDS } from "@/lib/utils/screenplay-export";
+import { exportFdx } from "@/lib/api/preproduction";
+import { useParams } from "next/navigation";
 
 const LABELS: Record<(typeof SCRIPT_EXPORT_KINDS)[number], string> = {
   txt: "TXT",
@@ -26,7 +28,20 @@ export function ExportSlot({
   disabled?: boolean;
 }) {
   const { busy, error, exportKind } = useScriptExport(doc);
+  const params = useParams<{ id: string }>();
   const unavailable = disabled || !doc || busy;
+
+  const downloadFdx = async () => {
+    if (!doc || !params?.id) return;
+    const result = await exportFdx(params.id, doc.episodeId);
+    const blob = new Blob([result.xml], { type: "application/xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = result.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="sp-export-slot">
@@ -56,6 +71,9 @@ export function ExportSlot({
               {LABELS[kind]}
             </DropdownMenuItem>
           ))}
+          <DropdownMenuItem disabled={unavailable} onClick={() => void downloadFdx()}>
+            FDX
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

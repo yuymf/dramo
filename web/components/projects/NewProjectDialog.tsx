@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { createProject } from "@/lib/api/projects";
+import { importFdx } from "@/lib/api/preproduction";
 
 interface NewProjectDialogProps {
   open: boolean;
@@ -172,9 +173,36 @@ export function NewProjectDialog({
         </form>
 
         <div
-          className="mt-6 pt-4 text-center"
+          className="mt-6 pt-4 text-center space-y-2"
           style={{ borderTop: "1px solid rgba(26, 26, 24, 0.06)" }}
         >
+          <label className="block text-xs cursor-pointer" style={{ color: "#78716c" }}>
+            从 FDX 导入（新建项目）
+            <input
+              aria-label="导入 FDX"
+              type="file"
+              accept=".fdx,application/xml,text/xml"
+              className="sr-only"
+              disabled={loading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setLoading(true);
+                setError(null);
+                try {
+                  const xml = await file.text();
+                  const project = await importFdx(xml, name.trim() || file.name.replace(/\.fdx$/i, ""));
+                  onSuccess?.(project.id);
+                  onClose();
+                  router.replace(`/projects/${project.id}/screenplay`);
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "导入 FDX 失败");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            />
+          </label>
           <button
             type="button"
             onClick={() => void handleCreateSpoken()}

@@ -63,7 +63,8 @@ export function parseCharacterName(text: string): string | null {
  */
 export async function deriveFromNodes(
   projectId: string,
-  nodes: ScreenplayNode[]
+  nodes: ScreenplayNode[],
+  episodeId?: string
 ): Promise<void> {
   const locationNames = new Set<string>();
   const characterNames = new Set<string>();
@@ -116,5 +117,50 @@ export async function deriveFromNodes(
 
   if (writes.length > 0) {
     await Promise.all(writes);
+  }
+
+  if (episodeId) {
+    await deriveScenes(episodeId, nodes);
+  }
+}
+
+export async function deriveScenes(episodeId: string, nodes: ScreenplayNode[]): Promise<void> {
+  const headings: Array<{ heading: string; locationName: string | null; sortOrder: number }> = [];
+  const seen = new Set<string>();
+  for (const node of nodes) {
+    if (node.type !== 'scene_heading') continue;
+    const heading = node.text.trim();
+    if (!heading || seen.has(heading)) continue;
+    seen.add(heading);
+    headings.push({
+      heading,
+      locationName: parseLocationName(heading),
+      sortOrder: headings.length,
+    });
+  }
+
+  for (const item of headings) {
+    await prisma.scene.upsert({
+      where: { episodeId_heading: { episodeId, heading: item.heading } },
+      create: {
+        episodeId,
+        heading: item.heading,
+        locationName: item.locationName,
+        sortOrder: item.sortOrder,
+      },
+      update: { locationName: item.locationName, sortOrder: item.sortOrder },
+    });
+  }
+
+  if (seen.size === 0) return;
+  const staleScenes = await prisma.scene.findMany({
+    where: { episodeId, heading: { notIn: [...seen] } },
+    select: { id: true },
+  });
+  if (staleScenes.length > 0) {
+    await prisma.shot.updateMany({
+      where: { sceneId: { in: staleScenes.map((row) => row.id) } },
+      data: { stale: true },
+    });
   }
 }
