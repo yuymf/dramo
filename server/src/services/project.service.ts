@@ -2,6 +2,7 @@ import { Prisma, type MemberRole, type ProjectType, type ScreenplayFormat } from
 import { prisma } from '../lib/db';
 import { AppException, ErrorCode } from '../lib/errors';
 import { EMPTY_COVER } from '../types/screenplay';
+import { DEFAULT_CINEMA_SETTINGS, normalizeCinemaSettings, type CinemaSettings } from '../types/cinema';
 
 const PROJECT_TYPES: ProjectType[] = ['script', 'cinema', 'spoken'];
 const SCREENPLAY_FORMATS: ScreenplayFormat[] = ['hollywood', 'asian'];
@@ -94,7 +95,13 @@ export class ProjectService {
 
   async createProject(
     userId: string,
-    data: { name: string; type?: ProjectType; format?: ScreenplayFormat; description?: string }
+    data: {
+      name: string;
+      type?: ProjectType;
+      format?: ScreenplayFormat;
+      description?: string;
+      cinemaSettings?: CinemaSettings;
+    }
   ) {
     const type = data.type ?? 'script';
     const format = data.format ?? 'hollywood';
@@ -106,6 +113,11 @@ export class ProjectService {
       throw new AppException(ErrorCode.INVALID_INPUT, '无效的剧本格式');
     }
 
+    const cinemaSettings =
+      type === 'cinema'
+        ? normalizeCinemaSettings(data.cinemaSettings ?? DEFAULT_CINEMA_SETTINGS)
+        : DEFAULT_CINEMA_SETTINGS;
+
     return prisma.$transaction(async (tx) => {
       return tx.project.create({
         data: {
@@ -113,25 +125,35 @@ export class ProjectService {
           description: data.description,
           type,
           format,
+          cinemaSettings: cinemaSettings as unknown as Prisma.InputJsonValue,
           members: {
             create: { userId, role: 'OWNER' },
           },
           episodes: {
-            create: {
-              name: '第 1 集',
-              sortOrder: 0,
-              screenplay: {
-                create: {
-                  title: data.name,
-                  cover: EMPTY_COVER as unknown as Prisma.InputJsonValue,
-                  nodes: [] as Prisma.InputJsonArray,
-                },
-              },
-            },
+            create:
+              type === 'cinema'
+                ? {
+                    name: '第 1 集',
+                    sortOrder: 0,
+                    reels: {
+                      create: { name: 'Reel 1', sortOrder: 0 },
+                    },
+                  }
+                : {
+                    name: '第 1 集',
+                    sortOrder: 0,
+                    screenplay: {
+                      create: {
+                        title: data.name,
+                        cover: EMPTY_COVER as unknown as Prisma.InputJsonValue,
+                        nodes: [] as Prisma.InputJsonArray,
+                      },
+                    },
+                  },
           },
         },
         include: {
-          episodes: { include: { screenplay: true } },
+          episodes: { include: { screenplay: true, reels: true } },
           members: true,
         },
       });
@@ -141,7 +163,7 @@ export class ProjectService {
   async updateProject(
     id: string,
     userId: string,
-    data: { name?: string; format?: ScreenplayFormat }
+    data: { name?: string; format?: ScreenplayFormat; cinemaSettings?: CinemaSettings }
   ) {
     await this.requireMember(id, userId, WRITE_ROLES);
 
@@ -154,6 +176,9 @@ export class ProjectService {
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.format !== undefined ? { format: data.format } : {}),
+        ...(data.cinemaSettings !== undefined
+          ? { cinemaSettings: normalizeCinemaSettings(data.cinemaSettings) as unknown as Prisma.InputJsonValue }
+          : {}),
       },
     });
   }

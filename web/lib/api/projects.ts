@@ -1,4 +1,5 @@
 import { api } from './client';
+import type { CinemaSettings } from '@/lib/types/cinema';
 import type { ProjectType, ScreenplayFormat } from '@/lib/types/screenplay';
 
 export type Project = {
@@ -7,6 +8,7 @@ export type Project = {
   description?: string;
   type?: ProjectType;
   format?: ScreenplayFormat;
+  cinemaSettings?: CinemaSettings;
   createdAt: string;
   updatedAt: string;
   episodes?: Array<{
@@ -34,6 +36,7 @@ export type ProjectListResponse = {
 export type CreateProjectOptions = {
   type?: ProjectType;
   format?: ScreenplayFormat;
+  cinemaSettings?: CinemaSettings;
 };
 
 export async function listProjects(page = 1, limit = 50): Promise<ProjectListResponse> {
@@ -52,6 +55,7 @@ export async function createProject(
       name,
       type: options?.type ?? 'script',
       format: options?.format ?? 'hollywood',
+      cinemaSettings: options?.cinemaSettings,
     },
   });
 }
@@ -64,7 +68,7 @@ export async function getProject(projectId: string): Promise<Project> {
 
 export async function updateProject(
   projectId: string,
-  updates: Partial<Pick<Project, 'name' | 'description' | 'format'>>
+  updates: Partial<Pick<Project, 'name' | 'description' | 'format' | 'cinemaSettings'>>
 ): Promise<Project> {
   return api<Project>(`/api/projects/${projectId}`, {
     method: 'PATCH',

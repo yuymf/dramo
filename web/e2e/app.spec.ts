@@ -104,6 +104,7 @@ test.describe('注册后的书桌', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByLabel('项目名称')).toBeVisible();
     await expect(dialog.getByRole('button', { name: '创建剧本项目' })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: '制片项目（Cinema）' })).toBeVisible();
 
     await dialog.getByRole('button', { name: '取消' }).click();
     await expect(dialog).toHaveCount(0);
@@ -404,3 +405,72 @@ test.describe('剧本工作区', () => {
     await expect(page.getByText(marker)).toBeVisible({ timeout: 10_000 });
   });
 });
+
+async function createCinemaProject(page: Page, name: string) {
+  await page.goto('/projects');
+  await expect(page.getByRole('heading', { name: '我的项目' })).toBeVisible();
+  await page.getByRole('button', { name: /新建项目/ }).click();
+  const dialog = page.getByRole('dialog', { name: '新建项目' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: '制片项目（Cinema）' })).toBeVisible();
+  await dialog.getByLabel('项目名称').fill(name);
+  await dialog.getByRole('button', { name: '制片项目（Cinema）' }).click();
+  await dialog.getByLabel('画幅').selectOption('9:16');
+  await dialog.getByLabel('制片类型').fill('短片');
+  await dialog.getByLabel('摄影风格').fill('手持');
+  await dialog.getByLabel('美术风格').fill('胶片颗粒');
+  await dialog.getByRole('button', { name: '创建制片项目' }).click();
+  await expect(page).toHaveURL(/\/projects\/[^/]+\/reels/, { timeout: 15_000 });
+  await expect(page.getByRole('heading', { name: 'Reels', exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
+test.describe('第四期 Cinema', () => {
+  test('新建制片项目走五阶段，表演推导角色道具，成片前置生效', async ({ page }) => {
+    test.setTimeout(90_000);
+    await signUp(page);
+    await createCinemaProject(page, `E2E 制片 ${Date.now()}`);
+
+    await expect(page.getByRole('link', { name: 'Reels' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '角色' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '道具' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '任务' })).toBeVisible();
+    await expect(page.getByRole('link', { name: '剧本' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: '分镜' })).toHaveCount(0);
+    await expect(page.getByText('9:16')).toBeVisible();
+
+    await page.getByRole('button', { name: '生成文字分镜' }).click();
+    await expect(page.getByText('没有表演不能出文字分镜')).toBeVisible({ timeout: 10_000 });
+
+    await page.getByLabel('场景').fill('INT. 地铁车厢 - NIGHT。末班车几乎空了。');
+    await page.getByRole('button', { name: '保存场景' }).click();
+    await expect(page.getByText('场景已保存')).toBeVisible({ timeout: 10_000 });
+
+    await page.getByLabel('表演').fill('@林晚 拿出 #旧怀表 「末班车要到了。」');
+    await page.getByRole('button', { name: '保存表演' }).click();
+    await expect(page.getByText('表演已保存')).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole('button', { name: '生成文字分镜' }).click();
+    await expect(page.getByText('近景')).toBeVisible({ timeout: 10_000 });
+
+    await expect(page.getByRole('button', { name: '生成 15 秒成片' })).toBeDisabled();
+    await page.getByRole('button', { name: '生成分镜图' }).click();
+    await expect(page.getByText('没有可用的 Stable Diffusion worker')).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole('link', { name: '角色' }).click();
+    await expect(page.getByText('林晚')).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('link', { name: '道具' }).click();
+    await expect(page.getByText('旧怀表')).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole('link', { name: '任务' }).click();
+    await expect(page.getByRole('heading', { name: '任务', exact: true })).toBeVisible();
+
+    await page.goto('/projects');
+    await page.getByRole('button', { name: /新建项目/ }).click();
+    const dialog = page.getByRole('dialog', { name: '新建项目' });
+    await dialog.getByRole('button', { name: '制片项目（Cinema）' }).click();
+    await expect(dialog.getByLabel('导入 FDX')).toHaveCount(0);
+  });
+});
+

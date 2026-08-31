@@ -11,7 +11,7 @@ export type NodeType =
   | "comment"
   | "subtitle";
 export type TaskStatus = "queued" | "running" | "completed" | "failed" | "canceled";
-export type AssetKind = "portrait" | "location" | "prop" | "storyboard" | "poster";
+export type AssetKind = "portrait" | "location" | "prop" | "storyboard" | "poster" | "cinema_frame" | "cinema_film";
 
 export interface ScreenplayNode {
   id: string;

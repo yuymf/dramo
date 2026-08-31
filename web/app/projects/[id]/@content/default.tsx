@@ -1,14 +1,29 @@
-import { redirect } from "next/navigation";
+"use client";
 
-/**
- * /projects/:id 没有匹配的 @content 页时，进入剧本正文。
- * 布局只渲染 content，不渲染 children，所以 page.tsx 的 redirect 不会生效。
- */
-export default async function DefaultContentSlot({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  redirect(`/projects/${id}/screenplay`);
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { getProject } from "@/lib/api/projects";
+
+export default function DefaultContentSlot() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const id = params?.id ?? "";
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    void getProject(id)
+      .then((project) => {
+        if (cancelled) return;
+        router.replace(project.type === "cinema" ? `/projects/${id}/reels` : `/projects/${id}/screenplay`);
+      })
+      .catch(() => {
+        if (!cancelled) router.replace(`/projects/${id}/screenplay`);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, router]);
+
+  return null;
 }

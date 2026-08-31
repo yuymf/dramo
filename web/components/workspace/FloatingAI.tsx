@@ -10,6 +10,9 @@ import {
 } from "react";
 import { Loader2, Minus, Send } from "lucide-react";
 import { api } from "@/lib/api/client";
+import { assistReel } from "@/lib/api/cinema";
+import { firstEpisodeId } from "@/lib/api/planning";
+import type { CinemaAssistTarget } from "@/lib/types/cinema";
 import type { ScreenplayDoc } from "@/lib/types/screenplay";
 import {
   SCREENPLAY_SCOPE_EVENT,
@@ -29,6 +32,7 @@ export interface FloatingAIProps {
   projectId: string;
   scopeNodeIds: string[];
   onSend?: (payload: FloatingAISendPayload) => void;
+  mode?: "script" | "cinema";
 }
 
 const MIN_W = 280;
@@ -61,12 +65,14 @@ function pickEpisodeId(project: ProjectDetail): string | null {
   return episodes[0]?.id ?? null;
 }
 
-export function FloatingAI({ projectId, scopeNodeIds, onSend }: FloatingAIProps) {
+export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }: FloatingAIProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const [size, setSize] = useState({ w: DEFAULT_W, h: DEFAULT_H });
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [cinemaTarget, setCinemaTarget] = useState<CinemaAssistTarget>("performance");
+  const [cinemaReelId, setCinemaReelId] = useState<string | null>(null);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [scope, setScope] = useState<ScreenplayScopeDetail>({
     type: "selection",
@@ -106,6 +112,16 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend }: FloatingAIProps)
     };
     window.addEventListener(SCREENPLAY_SCOPE_EVENT, onScope);
     return () => window.removeEventListener(SCREENPLAY_SCOPE_EVENT, onScope);
+  }, []);
+
+  useEffect(() => {
+    const onReel = (event: Event) => {
+      const detail = (event as CustomEvent<{ reelId?: string; target?: CinemaAssistTarget }>).detail;
+      if (detail?.reelId) setCinemaReelId(detail.reelId);
+      if (detail?.target) setCinemaTarget(detail.target);
+    };
+    window.addEventListener("cinema-reel-scope", onReel);
+    return () => window.removeEventListener("cinema-reel-scope", onReel);
   }, []);
 
   useEffect(() => {
@@ -210,6 +226,39 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend }: FloatingAIProps)
   const submit = async () => {
     const next = text.trim();
     if (!next || sending) return;
+
+    if (mode === "cinema") {
+      setText("");
+      setSending(true);
+      setLines((prev) => [...prev, { role: "user", text: next }]);
+      try {
+        let reelId = cinemaReelId;
+        if (!reelId) {
+          const episodeId = await firstEpisodeId(projectId);
+          const listed = unwrap(
+            await api<{ reels: Array<{ id: string }> } | { data: { reels: Array<{ id: string }> } }>(
+              `/api/projects/${projectId}/episodes/${episodeId}/reels`,
+              { noCache: true }
+            )
+          );
+          reelId = listed.reels[0]?.id ?? null;
+        }
+        if (!reelId) {
+          throw new Error("还没有 Reel");
+        }
+        const result = await assistReel(projectId, reelId, { target: cinemaTarget, instruction: next });
+        window.dispatchEvent(new CustomEvent("cinema-revised", { detail: result.reel }));
+        setLines((prev) => [...prev, { role: "assistant", text: result.message }]);
+        onSend?.({ projectId, text: next, scopeNodeIds: [] });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "修订失败";
+        setLines((prev) => [...prev, { role: "assistant", text: message }]);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
     if (scope.nodeIds.length === 0) {
       setLines((prev) => [...prev, { role: "assistant", text: "请先在剧本里选中要改的句子" }]);
       return;
@@ -256,9 +305,11 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend }: FloatingAIProps)
     : { right: 16, bottom: 16 };
 
   const scopeLabel =
-    scope.nodeIds.length > 0
-      ? `${scope.type === "scene" ? "本场" : "选区"} ${scope.nodeIds.length} 个节点`
-      : "未选中节点";
+    mode === "cinema"
+      ? `Cinema · ${cinemaTarget === "scene" ? "场景" : cinemaTarget === "shots" ? "镜头" : "表演"}`
+      : scope.nodeIds.length > 0
+        ? `${scope.type === "scene" ? "本场" : "选区"} ${scope.nodeIds.length} 个节点`
+        : "未选中节点";
 
   if (collapsed) {
     return (
@@ -320,7 +371,9 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend }: FloatingAIProps)
         <div className="flex-1 min-h-0 overflow-y-auto mb-2 space-y-1.5 pr-0.5">
           {lines.length === 0 && (
             <p className="text-[11px] leading-5" style={{ color: "#a8a29e" }}>
-              选中对白或动作，写下指令后发送。只会改选区内的节点，不会生成整本。
+              {mode === "cinema"
+                ? "只改当前 Reel 的场景、表演或文字镜头，不会动剧本项目。"
+                : "选中对白或动作，写下指令后发送。只会改选区内的节点，不会生成整本。"}
             </p>
           )}
           {lines.map((line, index) => (
@@ -360,6 +413,30 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend }: FloatingAIProps)
             border: "1px solid #e7e5e4",
           }}
         />
+        {mode === "cinema" && (
+          <div className="mb-2 flex gap-1" role="group" aria-label="Cinema 作用域">
+            {(
+              [
+                { id: "scene" as const, label: "场景" },
+                { id: "performance" as const, label: "表演" },
+                { id: "shots" as const, label: "镜头" },
+              ] as const
+            ).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setCinemaTarget(item.id)}
+                className="px-2 py-1 rounded-md text-[10px]"
+                style={{
+                  color: cinemaTarget === item.id ? "#c2410c" : "#78716c",
+                  background: cinemaTarget === item.id ? "rgba(194, 65, 12, 0.08)" : "#f5f5f4",
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mt-3 flex items-center justify-between gap-2">
           <p className="text-[10px] truncate" style={{ color: "#a8a29e" }}>
             {scopeLabel}

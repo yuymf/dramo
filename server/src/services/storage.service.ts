@@ -42,6 +42,27 @@ export class StorageService {
     }
   }
 
+  async uploadBytes(projectId: string, buffer: Buffer, ext: string): Promise<StoredImage> {
+    const safeExt = ext.replace(/^\./, '').replace(/[^a-zA-Z0-9]/g, '') || 'bin';
+    const filename = `${crypto.randomUUID()}.${safeExt}`;
+    return this.uploadToLocal(projectId, filename, buffer);
+  }
+
+  resolveLocalPath(publicUrl: string): string | null {
+    const match = publicUrl.match(/\/(?:api\/files|uploads)\/projects\/([^/]+)\/([^/?#]+)/);
+    if (!match) return null;
+    const projectId = match[1];
+    const filename = match[2];
+    if (!/^[a-zA-Z0-9_-]+$/.test(projectId) || !/^[a-zA-Z0-9._-]+$/.test(filename)) {
+      return null;
+    }
+    return path.resolve(config.storageLocalDir, 'projects', projectId, filename);
+  }
+
+  publicApiUrl(projectId: string, filename: string): string {
+    return `/api/files/projects/${projectId}/${filename}`;
+  }
+
   async uploadImageFromBase64(projectId: string, base64Data: string): Promise<StoredImage> {
     logger.info(`[Storage] Uploading image from base64 for project ${projectId}`);
     try {

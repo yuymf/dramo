@@ -64,6 +64,12 @@ describe('ProjectService', () => {
           name: '第一本',
           type: 'script',
           format: 'hollywood',
+          cinemaSettings: {
+            aspectRatio: '16:9',
+            productionKind: '短片',
+            cameraStyle: '',
+            artStyle: '',
+          },
           members: { create: { userId: 'user-1', role: 'OWNER' } },
           episodes: {
             create: expect.objectContaining({
@@ -81,6 +87,44 @@ describe('ProjectService', () => {
         }),
       })
     );
+  });
+
+  it('createProject cinema seeds reel and no screenplay', async () => {
+    const created = { id: 'p2', name: '短片', type: 'cinema' };
+    const tx = {
+      project: {
+        create: (jest.fn() as any).mockResolvedValue(created), // eslint-disable-line @typescript-eslint/no-explicit-any
+      },
+    };
+    mocked(prisma.$transaction).mockImplementation(async (fn: unknown) => (fn as (t: typeof tx) => unknown)(tx));
+
+    await service.createProject('user-1', {
+      name: '短片',
+      type: 'cinema',
+      cinemaSettings: { aspectRatio: '9:16', productionKind: '广告', cameraStyle: '手持', artStyle: '胶片' },
+    });
+    expect(tx.project.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'cinema',
+          cinemaSettings: {
+            aspectRatio: '9:16',
+            productionKind: '广告',
+            cameraStyle: '手持',
+            artStyle: '胶片',
+          },
+          episodes: {
+            create: expect.objectContaining({
+              reels: { create: { name: 'Reel 1', sortOrder: 0 } },
+            }),
+          },
+        }),
+      })
+    );
+    const arg = mocked(tx.project.create).mock.calls[0][0] as {
+      data: { episodes: { create: { screenplay?: unknown } } };
+    };
+    expect(arg.data.episodes.create.screenplay).toBeUndefined();
   });
 
   it('getProject 404s when the user is not a member', async () => {
