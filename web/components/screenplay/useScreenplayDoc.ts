@@ -171,22 +171,10 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
         setFormat(projectRes.format ?? docRes.format ?? "hollywood");
         setTitleState(docRes.title || projectRes.name || "");
         setCoverState(normalizeCover(docRes.cover));
-        const nextNodes = normalizeNodes(docRes.nodes);
-        setNodesState(nextNodes);
+        setNodesState(normalizeNodes(docRes.nodes));
         setStatus("idle");
         hydratedRef.current = true;
         setReady(true);
-        if (!Array.isArray(docRes.nodes) || docRes.nodes.length === 0) {
-          payloadRef.current = {
-            title: docRes.title || projectRes.name || "",
-            cover: normalizeCover(docRes.cover),
-            nodes: nextNodes,
-            episodeId: eid,
-            projectId,
-          };
-          dirtyRef.current = true;
-          void putNow();
-        }
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "加载失败");

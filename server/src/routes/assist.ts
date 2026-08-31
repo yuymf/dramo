@@ -112,11 +112,21 @@ assist.post(`${EPISODE}/micro-continue`, async (c) => {
   if (typeof body.afterNodeId !== 'string' || !body.afterNodeId.trim()) {
     throw new AppException(ErrorCode.INVALID_INPUT, 'afterNodeId 必须是非空字符串');
   }
+  const clientNodes = Array.isArray(body.nodes)
+    ? body.nodes.filter(
+        (node): node is { id: string; text: string } =>
+          !!node &&
+          typeof node === 'object' &&
+          typeof (node as { id: unknown }).id === 'string' &&
+          typeof (node as { text: unknown }).text === 'string'
+      )
+    : undefined;
   const result = await assistService.microContinue(
     c.req.param('projectId'),
     c.req.param('episodeId'),
     requireUser(c).userId,
-    body.afterNodeId
+    body.afterNodeId,
+    clientNodes
   );
   return c.json(result);
 });

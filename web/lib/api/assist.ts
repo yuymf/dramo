@@ -105,11 +105,12 @@ export async function getDoctor(projectId: string, episodeId: string): Promise<{
 export async function requestMicroContinue(
   projectId: string,
   episodeId: string,
-  afterNodeId: string
+  afterNodeId: string,
+  nodes?: Array<{ id: string; text: string }>
 ): Promise<{ suggestion: string }> {
   return api(`/api/projects/${projectId}/episodes/${episodeId}/micro-continue`, {
     method: "POST",
-    body: { afterNodeId },
+    body: { afterNodeId, nodes },
     noCache: true,
   });
 }

@@ -308,13 +308,16 @@ export class AssistService {
     projectId: string,
     episodeId: string,
     userId: string,
-    afterNodeId: string
+    afterNodeId: string,
+    clientNodes?: Array<{ id: string; text: string }>
   ): Promise<{ suggestion: string }> {
     await this.requireEpisode(projectId, episodeId, userId, { write: true });
     const screenplay = await prisma.screenplay.findUnique({ where: { episodeId } });
-    const nodes = Array.isArray(screenplay?.nodes)
+    const stored = Array.isArray(screenplay?.nodes)
       ? (screenplay?.nodes as Array<{ id: string; text: string }>)
       : [];
+    const nodes =
+      clientNodes && clientNodes.some((node) => node.id === afterNodeId) ? clientNodes : stored;
     if (!nodes.some((node) => node.id === afterNodeId)) {
       throw new AppException(ErrorCode.INVALID_INPUT, 'afterNodeId 不在正文里');
     }

@@ -32,9 +32,13 @@ export function ScreenplayView() {
       void (async () => {
         setSuggesting(true);
         try {
-          await requestScreenplayFlush();
           const eid = episodeId || (await firstEpisodeId(projectId));
-          const result = await requestMicroContinue(projectId, eid, activeNodeId);
+          const result = await requestMicroContinue(
+            projectId,
+            eid,
+            activeNodeId,
+            nodes.map((node) => ({ id: node.id, text: node.text }))
+          );
           if (!cancelled) setSuggestion(result.suggestion);
         } catch {
           if (!cancelled) setSuggestion(null);
