@@ -25,11 +25,6 @@ const nextConfig: NextConfig = {
         destination: '/projects/:id/screenplay',
         permanent: false,
       },
-      {
-        source: '/projects/:id/storyboard',
-        destination: '/projects/:id/screenplay',
-        permanent: false,
-      },
     ];
   },
   experimental: {
