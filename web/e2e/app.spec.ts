@@ -420,7 +420,7 @@ test.describe('剧本工作区', () => {
     const dialogue = page.getByRole('list', { name: '剧本正文' }).getByRole('textbox', { name: '对白' });
     await dialogue.click();
     await page.getByLabel('节点评论').fill('这句可以再压一点。');
-    await page.getByRole('button', { name: '评论' }).click();
+    await page.getByLabel('节点评论').press('Enter');
     await expect(page.getByText('这句可以再压一点。')).toBeVisible({ timeout: 10_000 });
 
     await page.getByLabel('版本名称').fill('第一稿');

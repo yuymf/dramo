@@ -76,6 +76,19 @@ export function ScreenplayView() {
     }
   };
 
+  const submitComment = async () => {
+    if (!projectId || !activeNodeId || !commentDraft.trim()) return;
+    await addComment(projectId, {
+      anchorType: "screenplay",
+      anchorId: activeNodeId,
+      body: commentDraft.trim(),
+      episodeId: episodeId ?? undefined,
+    });
+    setCommentDraft("");
+    const doc = await listComments(projectId, { anchorType: "screenplay", anchorId: activeNodeId });
+    setComments(doc.comments);
+  };
+
   const acceptSuggestion = () => {
     if (!activeNodeId || !suggestion) return;
     setNodes(
@@ -181,26 +194,17 @@ export function ScreenplayView() {
               aria-label="节点评论"
               value={commentDraft}
               onChange={(e) => setCommentDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void submitComment();
+                }
+              }}
               className="flex-1 rounded-md border px-2 py-1 text-xs"
               placeholder="Viewer 可评不可改稿"
             />
-            <Button
-              type="button"
-              size="sm"
-              onClick={async () => {
-                if (!commentDraft.trim()) return;
-                await addComment(projectId, {
-                  anchorType: "screenplay",
-                  anchorId: activeNodeId,
-                  body: commentDraft.trim(),
-                  episodeId: episodeId ?? undefined,
-                });
-                setCommentDraft("");
-                const doc = await listComments(projectId, { anchorType: "screenplay", anchorId: activeNodeId });
-                setComments(doc.comments);
-              }}
-            >
-              评论
+            <Button type="button" size="sm" onClick={() => void submitComment()}>
+              发表评论
             </Button>
           </div>
         </aside>
