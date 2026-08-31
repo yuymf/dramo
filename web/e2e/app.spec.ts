@@ -365,6 +365,8 @@ test.describe('剧本工作区', () => {
     await page.getByLabel('镜头 1 机位').fill('特写');
     await page.getByLabel('镜头 1 设计').fill('暖灯，金属反光');
     await page.getByRole('button', { name: '保存镜头' }).click();
+    await expect(page.getByRole('button', { name: '保存镜头' })).toBeEnabled({ timeout: 10_000 });
+    await expect(page.getByLabel('镜头 1 描述')).toHaveValue('近景，旧怀表停在掌心');
     await page.reload();
     await expect(page.getByLabel('镜头 1 描述')).toHaveValue('近景，旧怀表停在掌心', { timeout: 15_000 });
 

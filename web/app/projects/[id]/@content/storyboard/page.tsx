@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ export default function StoryboardPage() {
   const [view, setView] = useState<ViewId>("panel");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const shotsRef = useRef(shots);
+  shotsRef.current = shots;
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -55,7 +57,7 @@ export default function StoryboardPage() {
     if (!episodeId || saving) return;
     setSaving(true);
     try {
-      const saved = await putShots(projectId, episodeId, shots);
+      const saved = await putShots(projectId, episodeId, shotsRef.current);
       setShots(saved.shots);
     } catch (err) {
       showToast(err instanceof Error ? err.message : "保存镜头失败", "error");
