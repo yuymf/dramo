@@ -88,6 +88,8 @@ model Project {
   episodes        Episode[]
   characters      Character[]
   locations       Location[]
+  props           Prop[]
+  worldviewRules  WorldviewRule[]
   assets          Asset[]
   generationTasks GenerationTask[]
   chatSessions    ChatSession[]
@@ -120,8 +122,34 @@ model Episode {
 
   project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   screenplay Screenplay?
+  outline    Outline?
+  beats      Beat[]
 
   @@index([projectId, sortOrder])
+}
+
+model Outline {
+  id        String   @id @default(cuid())
+  episodeId String   @unique
+  markdown  String   @default("")
+  updatedAt DateTime @updatedAt
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+}
+
+model Beat {
+  id        String   @id @default(cuid())
+  episodeId String
+  sortOrder Int      @default(0)
+  action    String   @default("")
+  intent    String   @default("")
+  outcome   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@index([episodeId, sortOrder])
 }
 
 model Screenplay {
@@ -153,13 +181,14 @@ model ScreenplayVersion {
 }
 
 model Character {
-  id          String   @id @default(cuid())
-  projectId   String
-  name        String
-  description String?
-  images      Json     @default("[]")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  projectId    String
+  name         String
+  description  String?
+  castingNotes String?
+  images       Json     @default("[]")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -172,6 +201,8 @@ model Location {
   projectId   String
   name        String
   description String?
+  storyPlace  String?
+  shootPlace  String?
   images      Json     @default("[]")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -179,6 +210,37 @@ model Location {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model Prop {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  description String?
+  holder      String?
+  continuity  String?
+  images      Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model WorldviewRule {
+  id        String   @id @default(cuid())
+  projectId String
+  key       String
+  value     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, key])
   @@index([projectId])
 }
 

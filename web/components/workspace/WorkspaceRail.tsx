@@ -3,10 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, MapPin, Mic2, MoreHorizontal, Users } from "lucide-react";
+import {
+  FileText,
+  Globe,
+  Layers,
+  ListTree,
+  MapPin,
+  Mic2,
+  MoreHorizontal,
+  Package,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type DimId = "screenplay" | "characters" | "locations" | "spoken";
+type DimId = "screenplay" | "outline" | "beats" | "characters" | "locations" | "props" | "worldview" | "spoken";
 
 const PRIMARY: Array<{
   id: DimId;
@@ -15,15 +25,22 @@ const PRIMARY: Array<{
   icon: typeof FileText;
 }> = [
   { id: "screenplay", label: "剧本", href: (id) => `/projects/${id}/screenplay`, icon: FileText },
+  { id: "outline", label: "大纲", href: (id) => `/projects/${id}/outline`, icon: ListTree },
+  { id: "beats", label: "Beats", href: (id) => `/projects/${id}/beats`, icon: Layers },
   { id: "characters", label: "角色", href: (id) => `/projects/${id}/characters`, icon: Users },
   { id: "locations", label: "地点", href: (id) => `/projects/${id}/locations`, icon: MapPin },
+  { id: "props", label: "道具", href: (id) => `/projects/${id}/props`, icon: Package },
 ];
 
 function activeDim(pathname: string | null): DimId | null {
   if (!pathname) return null;
   if (pathname.includes("/spoken")) return "spoken";
+  if (pathname.includes("/worldview")) return "worldview";
   if (pathname.includes("/characters")) return "characters";
   if (pathname.includes("/locations")) return "locations";
+  if (pathname.includes("/props")) return "props";
+  if (pathname.includes("/outline")) return "outline";
+  if (pathname.includes("/beats")) return "beats";
   if (
     pathname.includes("/screenplay") ||
     pathname.includes("/cover") ||
@@ -43,6 +60,7 @@ export function WorkspaceRail({ projectId }: WorkspaceRailProps) {
   const current = activeDim(pathname);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const moreActive = current === "spoken" || current === "worldview";
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -115,6 +133,19 @@ export function WorkspaceRail({ projectId }: WorkspaceRailProps) {
               更多
             </p>
             <Link
+              href={`/projects/${projectId}/worldview`}
+              role="menuitem"
+              onClick={() => setMoreOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-xs"
+              style={{
+                color: current === "worldview" ? "#c2410c" : "#44403c",
+                fontWeight: current === "worldview" ? 600 : 400,
+              }}
+            >
+              <Globe size={14} strokeWidth={1.5} />
+              世界观
+            </Link>
+            <Link
               href={`/projects/${projectId}/spoken`}
               role="menuitem"
               onClick={() => setMoreOpen(false)}
@@ -137,11 +168,9 @@ export function WorkspaceRail({ projectId }: WorkspaceRailProps) {
           onClick={() => setMoreOpen((v) => !v)}
           className="w-12 flex flex-col items-center gap-1 rounded-lg py-2 text-[10px] leading-none font-medium"
           style={{
-            color: current === "spoken" || moreOpen ? "#c2410c" : "#78716c",
+            color: moreActive || moreOpen ? "#c2410c" : "#78716c",
             background:
-              current === "spoken" || moreOpen
-                ? "rgba(194, 65, 12, 0.08)"
-                : "transparent",
+              moreActive || moreOpen ? "rgba(194, 65, 12, 0.08)" : "transparent",
           }}
         >
           <MoreHorizontal size={16} strokeWidth={1.5} />

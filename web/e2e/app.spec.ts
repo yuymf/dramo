@@ -248,6 +248,66 @@ test.describe('剧本工作区', () => {
     await expect(page.getByText(name)).toBeVisible({ timeout: 10_000 });
   });
 
+  test('大纲、Beats、#道具 和世界观能形成规划闭环', async ({ page }) => {
+    test.setTimeout(90_000);
+    await signUp(page);
+    await createScriptProject(page, `E2E 规划 ${Date.now()}`);
+
+    await page.getByRole('link', { name: '大纲' }).click();
+    await expect(page).toHaveURL(/\/outline/);
+    await expect(page.getByRole('heading', { name: '大纲', exact: true })).toBeVisible();
+    const outline = page.getByLabel('大纲正文');
+    await expect(outline).toBeVisible({ timeout: 15_000 });
+    await outline.fill('末班车前，林晚必须交出旧怀表才能离开。');
+    await outline.blur();
+    await expect(page.getByText('已保存')).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole('link', { name: 'Beats' }).click();
+    await expect(page).toHaveURL(/\/beats/);
+    await expect(page.getByText('还没有 Beat')).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: '添加 Beat' }).click();
+    await page.getByLabel('动作 1').fill('交出旧怀表');
+    await page.getByLabel('意图 1').fill('求他放行');
+    await page.getByLabel('结果 1').fill('门开了');
+    await page.getByLabel('结果 1').blur();
+    await page.getByRole('button', { name: '添加 Beat' }).click();
+    await page.getByLabel('动作 2').fill('值班员拦下她');
+    await page.getByLabel('意图 2').fill('查清来历');
+    await page.getByLabel('结果 2').fill('对峙升级');
+    await page.getByRole('button', { name: '保存 Beats' }).click();
+    await expect(page.getByText('未兑现')).toHaveCount(2, { timeout: 10_000 });
+
+    await page.getByRole('link', { name: '剧本' }).click();
+    const editor = page.getByRole('list', { name: '剧本正文' });
+    await expect(editor).toBeVisible({ timeout: 15_000 });
+    await editor.getByRole('textbox').first().click();
+    await page.keyboard.type('她摸出 #旧怀表，准备交出旧怀表。');
+    await expect(page.getByText('已保存')).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole('link', { name: '道具' }).click();
+    await expect(page).toHaveURL(/\/props/);
+    await expect(page.getByRole('heading', { name: '旧怀表' })).toBeVisible({ timeout: 10_000 });
+
+    await page.getByRole('link', { name: 'Beats' }).click();
+    await expect(page.getByLabel('动作 1')).toHaveValue('交出旧怀表', { timeout: 10_000 });
+    await expect(page.getByLabel('动作 2')).toHaveValue('值班员拦下她');
+    await expect(page.getByText('已兑现')).toHaveCount(1);
+    await expect(page.getByText('未兑现')).toHaveCount(1);
+
+    await page.getByRole('button', { name: '更多' }).click();
+    await page.getByRole('menuitem', { name: '世界观' }).click();
+    await expect(page).toHaveURL(/\/worldview/);
+    await expect(page.getByText('还没有规则')).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('button', { name: '添加规则' }).click();
+    await page.getByLabel('规则名 1').fill('时间');
+    await page.getByLabel('规则内容 1').fill('地铁夜里不会再来一班车');
+    await page.getByRole('button', { name: '保存世界观' }).click();
+    await expect(page.getByRole('button', { name: '保存世界观' })).toBeEnabled({ timeout: 10_000 });
+    await page.reload();
+    await expect(page.getByLabel('规则名 1')).toHaveValue('时间', { timeout: 15_000 });
+    await expect(page.getByLabel('规则内容 1')).toHaveValue('地铁夜里不会再来一班车');
+  });
+
   test('编辑后刷新剧本仍在', async ({ page }) => {
     await signUp(page);
     await createScriptProject(page, `E2E 编辑 ${Date.now()}`);
