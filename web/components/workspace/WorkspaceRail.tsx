@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BookOpen,
+  Compass,
   FileText,
   Globe,
   Layers,
@@ -12,11 +14,23 @@ import {
   Mic2,
   MoreHorizontal,
   Package,
+  Sparkles,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type DimId = "screenplay" | "outline" | "beats" | "characters" | "locations" | "props" | "worldview" | "spoken";
+type DimId =
+  | "screenplay"
+  | "outline"
+  | "beats"
+  | "characters"
+  | "locations"
+  | "props"
+  | "worldview"
+  | "knowledge"
+  | "advisors"
+  | "cold-start"
+  | "spoken";
 
 const PRIMARY: Array<{
   id: DimId;
@@ -36,6 +50,9 @@ function activeDim(pathname: string | null): DimId | null {
   if (!pathname) return null;
   if (pathname.includes("/spoken")) return "spoken";
   if (pathname.includes("/worldview")) return "worldview";
+  if (pathname.includes("/knowledge")) return "knowledge";
+  if (pathname.includes("/advisors")) return "advisors";
+  if (pathname.includes("/cold-start")) return "cold-start";
   if (pathname.includes("/characters")) return "characters";
   if (pathname.includes("/locations")) return "locations";
   if (pathname.includes("/props")) return "props";
@@ -60,7 +77,12 @@ export function WorkspaceRail({ projectId }: WorkspaceRailProps) {
   const current = activeDim(pathname);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
-  const moreActive = current === "spoken" || current === "worldview";
+  const moreActive =
+    current === "spoken" ||
+    current === "worldview" ||
+    current === "knowledge" ||
+    current === "advisors" ||
+    current === "cold-start";
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -132,19 +154,33 @@ export function WorkspaceRail({ projectId }: WorkspaceRailProps) {
             >
               更多
             </p>
-            <Link
-              href={`/projects/${projectId}/worldview`}
-              role="menuitem"
-              onClick={() => setMoreOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-xs"
-              style={{
-                color: current === "worldview" ? "#c2410c" : "#44403c",
-                fontWeight: current === "worldview" ? 600 : 400,
-              }}
-            >
-              <Globe size={14} strokeWidth={1.5} />
-              世界观
-            </Link>
+            {(
+              [
+                { id: "worldview" as const, href: "worldview", label: "世界观", icon: Globe },
+                { id: "knowledge" as const, href: "knowledge", label: "知识库", icon: BookOpen },
+                { id: "advisors" as const, href: "advisors", label: "顾问", icon: Compass },
+                { id: "cold-start" as const, href: "cold-start", label: "冷启动", icon: Sparkles },
+              ] as const
+            ).map((item) => {
+              const Icon = item.icon;
+              const active = current === item.id;
+              return (
+                <Link
+                  key={item.id}
+                  href={`/projects/${projectId}/${item.href}`}
+                  role="menuitem"
+                  onClick={() => setMoreOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 text-xs"
+                  style={{
+                    color: active ? "#c2410c" : "#44403c",
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >
+                  <Icon size={14} strokeWidth={1.5} />
+                  {item.label}
+                </Link>
+              );
+            })}
             <Link
               href={`/projects/${projectId}/spoken`}
               role="menuitem"

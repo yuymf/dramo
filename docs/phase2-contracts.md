@@ -27,4 +27,19 @@ Viewer 只读。PUT 空 beats 数组表示清空。
 
 ## 前端路由
 
-`/outline` `/beats` `/props` `/worldview`。世界观放在「更多」。
+`/outline` `/beats` `/props` `/worldview` `/knowledge` `/advisors` `/cold-start`。世界观、知识、顾问、冷启动放在「更多」。
+
+## 知识 / 顾问 / 冷启动 / 医生 / 微续写
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/projects/:id/knowledge` | `{ data: KnowledgeFile[] }` |
+| POST | `/projects/:id/knowledge` | `{ name, filename, text, mime? }` 存纯文本 |
+| DELETE | `/projects/:id/knowledge/:fileId` | 删除一条 |
+| GET | `/advisors` | 内置方法论目录 |
+| GET/PUT | `/projects/:id/advisor` | `{ id }`，`id=null` 解聘；项目至多一个 |
+| GET/PUT | `/projects/:id/episodes/:eid/cold-start` | 五关进度与答案 |
+| GET | `/projects/:id/episodes/:eid/doctor` | 只诊断不改稿 |
+| POST | `/projects/:id/episodes/:eid/micro-continue` | `{ afterNodeId }` → `{ suggestion }` 约 50–100 字，采纳才进文档 |
+
+顾问目录：`three-act` / `save-the-cat` / `story-circle`。知识只存文本，TXT/MD 直接读入，PDF/DOCX 粘贴正文。AI 未获本轮授权不得写世界观。

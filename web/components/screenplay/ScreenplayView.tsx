@@ -1,19 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { ScreenplayEditor } from "./ScreenplayEditor";
 import { PageTimeline } from "./PageTimeline";
 import { ExportSlot } from "./ExportSlot";
 import { formatLabel } from "./nodeMeta";
 import { saveStatusLabel, useScreenplayDoc } from "./useScreenplayDoc";
+import { firstEpisodeId, getDoctor, requestMicroContinue, type DoctorNote } from "@/lib/api/assist";
+import { requestScreenplayFlush } from "./scope";
+import { Button } from "@/components/ui/button";
 import "./screenplay.css";
 
 export function ScreenplayView() {
   const params = useParams<{ id: string }>();
   const projectId = params?.id;
-  const { format, nodes, status, error, ready, setNodes, doc } = useScreenplayDoc(projectId);
+  const { format, nodes, status, error, ready, setNodes, doc, episodeId } = useScreenplayDoc(projectId);
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const [notes, setNotes] = useState<DoctorNote[] | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+
+  const active = nodes.find((node) => node.id === activeNodeId);
+  const emptyActive = !!active && !active.text.trim();
+
+  useEffect(() => {
+    setSuggestion(null);
+    if (!projectId || !emptyActive || !activeNodeId) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        setSuggesting(true);
+        try {
+          await requestScreenplayFlush();
+          const eid = episodeId || (await firstEpisodeId(projectId));
+          const result = await requestMicroContinue(projectId, eid, activeNodeId);
+          if (!cancelled) setSuggestion(result.suggestion);
+        } catch {
+          if (!cancelled) setSuggestion(null);
+        } finally {
+          if (!cancelled) setSuggesting(false);
+        }
+      })();
+    }, 1200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [activeNodeId, emptyActive, episodeId, projectId]);
+
+  const runDoctor = async () => {
+    if (!projectId) return;
+    try {
+      const eid = episodeId || (await firstEpisodeId(projectId));
+      const result = await getDoctor(projectId, eid);
+      setNotes(result.notes);
+    } catch {
+      setNotes([{ id: "err", priority: "med", area: "theme", title: "诊断失败", body: "稍后再试" }]);
+    }
+  };
+
+  const acceptSuggestion = () => {
+    if (!activeNodeId || !suggestion) return;
+    setNodes(
+      nodes.map((node) => (node.id === activeNodeId ? { ...node, text: suggestion } : node))
+    );
+    setSuggestion(null);
+  };
 
   if (!ready && status === "loading") {
     return (
@@ -41,9 +94,47 @@ export function ScreenplayView() {
         </div>
         <div className="sp-toolbar-actions">
           <span className="sp-save-status">{saveStatusLabel(status)}</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => void runDoctor()}>
+            剧本医生
+          </Button>
           <ExportSlot doc={doc} />
         </div>
       </header>
+      {notes ? (
+        <aside className="px-5 py-3 border-b border-[var(--at-border)] bg-[var(--at-surface)] text-sm">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="font-medium">诊断（只读，不改稿）</p>
+            <button type="button" className="text-xs text-[var(--at-text-tertiary)]" onClick={() => setNotes(null)}>
+              关闭
+            </button>
+          </div>
+          {notes.length === 0 ? (
+            <p className="text-[var(--at-text-secondary)]">这一集暂时没有优先笔记。</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {notes.map((note) => (
+                <li key={note.id}>
+                  <span className="text-[11px] mr-2 text-[var(--at-accent)]">{note.area}</span>
+                  {note.title}
+                  {note.body ? <span className="text-[var(--at-text-tertiary)]"> · {note.body}</span> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+      ) : null}
+      {emptyActive && (suggesting || suggestion) ? (
+        <div className="px-5 py-2 border-b border-[var(--at-border)] text-sm flex items-center gap-3">
+          <span className="text-[var(--at-text-secondary)]">
+            {suggesting ? "微续写…" : suggestion}
+          </span>
+          {suggestion ? (
+            <Button type="button" size="sm" variant="accent" onClick={acceptSuggestion}>
+              采纳
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       <div className="sp-body">
         <div className="sp-stage">
           <div className="sp-paper">
