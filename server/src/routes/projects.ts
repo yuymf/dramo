@@ -3,6 +3,7 @@ import type { ProjectType, ScreenplayFormat } from '@prisma/client';
 import { ProjectService } from '../services/project.service';
 import type { AuthEnv } from '../middleware/session';
 import { AppException, ErrorCode } from '../lib/errors';
+import { normalizeCinemaSettings, type CinemaSettings } from '../types/cinema';
 
 const projects = new Hono<AuthEnv>();
 const projectService = new ProjectService();
@@ -28,11 +29,12 @@ projects.get('/projects', async (c) => {
 
 projects.post('/projects', async (c) => {
   const body = await c.req.json().catch(() => ({}));
-  const { name, description, type, format } = body as {
+  const { name, description, type, format, cinemaSettings } = body as {
     name?: string;
     description?: string;
     type?: ProjectType;
     format?: ScreenplayFormat;
+    cinemaSettings?: CinemaSettings;
   };
   const userId = requireUser(c).userId;
 
@@ -45,6 +47,7 @@ projects.post('/projects', async (c) => {
     description,
     type,
     format,
+    cinemaSettings: cinemaSettings ? normalizeCinemaSettings(cinemaSettings) : undefined,
   });
   return c.json(project, 201);
 });
@@ -60,10 +63,18 @@ projects.get('/projects/:id', async (c) => {
 projects.patch('/projects/:id', async (c) => {
   const id = c.req.param('id');
   const body = await c.req.json().catch(() => ({}));
-  const { name, format } = body as { name?: string; format?: ScreenplayFormat };
+  const { name, format, cinemaSettings } = body as {
+    name?: string;
+    format?: ScreenplayFormat;
+    cinemaSettings?: CinemaSettings;
+  };
   const userId = requireUser(c).userId;
 
-  const project = await projectService.updateProject(id, userId, { name, format });
+  const project = await projectService.updateProject(id, userId, {
+    name,
+    format,
+    cinemaSettings: cinemaSettings ? normalizeCinemaSettings(cinemaSettings) : undefined,
+  });
   return c.json(project);
 });
 

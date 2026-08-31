@@ -5,6 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { FolderOpen } from "lucide-react";
 import { getProject, updateProject } from "@/lib/api/projects";
+import {
+  CINEMA_ASPECT_RATIOS,
+  DEFAULT_CINEMA_SETTINGS,
+  type CinemaSettings,
+} from "@/lib/types/cinema";
 import type { ProjectType, ScreenplayFormat } from "@/lib/types/screenplay";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
@@ -29,6 +34,7 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
   const [format, setFormat] = useState<ScreenplayFormat>("hollywood");
   const [type, setType] = useState<ProjectType>("script");
   const [episodeName, setEpisodeName] = useState("第 1 集");
+  const [cinemaSettings, setCinemaSettings] = useState<CinemaSettings>(DEFAULT_CINEMA_SETTINGS);
   const [loading, setLoading] = useState(true);
 
   const onScreenplay =
@@ -52,6 +58,9 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
         }
         if (project.type === "script" || project.type === "cinema" || project.type === "spoken") {
           setType(project.type);
+        }
+        if (project.cinemaSettings) {
+          setCinemaSettings({ ...DEFAULT_CINEMA_SETTINGS, ...project.cinemaSettings });
         }
         const first = [...(project.episodes ?? [])].sort(
           (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
@@ -164,6 +173,40 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
           </h1>
         )}
 
+        {type === "cinema" ? (
+        <div className="mt-5 px-2">
+          <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
+            画幅 / 美术
+          </p>
+          <select
+            aria-label="画幅"
+            value={cinemaSettings.aspectRatio}
+            onChange={(e) => {
+              const next = {
+                ...cinemaSettings,
+                aspectRatio: e.target.value as CinemaSettings["aspectRatio"],
+              };
+              setCinemaSettings(next);
+              void updateProject(projectId, { cinemaSettings: next }).catch(() => {
+                showToast("更新画幅失败", "error");
+              });
+            }}
+            className="w-full rounded-md px-2 py-1.5 text-xs"
+            style={{ background: "#f5f5f4", color: "#1c1917" }}
+          >
+            {CINEMA_ASPECT_RATIOS.map((ratio) => (
+              <option key={ratio} value={ratio}>
+                {ratio}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-[11px] leading-5" style={{ color: "#78716c" }}>
+            {cinemaSettings.productionKind || "短片"}
+            {cinemaSettings.artStyle ? ` · ${cinemaSettings.artStyle}` : ""}
+            {cinemaSettings.cameraStyle ? ` · ${cinemaSettings.cameraStyle}` : ""}
+          </p>
+        </div>
+        ) : (
         <div className="mt-5 px-2">
           <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
             格式
@@ -201,6 +244,7 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
             })}
           </div>
         </div>
+        )}
 
         <div className="mt-5 px-2">
           <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>

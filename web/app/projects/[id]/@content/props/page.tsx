@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,14 +58,7 @@ export default function PropsPage() {
           </div>
         ) : props.length === 0 ? (
           <p className="max-w-md mx-auto text-center text-sm text-[var(--at-text-secondary)] py-20">
-            去
-            <Link
-              href={`/projects/${projectId}/screenplay`}
-              className="text-[var(--at-accent)] underline-offset-4 hover:underline mx-0.5"
-            >
-              剧本页
-            </Link>
-            写下 #道具名 后回到这里
+            去剧本页或 Reel 表演写下 #道具名 后回到这里
           </p>
         ) : (
           <ul className="max-w-3xl mx-auto space-y-4">

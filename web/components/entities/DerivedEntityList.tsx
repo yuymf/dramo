@@ -34,7 +34,7 @@ const COPY: Record<
 > = {
   character: {
     title: "角色",
-    hint: "从剧本角色行推导，可补描述并生成肖像",
+    hint: "从剧本角色行或 Cinema 表演 @角色 推导，可补描述并生成肖像",
     generateLabel: "生成肖像",
     imageKind: "portrait",
   },

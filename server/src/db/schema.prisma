@@ -76,13 +76,14 @@ model UserLLMConfig {
 }
 
 model Project {
-  id          String           @id @default(cuid())
-  name        String
-  description String?
-  type        ProjectType      @default(script)
-  format      ScreenplayFormat @default(hollywood)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  name           String
+  description    String?
+  type           ProjectType      @default(script)
+  format         ScreenplayFormat @default(hollywood)
+  cinemaSettings Json             @default("{}")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   members         ProjectMember[]
   episodes        Episode[]
@@ -128,6 +129,7 @@ model Episode {
   beats      Beat[]
   scenes     Scene[]
   shots      Shot[]
+  reels      Reel[]
   coldStart  Json      @default("{}")
 
   @@index([projectId, sortOrder])
@@ -167,6 +169,38 @@ model Shot {
 
   @@index([episodeId, sortOrder])
   @@index([sceneId])
+}
+
+model Reel {
+  id             String   @id @default(cuid())
+  episodeId      String
+  name           String
+  sortOrder      Int      @default(0)
+  sceneText      String   @default("")
+  performance    String   @default("")
+  shots          Json     @default("[]")
+  images         Json     @default("[]")
+  lastFrameUrl   String?
+  previousReelId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  episode Episode    @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  films   ReelFilm[]
+
+  @@index([episodeId, sortOrder])
+}
+
+model ReelFilm {
+  id          String   @id @default(cuid())
+  reelId      String
+  url         String
+  durationSec Int      @default(15)
+  createdAt   DateTime @default(now())
+
+  reel Reel @relation(fields: [reelId], references: [id], onDelete: Cascade)
+
+  @@index([reelId, createdAt])
 }
 
 model Outline {
