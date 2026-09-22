@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { hashPassword, verifyPassword } from '../../lib/password';
+import { hashPassword, verifyPassword } from '../../lib/password.js';
 
 describe('password (scrypt)', () => {
   it('hashes and verifies a password', async () => {

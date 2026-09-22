@@ -1,12 +1,12 @@
 import type { MemberRole, Prisma } from '@prisma/client';
-import { prisma } from '../lib/db';
-import { startWorkflowRun } from '../lib/agentos-client';
-import { AppException, ErrorCode } from '../lib/errors';
-import { logger } from '../lib/logger';
-import { unwrapWorkflowJson } from '../lib/workflow-json';
-import { LLMConfigService } from './llm-config.service';
-import { resolveAccess } from './access.service';
-import { deriveFromNodes } from './derive.service';
+import { prisma } from '../lib/db.js';
+import { startWorkflowRun } from '../lib/agentos-client.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { logger } from '../lib/logger.js';
+import { unwrapWorkflowJson } from '../lib/workflow-json.js';
+import { LLMConfigService } from './llm-config.service.js';
+import { resolveAccess } from './access.service.js';
+import { deriveFromNodes } from './derive.service.js';
 import {
   EMPTY_COVER,
   NODE_TYPES,
@@ -15,7 +15,7 @@ import {
   type ScreenplayDoc,
   type ScreenplayFormat,
   type ScreenplayNode,
-} from '../types/screenplay';
+} from '../types/screenplay.js';
 
 const REVISE_WORKFLOW_ID = 'reviseworkflow';
 const NODE_TYPE_SET = new Set<string>(NODE_TYPES);

@@ -18,8 +18,8 @@ jest.mock('../../services/derive.service', () => ({
   deriveFromNodes: jest.fn(),
 }));
 
-import { startWorkflowRun } from '../../lib/agentos-client';
-import { parseRevisePayload, reviseWithLlm } from '../../services/screenplay.service';
+import { startWorkflowRun } from '../../lib/agentos-client.js';
+import { parseRevisePayload, reviseWithLlm } from '../../services/screenplay.service.js';
 
 const mockedStart = startWorkflowRun as jest.MockedFunction<typeof startWorkflowRun>;
 

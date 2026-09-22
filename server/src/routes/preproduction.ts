@@ -1,31 +1,11 @@
 import { Hono } from 'hono';
-import { AppException, ErrorCode } from '../lib/errors';
-import type { AuthEnv } from '../middleware/session';
-import { PreproductionService, type ShotInput } from '../services/preproduction.service';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import type { AuthEnv } from '../middleware/session.js';
+import { PreproductionService, type ShotInput } from '../services/preproduction.service.js';
+import { asObject, readJson, requireUser } from './helpers.js';
 
 const preproduction = new Hono<AuthEnv>();
 const service = new PreproductionService();
-
-function requireUser(c: { get: (key: 'user') => AuthEnv['Variables']['user'] | undefined }) {
-  const user = c.get('user');
-  if (!user) throw new AppException(ErrorCode.UNAUTHORIZED, '未登录');
-  return user;
-}
-
-async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<unknown> {
-  try {
-    return await c.req.json();
-  } catch {
-    throw new AppException(ErrorCode.INVALID_INPUT, '请求体必须是 JSON');
-  }
-}
-
-function asObject(body: unknown): Record<string, unknown> {
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    throw new AppException(ErrorCode.INVALID_INPUT, '请求体必须是对象');
-  }
-  return body as Record<string, unknown>;
-}
 
 function parseShots(value: unknown): ShotInput[] {
   if (!Array.isArray(value)) {

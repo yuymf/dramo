@@ -21,11 +21,11 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
-import { prisma } from '../../lib/db';
-import { JobRunnerService } from '../../services/job-runner.service';
-import { JobStoreService } from '../../services/job-store.service';
-import { NO_SD_WORKER_MESSAGE, type SdPoolService } from '../../services/sd-pool.service';
-import type { StorageService } from '../../services/storage.service';
+import { prisma } from '../../lib/db.js';
+import { TaskRunnerService } from '../../services/task-runner.service.js';
+import { TaskStoreService } from '../../services/task-store.service.js';
+import { NO_SD_WORKER_MESSAGE, type SdPoolService } from '../../services/sd-pool.service.js';
+import type { StorageService } from '../../services/storage.service.js';
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>;
 
@@ -55,21 +55,21 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-describe('JobRunnerService', () => {
-  let mockStore: jest.Mocked<JobStoreService>;
+describe('TaskRunnerService', () => {
+  let mockStore: jest.Mocked<TaskStoreService>;
   let mockPool: jest.Mocked<SdPoolService>;
   let mockStorage: jest.Mocked<StorageService>;
-  let service: JobRunnerService;
+  let service: TaskRunnerService;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     mockStore = {
-      listJobs: jest.fn(),
-      getJob: jest.fn(),
-      updateJob: jest.fn(),
-      updateJobIfActive: jest.fn(),
-    } as unknown as jest.Mocked<JobStoreService>;
+      listTasks: jest.fn(),
+      getTask: jest.fn(),
+      updateTask: jest.fn(),
+      updateTaskIfActive: jest.fn(),
+    } as unknown as jest.Mocked<TaskStoreService>;
 
     mockPool = {
       pickWorker: jest.fn(),
@@ -79,23 +79,24 @@ describe('JobRunnerService', () => {
 
     mockStorage = {
       uploadImageFromBase64: jest.fn(),
+      publicApiUrl: jest.fn((projectId: string, filename: string) => `/api/files/projects/${projectId}/${filename}`),
     } as unknown as jest.Mocked<StorageService>;
 
     (mockPrisma.character.findFirst as jest.MockedFunction<typeof mockPrisma.character.findFirst>)
       .mockResolvedValue({ id: 'char-1', projectId: 'proj-1', images: [] } as never);
 
-    service = new JobRunnerService(mockStore, mockPool, mockStorage);
+    service = new TaskRunnerService(mockStore, mockPool, mockStorage);
   });
 
-  describe('createJob', () => {
+  describe('createTask', () => {
     it('creates a GenerationTask and returns it', async () => {
       const task = makeTask();
       (mockPrisma.generationTask.create as jest.MockedFunction<typeof mockPrisma.generationTask.create>)
         .mockResolvedValue(task as never);
       mockPool.pickWorker.mockResolvedValue(null);
-      mockStore.updateJobIfActive.mockResolvedValue(task as never);
+      mockStore.updateTaskIfActive.mockResolvedValue(task as never);
 
-      const result = await service.createJob({
+      const result = await service.createTask({
         userId: 'user-1',
         projectId: 'proj-1',
         kind: 'portrait',
@@ -123,9 +124,9 @@ describe('JobRunnerService', () => {
       (mockPrisma.generationTask.create as jest.MockedFunction<typeof mockPrisma.generationTask.create>)
         .mockResolvedValue(task as never);
       mockPool.pickWorker.mockResolvedValue(null);
-      mockStore.updateJobIfActive.mockResolvedValue(task as never);
+      mockStore.updateTaskIfActive.mockResolvedValue(task as never);
 
-      await service.createJob({
+      await service.createTask({
         userId: 'user-1',
         projectId: 'proj-1',
         kind: 'portrait',
@@ -134,7 +135,7 @@ describe('JobRunnerService', () => {
       });
       await flush();
 
-      expect(mockStore.updateJobIfActive).toHaveBeenCalledWith(
+      expect(mockStore.updateTaskIfActive).toHaveBeenCalledWith(
         'task-1',
         expect.objectContaining({
           status: 'failed',
@@ -164,13 +165,13 @@ describe('JobRunnerService', () => {
         url: 'http://localhost/uploads/projects/proj-1/img.png',
         path: 'projects/proj-1/img.png',
       });
-      mockStore.updateJobIfActive.mockResolvedValue(task as never);
+      mockStore.updateTaskIfActive.mockResolvedValue(task as never);
       (mockPrisma.asset.create as jest.MockedFunction<typeof mockPrisma.asset.create>)
         .mockResolvedValue({ id: 'asset-1' } as never);
       (mockPrisma.character.update as jest.MockedFunction<typeof mockPrisma.character.update>)
         .mockResolvedValue({ id: 'char-1' } as never);
 
-      await service.createJob({
+      await service.createTask({
         userId: 'user-1',
         projectId: 'proj-1',
         kind: 'portrait',
@@ -188,20 +189,20 @@ describe('JobRunnerService', () => {
           kind: 'portrait',
           entityType: 'character',
           entityId: 'char-1',
-          url: 'http://localhost/uploads/projects/proj-1/img.png',
+          url: '/api/files/projects/proj-1/img.png',
           taskId: 'task-1',
         }),
       });
       expect(mockPrisma.character.update).toHaveBeenCalledWith({
         where: { id: 'char-1' },
-        data: { images: [{ url: 'http://localhost/uploads/projects/proj-1/img.png' }] },
+        data: { images: [{ url: '/api/files/projects/proj-1/img.png' }] },
       });
-      expect(mockStore.updateJobIfActive).toHaveBeenCalledWith(
+      expect(mockStore.updateTaskIfActive).toHaveBeenCalledWith(
         'task-1',
         expect.objectContaining({
           status: 'completed',
           progress: 100,
-          resultUrl: 'http://localhost/uploads/projects/proj-1/img.png',
+          resultUrl: '/api/files/projects/proj-1/img.png',
         })
       );
       expect(mockPool.release).toHaveBeenCalledWith('sd-1');
@@ -221,9 +222,9 @@ describe('JobRunnerService', () => {
         healthy: true,
       });
       mockPool.txt2img.mockRejectedValue(new Error('fetch failed'));
-      mockStore.updateJobIfActive.mockResolvedValue(task as never);
+      mockStore.updateTaskIfActive.mockResolvedValue(task as never);
 
-      await service.createJob({
+      await service.createTask({
         userId: 'user-1',
         projectId: 'proj-1',
         kind: 'portrait',
@@ -232,7 +233,7 @@ describe('JobRunnerService', () => {
       });
       await flush();
 
-      expect(mockStore.updateJobIfActive).toHaveBeenCalledWith(
+      expect(mockStore.updateTaskIfActive).toHaveBeenCalledWith(
         'task-1',
         expect.objectContaining({
           status: 'failed',
@@ -246,63 +247,117 @@ describe('JobRunnerService', () => {
     });
   });
 
-  describe('cancelJob', () => {
-    it('should cancel a queued job', async () => {
-      const task = makeTask({ status: 'queued' });
-      const canceled = makeTask({ status: 'canceled' });
-      mockStore.getJob.mockResolvedValue(task as never);
-      mockStore.updateJob.mockResolvedValue(canceled as never);
+  describe('runTxt2Img', () => {
+    it('creates a cinema_frame task and returns the stored url', async () => {
+      const task = makeTask({ id: 'task-c', kind: 'cinema_frame', entityType: 'reel', entityId: 'reel-1' });
+      (mockPrisma.generationTask.create as jest.MockedFunction<typeof mockPrisma.generationTask.create>)
+        .mockResolvedValue(task as never);
+      mockPool.pickWorker.mockResolvedValue({
+        id: 'sd-1',
+        baseUrl: 'http://127.0.0.1:7860',
+        weight: 1,
+        capabilities: ['txt2img'],
+        queue: 0,
+        failCount: 0,
+        healthy: true,
+      });
+      mockPool.txt2img.mockResolvedValue('iVBORw0KGgo=');
+      mockStorage.uploadImageFromBase64.mockResolvedValue({
+        url: 'http://localhost/uploads/projects/proj-1/frame.png',
+        path: 'projects/proj-1/frame.png',
+      });
+      mockStore.updateTaskIfActive.mockResolvedValue(task as never);
+      (mockPrisma.asset.create as jest.MockedFunction<typeof mockPrisma.asset.create>)
+        .mockResolvedValue({ id: 'asset-1' } as never);
 
-      const result = await service.cancelJob('task-1', 'user-1');
+      const result = await service.runTxt2Img({
+        userId: 'user-1',
+        projectId: 'proj-1',
+        kind: 'cinema_frame',
+        entityType: 'reel',
+        entityId: 'reel-1',
+        prompt: 'wide shot',
+        aspectRatio: '2.39:1',
+        stickyKey: 'reel-1',
+      });
 
-      expect(mockStore.updateJob).toHaveBeenCalledWith('task-1', { status: 'canceled' });
-      expect(result).toEqual(canceled);
-    });
-
-    it('should return already canceled job without re-canceling', async () => {
-      const task = makeTask({ status: 'canceled' });
-      mockStore.getJob.mockResolvedValue(task as never);
-
-      const result = await service.cancelJob('task-1', 'user-1');
-
-      expect(mockStore.updateJob).not.toHaveBeenCalled();
-      expect(result).toEqual(task);
-    });
-
-    it('should throw when trying to cancel a completed job', async () => {
-      mockStore.getJob.mockResolvedValue(makeTask({ status: 'completed' }) as never);
-      await expect(service.cancelJob('task-1', 'user-1')).rejects.toThrow('Job cannot be canceled');
-    });
-
-    it('should throw when trying to cancel a failed job', async () => {
-      mockStore.getJob.mockResolvedValue(makeTask({ status: 'failed' }) as never);
-      await expect(service.cancelJob('task-1', 'user-1')).rejects.toThrow('Job cannot be canceled');
+      expect(result).toEqual({ taskId: 'task-c', url: '/api/files/projects/proj-1/frame.png' });
+      expect(mockPrisma.generationTask.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          kind: 'cinema_frame',
+          entityType: 'reel',
+          entityId: 'reel-1',
+        }),
+      });
+      expect(mockPrisma.character.update).not.toHaveBeenCalled();
     });
   });
 
-  describe('retryJob', () => {
-    it('should retry a failed job', async () => {
+  describe('cancelTask', () => {
+    it('should cancel a queued task', async () => {
+      const task = makeTask({ status: 'queued' });
+      const canceled = makeTask({ status: 'canceled' });
+      mockStore.getTask.mockResolvedValue(task as never);
+      mockStore.updateTask.mockResolvedValue(canceled as never);
+
+      const result = await service.cancelTask('task-1', 'user-1');
+
+      expect(mockStore.updateTask).toHaveBeenCalledWith('task-1', { status: 'canceled' });
+      expect(result).toEqual(canceled);
+    });
+
+    it('should return already canceled task without re-canceling', async () => {
+      const task = makeTask({ status: 'canceled' });
+      mockStore.getTask.mockResolvedValue(task as never);
+
+      const result = await service.cancelTask('task-1', 'user-1');
+
+      expect(mockStore.updateTask).not.toHaveBeenCalled();
+      expect(result).toEqual(task);
+    });
+
+    it('should throw when trying to cancel a completed task', async () => {
+      mockStore.getTask.mockResolvedValue(makeTask({ status: 'completed' }) as never);
+      await expect(service.cancelTask('task-1', 'user-1')).rejects.toMatchObject({
+        message: 'Task cannot be canceled',
+      });
+    });
+
+    it('should throw when trying to cancel a failed task', async () => {
+      mockStore.getTask.mockResolvedValue(makeTask({ status: 'failed' }) as never);
+      await expect(service.cancelTask('task-1', 'user-1')).rejects.toMatchObject({
+        message: 'Task cannot be canceled',
+      });
+    });
+  });
+
+  describe('retryTask', () => {
+    it('should retry a failed task', async () => {
       const failed = makeTask({ status: 'failed', error: { retryable: true } });
       const created = makeTask({ id: 'task-2', status: 'queued' });
-      mockStore.getJob.mockResolvedValue(failed as never);
+      mockStore.getTask.mockResolvedValue(failed as never);
       (mockPrisma.generationTask.create as jest.MockedFunction<typeof mockPrisma.generationTask.create>)
         .mockResolvedValue(created as never);
       mockPool.pickWorker.mockResolvedValue(null);
-      mockStore.updateJobIfActive.mockResolvedValue(created as never);
+      mockStore.updateTaskIfActive.mockResolvedValue(created as never);
 
-      const result = await service.retryJob('task-1', 'user-1');
+      const result = await service.retryTask('task-1', 'user-1');
 
       expect(result).toEqual(created);
     });
 
-    it('should throw when retrying non-failed job', async () => {
-      mockStore.getJob.mockResolvedValue(makeTask({ status: 'running' }) as never);
-      await expect(service.retryJob('task-1', 'user-1')).rejects.toThrow('Only failed jobs can be retried');
+    it('should throw when retrying non-failed task', async () => {
+      mockStore.getTask.mockResolvedValue(makeTask({ status: 'running' }) as never);
+      await expect(service.retryTask('task-1', 'user-1')).rejects.toMatchObject({
+        message: 'Only failed tasks can be retried',
+      });
     });
 
-    it('should throw when job is not retryable', async () => {
-      mockStore.getJob.mockResolvedValue(makeTask({ status: 'failed', error: { retryable: false } }) as never);
-      await expect(service.retryJob('task-1', 'user-1')).rejects.toThrow('Job is not retryable');
+    it('should throw when task is not retryable', async () => {
+      mockStore.getTask.mockResolvedValue(makeTask({ status: 'failed', error: { retryable: false } }) as never);
+      await expect(service.retryTask('task-1', 'user-1')).rejects.toMatchObject({
+        message: 'Task is not retryable',
+      });
     });
   });
 });

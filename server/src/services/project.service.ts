@@ -1,9 +1,9 @@
 import { Prisma, type MemberRole, type ProjectType, type ScreenplayFormat } from '@prisma/client';
-import { prisma } from '../lib/db';
-import { AppException, ErrorCode } from '../lib/errors';
-import { EMPTY_COVER } from '../types/screenplay';
-import { DEFAULT_CINEMA_SETTINGS, normalizeCinemaSettings, type CinemaSettings } from '../types/cinema';
-import { resolveAccess } from './access.service';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { EMPTY_COVER } from '../types/screenplay.js';
+import { DEFAULT_CINEMA_SETTINGS, normalizeCinemaSettings, type CinemaSettings } from '../types/cinema.js';
+import { resolveAccess } from './access.service.js';
 
 const PROJECT_TYPES: ProjectType[] = ['script', 'cinema', 'spoken'];
 const SCREENPLAY_FORMATS: ScreenplayFormat[] = ['hollywood', 'asian'];

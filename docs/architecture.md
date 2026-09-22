@@ -46,13 +46,15 @@ Browser → fetch('/api/projects', { credentials: 'include' })
 
 ## SSE
 
-- 对话、`GET /api/jobs/stream`
+- 对话、`GET /api/tasks/stream`
 - 超时 55s（nginx `proxy_read_timeout` 600s）
 - 实现：`server/src/lib/sse.ts`
 
 ## 图片生成
 
-主路径：`POST /api/images/generations` → `GenerationTask` → `sd-pool.service.ts`。
+主路径：`POST /api/images/generations` 与 Cinema 分镜图都走 `TaskRunnerService`（`GenerationTask` + SD 池 + Asset）。
+
+`GET /api/tasks` 列任务。旧 `/api/jobs` 路径已删除。
 
 `SD_WORKERS` 是 A1111 兼容 JSON 数组。未设置时本地默认 `127.0.0.1:7860/7861`。Docker 里这个 loopback 指向 api 容器，必须经 compose 注入宿主机可达的 URL。
 

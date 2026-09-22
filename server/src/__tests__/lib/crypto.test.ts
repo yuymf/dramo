@@ -3,7 +3,7 @@ import { describe, it, expect } from '@jest/globals';
 // Set test encryption key before importing module
 process.env.ENCRYPTION_KEY = 'a'.repeat(64); // 64 hex chars = 32 bytes
 
-import { encrypt, decrypt, maskApiKey, sanitizeHeaderValue } from '../../lib/crypto';
+import { encrypt, decrypt, maskApiKey, sanitizeHeaderValue } from '../../lib/crypto.js';
 
 describe('crypto', () => {
   describe('encrypt/decrypt', () => {

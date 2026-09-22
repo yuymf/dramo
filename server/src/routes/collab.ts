@@ -1,30 +1,11 @@
 import { Hono } from 'hono';
 import type { MemberRole, ShareMode } from '@prisma/client';
-import { AppException, ErrorCode } from '../lib/errors';
-import type { AuthEnv } from '../middleware/session';
-import { CollabService } from '../services/collab.service';
+import type { AuthEnv } from '../middleware/session.js';
+import { CollabService } from '../services/collab.service.js';
+import { asObject, readJson, requireUser } from './helpers.js';
 
 const collab = new Hono<AuthEnv>();
 const service = new CollabService();
-
-function requireUser(c: { get: (key: 'user') => AuthEnv['Variables']['user'] | undefined }) {
-  const user = c.get('user');
-  if (!user) throw new AppException(ErrorCode.UNAUTHORIZED, '未登录');
-  return user;
-}
-
-async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<Record<string, unknown>> {
-  try {
-    const body = await c.req.json();
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      throw new AppException(ErrorCode.INVALID_INPUT, '请求体必须是对象');
-    }
-    return body as Record<string, unknown>;
-  } catch (err) {
-    if (err instanceof AppException) throw err;
-    throw new AppException(ErrorCode.INVALID_INPUT, '请求体必须是 JSON');
-  }
-}
 
 collab.get('/share/:token', async (c) => {
   return c.json(await service.resolveToken(c.req.param('token'), requireUser(c).userId));
@@ -35,7 +16,7 @@ collab.get('/projects/:projectId/share', async (c) => {
 });
 
 collab.patch('/projects/:projectId/share', async (c) => {
-  const body = await readJson(c);
+  const body = asObject(await readJson(c));
   return c.json(
     await service.updateShare(c.req.param('projectId'), requireUser(c).userId, body.shareMode as ShareMode)
   );
@@ -46,7 +27,7 @@ collab.get('/projects/:projectId/members', async (c) => {
 });
 
 collab.post('/projects/:projectId/members', async (c) => {
-  const body = await readJson(c);
+  const body = asObject(await readJson(c));
   return c.json(
     await service.inviteMember(
       c.req.param('projectId'),
@@ -66,7 +47,7 @@ collab.get('/projects/:projectId/comments', async (c) => {
 });
 
 collab.post('/projects/:projectId/comments', async (c) => {
-  const body = await readJson(c);
+  const body = asObject(await readJson(c));
   return c.json(
     await service.addComment(c.req.param('projectId'), requireUser(c).userId, {
       anchorType: String(body.anchorType ?? ''),
@@ -85,7 +66,7 @@ collab.get('/projects/:projectId/versions', async (c) => {
 collab.post('/projects/:projectId/versions', async (c) => {
   let name: string | undefined;
   try {
-    const body = await readJson(c);
+    const body = asObject(await readJson(c));
     name = typeof body.name === 'string' ? body.name : undefined;
   } catch {
     name = undefined;
@@ -102,7 +83,7 @@ collab.post('/projects/:projectId/versions/:versionId/restore', async (c) => {
 collab.post('/projects/:projectId/publish', async (c) => {
   let allowCopy: boolean | undefined;
   try {
-    const body = await readJson(c);
+    const body = asObject(await readJson(c));
     allowCopy = typeof body.allowCopy === 'boolean' ? body.allowCopy : undefined;
   } catch {
     allowCopy = undefined;
@@ -134,7 +115,7 @@ collab.get('/library/:projectId/discussions', async (c) => {
 });
 
 collab.post('/library/:projectId/discussions', async (c) => {
-  const body = await readJson(c);
+  const body = asObject(await readJson(c));
   return c.json(
     await service.addDiscussion(c.req.param('projectId'), requireUser(c).userId, String(body.body ?? '')),
     201

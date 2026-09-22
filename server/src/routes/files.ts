@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Hono } from 'hono';
-import { config } from '../config';
-import type { AuthEnv } from '../middleware/session';
+import { config } from '../config/index.js';
+import type { AuthEnv } from '../middleware/session.js';
 
 const files = new Hono<AuthEnv>();
 

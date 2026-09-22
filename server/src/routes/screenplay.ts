@@ -1,18 +1,10 @@
 import { Hono } from 'hono';
-import { AppException, ErrorCode } from '../lib/errors';
-import type { AuthEnv } from '../middleware/session';
-import { ScreenplayService } from '../services/screenplay.service';
+import type { AuthEnv } from '../middleware/session.js';
+import { ScreenplayService } from '../services/screenplay.service.js';
+import { readJson, requireUser } from './helpers.js';
 
 const screenplay = new Hono<AuthEnv>();
 const screenplayService = new ScreenplayService();
-
-function requireUser(c: { get: (key: 'user') => AuthEnv['Variables']['user'] | undefined }) {
-  const user = c.get('user');
-  if (!user) {
-    throw new AppException(ErrorCode.UNAUTHORIZED, '未登录');
-  }
-  return user;
-}
 
 const EPISODE_PATH = '/projects/:projectId/episodes/:episodeId/screenplay';
 
@@ -70,13 +62,5 @@ screenplay.put(EPISODE_PATH, async (c) => {
   );
   return c.json(result);
 });
-
-async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<unknown> {
-  try {
-    return await c.req.json();
-  } catch {
-    throw new AppException(ErrorCode.INVALID_INPUT, '请求体必须是 JSON');
-  }
-}
 
 export { screenplay };

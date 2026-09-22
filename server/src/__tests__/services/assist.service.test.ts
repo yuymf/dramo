@@ -8,7 +8,7 @@ jest.mock('../../services/screenplay.service', () => ({
   ScreenplayService: jest.fn().mockImplementation(() => ({})),
 }));
 
-import { normalizeColdStart, suggestMicroContinue } from '../../services/assist.service';
+import { normalizeColdStart, suggestMicroContinue } from '../../services/assist.service.js';
 
 describe('suggestMicroContinue', () => {
   it('returns 50–100 characters based on previous text', () => {

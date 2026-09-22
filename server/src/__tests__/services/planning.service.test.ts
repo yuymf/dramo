@@ -8,7 +8,7 @@ jest.mock('../../services/screenplay.service', () => ({
   ScreenplayService: jest.fn().mockImplementation(() => ({})),
 }));
 
-import { corpusFromNodes, isBeatCovered } from '../../services/planning.service';
+import { corpusFromNodes, isBeatCovered } from '../../services/planning.service.js';
 
 describe('isBeatCovered', () => {
   it('covers when any trimmed field of length >= 2 appears in the corpus', () => {

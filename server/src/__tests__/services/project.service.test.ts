@@ -17,10 +17,10 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
-import { prisma } from '../../lib/db';
-import { ProjectService } from '../../services/project.service';
-import { EMPTY_COVER } from '../../types/screenplay';
-import { AppException, ErrorCode } from '../../lib/errors';
+import { prisma } from '../../lib/db.js';
+import { ProjectService } from '../../services/project.service.js';
+import { EMPTY_COVER } from '../../types/screenplay.js';
+import { AppException, ErrorCode } from '../../lib/errors.js';
 
 // jest.Mock defaults to never for mockResolvedValue; keep tests untyped here.
 const mocked = (fn: unknown) => fn as any; // eslint-disable-line @typescript-eslint/no-explicit-any

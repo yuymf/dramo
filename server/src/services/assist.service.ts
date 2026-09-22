@@ -1,8 +1,8 @@
 import type { Prisma } from '@prisma/client';
-import { prisma } from '../lib/db';
-import { AppException, ErrorCode } from '../lib/errors';
-import { ScreenplayService } from './screenplay.service';
-import { isBeatCovered, corpusFromNodes } from './planning.service';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { ScreenplayService } from './screenplay.service.js';
+import { isBeatCovered, corpusFromNodes } from './planning.service.js';
 
 export const ADVISORS = [
   {
@@ -58,15 +58,6 @@ export interface DoctorNote {
   title: string;
   body: string;
 }
-
-const EMPTY_COLD: ColdStartDoc = {
-  gate: 1,
-  premise: { character: '', desire: '', obstacle: '', cost: '', format: '' },
-  structure: { causality: '', ending: '' },
-  beatsNote: '',
-  entitiesNote: '',
-  writingNote: '',
-};
 
 export function normalizeColdStart(raw: Prisma.JsonValue | null | undefined): ColdStartDoc {
   const obj = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};

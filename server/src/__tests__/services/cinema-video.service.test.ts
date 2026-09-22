@@ -4,8 +4,8 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { describe, expect, it } from '@jest/globals';
-import { encodeFifteenSecondFilm, filmPixelSize } from '../../services/cinema-video.service';
-import { FILM_DURATION_SEC } from '../../types/cinema';
+import { encodeFifteenSecondFilm, filmPixelSize } from '../../services/cinema-video.service.js';
+import { FILM_DURATION_SEC } from '../../types/cinema.js';
 
 const execFileAsync = promisify(execFile);
 

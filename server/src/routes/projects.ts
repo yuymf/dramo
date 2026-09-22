@@ -1,20 +1,13 @@
 import { Hono } from 'hono';
 import type { ProjectType, ScreenplayFormat } from '@prisma/client';
-import { ProjectService } from '../services/project.service';
-import type { AuthEnv } from '../middleware/session';
-import { AppException, ErrorCode } from '../lib/errors';
-import { normalizeCinemaSettings, type CinemaSettings } from '../types/cinema';
+import { ProjectService } from '../services/project.service.js';
+import type { AuthEnv } from '../middleware/session.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { normalizeCinemaSettings, type CinemaSettings } from '../types/cinema.js';
+import { requireUser } from './helpers.js';
 
 const projects = new Hono<AuthEnv>();
 const projectService = new ProjectService();
-
-function requireUser(c: { get: (key: 'user') => AuthEnv['Variables']['user'] | undefined }) {
-  const user = c.get('user');
-  if (!user) {
-    throw new AppException(ErrorCode.UNAUTHORIZED, '未登录');
-  }
-  return user;
-}
 
 projects.get('/projects', async (c) => {
   const { page = '1', limit = '20', search } = c.req.query();

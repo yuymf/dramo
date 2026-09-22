@@ -1,5 +1,5 @@
-import { prisma } from '../lib/db';
-import type { ScreenplayNode } from '../types/screenplay';
+import { prisma } from '../lib/db.js';
+import type { ScreenplayNode } from '../types/screenplay.js';
 
 /**
  * Leading slug on a scene heading: INT./EXT./内景/外景 (and INT./EXT. combos).
@@ -50,7 +50,7 @@ export function parseCharacterName(text: string): string | null {
   let value = text.trim();
   if (!value) return null;
   value = value.replace(/^@\s*/, '');
-  value = value.replace(/\s*[\(（][^)）]*[\)）]\s*/g, ' ');
+  value = value.replace(/\s*[(（][^)）]*[)）]\s*/g, ' ');
   value = value.replace(/[:：]\s*$/g, '');
   value = value.replace(MULTI_SPACE, ' ').trim();
   return value || null;

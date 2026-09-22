@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { fdxToNodes, nodesToFdx } from '../../lib/fdx';
+import { fdxToNodes, nodesToFdx } from '../../lib/fdx.js';
 
 describe('fdx', () => {
   it('round-trips scene and dialogue', () => {

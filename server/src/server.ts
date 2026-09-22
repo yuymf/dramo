@@ -1,9 +1,9 @@
 import { serve } from '@hono/node-server';
 import type { Server } from 'node:http';
-import app from './app';
-import { config } from './config';
-import { logger } from './lib/logger';
-import { initPrisma } from './lib/db';
+import app from './app.js';
+import { config } from './config/index.js';
+import { logger } from './lib/logger.js';
+import { initPrisma } from './lib/db.js';
 
 const port = config.port;
 

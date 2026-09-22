@@ -1,7 +1,7 @@
-import { prisma } from '../lib/db';
-import { AppException, ErrorCode } from '../lib/errors';
-import { encrypt, decrypt, maskApiKey, sanitizeHeaderValue } from '../lib/crypto';
-import { logger } from '../lib/logger';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { encrypt, decrypt, maskApiKey, sanitizeHeaderValue } from '../lib/crypto.js';
+import { logger } from '../lib/logger.js';
 import type { LLMConfigType } from '@prisma/client';
 
 const MAX_CONFIGS_PER_USER = 20;

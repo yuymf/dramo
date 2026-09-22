@@ -1,4 +1,4 @@
-import type { ScreenplayNode } from '../types/screenplay';
+import type { ScreenplayNode } from '../types/screenplay.js';
 
 const TYPE_TO_FDX: Record<string, string> = {
   scene_heading: 'Scene Heading',

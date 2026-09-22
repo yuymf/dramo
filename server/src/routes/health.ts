@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import type { AuthEnv } from '../middleware/session';
-import { config } from '../config';
-import { checkAgentOSHealth } from '../lib/agentos-client';
+import type { AuthEnv } from '../middleware/session.js';
+import { config } from '../config/index.js';
+import { checkAgentOSHealth } from '../lib/agentos-client.js';
 
 const health = new Hono<AuthEnv>();
 

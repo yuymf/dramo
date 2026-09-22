@@ -1,6 +1,6 @@
 import type { MemberRole, ShareMode } from '@prisma/client';
-import { prisma } from '../lib/db';
-import { AppException, ErrorCode } from '../lib/errors';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
 
 const WRITE_ROLES = new Set<MemberRole>(['OWNER', 'ADMIN', 'EDITOR']);
 const MANAGE_ROLES = new Set<MemberRole>(['OWNER', 'ADMIN']);
