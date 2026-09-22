@@ -1,33 +1,36 @@
 # Dramo API
 
-Hono + Prisma + 本地 PostgreSQL。无登录、无队列服务，AI 工作流全部交给 AgentOS。
+Hono + Prisma + 本地 PostgreSQL。Cookie session 鉴权；静帧出图走 SD worker 池。
 
 ## 启动
 
 ```bash
 # 在仓库根目录
-cp .env.example server/.env   # 填 DATABASE_URL、ENCRYPTION_KEY、AGENTOS_BASE_URL
+cp .env.example server/.env   # DATABASE_URL、ENCRYPTION_KEY、AGENTOS_BASE_URL、SD_WORKERS
 npm run prisma:generate
 npm run prisma:migrate
 npm run dev:server            # :12321
 ```
 
-Docker 下一并启动：根目录 `docker compose up -d`。入口脚本会先跑 `prisma migrate deploy`。
+Docker：根目录 `docker compose up -d`。入口脚本先跑 `prisma migrate deploy`。
 
 ## 结构
 
 ```
 src/
-  app.ts              # Hono 应用，路由挂在 /api/v1
-  server.ts           # Node HTTP 入口
-  routes/             # HTTP 层
-  services/           # 业务
-  lib/agentos-client.ts
-  middleware/         # 默认用户 + 统一错误
+  app.ts                 # 16 个路由模块，挂在 /api/v1
+  server.ts
+  routes/                # auth, projects, screenplay, entities, planning,
+                         # assist, preproduction, cinema, files, collab,
+                         # chat, chat-sessions, uploads, generation-jobs,
+                         # llm-config, health
+  services/
+  lib/agentos-client.ts  # 工作流 POST /workflows/{id}/runs
+  middleware/session.ts  # dramo_session cookie；公开路径仅 /auth/* /health
   db/schema.prisma
 ```
 
-对外路径：`/api/v1/*`。生产由 nginx 把浏览器的 `/api/*` 改写过来；本地开发由 Next.js catch-all 做同样的事。
+浏览器认 `/api/*`。生产 nginx 改写到 `/api/v1/*`；本地由 Next.js catch-all 转发。
 
 ## 常用命令
 

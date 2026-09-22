@@ -1,140 +1,162 @@
 # API 接口参考
 
-> 完整的后端 API 端点列表。**无认证** —— 所有请求自动关联 `default-local-user`。
+后端挂在 `/api/v1/*`。浏览器走 `/api/*`（生产 nginx 改写，本地 Next.js catch-all）。
 
-后端实际挂载在 `/api/v1/*`。浏览器走 `/api/*`，生产由 nginx 改写，本地由 Next.js catch-all 转发。
+除 `/auth/*` 与 `/health` 外需要 cookie `dramo_session`。未登录 401 `UNAUTHORIZED`。实现：`server/src/middleware/session.ts`。
 
-## 统一错误信封
+16 个模块：`server/src/app.ts`。
 
-所有错误返回统一格式：
+## 错误信封
 
 ```json
 {
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "用户友好消息",
-    "retryable": true
-  },
+  "error": { "code": "ERROR_CODE", "message": "用户友好消息", "retryable": true },
   "requestId": "uuid"
 }
 ```
 
 ---
 
-## 项目 (`/api/projects/`)
+## 健康 (`health.ts`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/projects` | 项目列表（分页）|
-| POST | `/api/projects` | 创建项目 |
-| GET | `/api/projects/:id` | 获取项目详情 |
-| PATCH | `/api/projects/:id` | 更新项目 |
-| DELETE | `/api/projects/:id` | 删除项目 |
+| GET | `/api/health` | 探活（公开） |
+| GET | `/api/health/deep` | 含 AgentOS |
 
-## 台本 (`/api/projects/:projectId/script`)
+## 账号 (`auth.ts`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/projects/:pid/script` | 获取台本 |
-| POST | `/api/projects/:pid/script` | 生成台本（同步调用 AgentOS）|
-| PATCH | `/api/projects/:pid/script/content` | 更新 scenes/acts |
-| POST | `/api/projects/:pid/script/scenes/:sceneId/regenerate` | 重新生成单个场景 |
-| GET | `/api/projects/:pid/script/versions` | 版本历史 |
-| POST | `/api/projects/:pid/script/versions/:vid/revert` | 回退版本 |
+| POST | `/api/auth/register` | `{ email, name, password }` → 201 + Set-Cookie |
+| POST | `/api/auth/login` | `{ email, password }` |
+| POST | `/api/auth/logout` | 删 session |
+| GET | `/api/auth/me` | 当前用户 |
 
-## 角色 (`/api/projects/:projectId/characters/`)
+## 项目 (`projects.ts`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `.../characters/extract` | 从台本提取角色 |
-| POST | `.../characters/generate-image` | 生成角色图 |
-| GET | `.../characters/assets` | 角色资产列表 |
-| POST | `.../characters/assets` | 创建角色资产 |
-| GET | `.../characters/assets/:assetId` | 单个角色资产 |
-| PUT | `.../characters/assets/:assetId` | 更新角色资产 |
-| DELETE | `.../characters/assets/:assetId` | 删除角色资产 |
+| GET | `/api/projects` | 分页列表 |
+| POST | `/api/projects` | `{ name, description?, type?, format?, cinemaSettings? }` |
+| GET | `/api/projects/:id` | 详情 |
+| PATCH | `/api/projects/:id` | `{ name, format, cinemaSettings }` |
+| DELETE | `/api/projects/:id` | 204 |
 
-## 角色关系 (`/api/projects/:projectId/characters/relations`)
+## 剧本 (`screenplay.ts`)
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `.../relations` | 获取关系图 |
-| POST | `.../relations` | 创建关系边 |
-| DELETE | `.../relations/:relationId` | 删除关系边 |
-
-## 场景 (`/api/projects/:projectId/locations/`)
+前缀：`/api/projects/:projectId/episodes/:episodeId/screenplay`
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `.../locations/extract` | 从台本提取场景 |
-| POST | `.../locations/generate-image` | 生成场景图 |
-| GET | `.../locations/assets` | 场景资产列表 |
-| POST | `.../locations/assets` | 创建场景资产 |
-| GET | `.../locations/assets/:assetId` | 单个场景资产 |
-| PUT | `.../locations/assets/:assetId` | 更新场景资产 |
-| DELETE | `.../locations/assets/:assetId` | 删除场景资产 |
+| GET | `.../screenplay` | 正文 |
+| PUT | `.../screenplay` | 存盘 |
+| GET | `.../screenplay/versions` | 版本 |
+| POST | `.../screenplay/versions/:vid/revert` | 回滚 |
+| POST | `.../screenplay/revise` | `{ instruction, scope }` → ReviseWorkflow |
 
-## 分镜 (`/api/projects/:projectId/storyboard`)
+## 角色 / 地点 (`entities.ts`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `.../storyboard/import/stream` | 导入分镜（SSE 流）|
-| POST | `.../storyboard/import` | 导入分镜（后台任务，返回 taskId）|
-| GET | `.../storyboard-data` | 获取持久化分镜 |
-| PUT | `.../storyboard-data` | 保存分镜帧 |
-| GET | `.../storyboard/frames/images` | 获取帧图片 |
-| PUT | `.../storyboard/frames/:frameId/image` | 更新帧图片 |
+| GET | `/api/projects/:projectId/characters` | 角色 |
+| PATCH | `/api/projects/:projectId/characters/:characterId` | 更新 |
+| GET | `/api/projects/:projectId/locations` | 地点 |
+| PATCH | `/api/projects/:projectId/locations/:locationId` | 更新 |
 
-## 润色 (`/api/projects/:projectId/polish`)
+## 规划 (`planning.ts`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `.../polish` | 台本润色 |
+| GET/PUT | `/api/projects/:pid/episodes/:eid/outline` | 大纲 |
+| GET/PUT | `.../beats` | Beats |
+| GET | `.../beats/coverage` | 覆盖 |
+| GET | `/api/projects/:pid/props` | 道具 |
+| PATCH | `/api/projects/:pid/props/:propId` | 更新道具 |
+| GET/PUT | `/api/projects/:pid/worldview` | 世界观 |
 
-## 对话 (`/api/chat/:projectId/`)
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/chat/:pid/messages` | 获取历史消息 |
-| POST | `/api/chat/:pid/messages` | 发送消息（支持 SSE 流）|
-| POST | `/api/chat/:pid/reset` | 清空对话 |
-| GET | `/api/chat/:pid/sessions` | 列出会话 |
-| POST | `/api/chat/:pid/sessions` | 创建新会话 |
-| GET/PUT/DELETE | `/api/chat/:pid/sessions/:sessionId` | 单会话操作 |
-
-## 图片生成与任务 (`/api/images/`, `/api/jobs/`)
+## 辅助 (`assist.ts`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/images/generations` | 创建图片生成任务 |
+| GET | `/api/advisors` | 顾问目录 |
+| GET/POST | `/api/projects/:pid/knowledge` | 知识库 |
+| DELETE | `/api/projects/:pid/knowledge/:fileId` | 删文件 |
+| GET/PUT | `/api/projects/:pid/advisor` | 项目顾问 |
+| GET/PUT | `/api/projects/:pid/episodes/:eid/cold-start` | 冷启动 |
+| GET | `.../doctor` | 剧本医生 |
+| POST | `.../micro-continue` | 微续写 |
+
+## 前期 (`preproduction.ts`)
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `.../episodes/:eid/scenes` | 场次 |
+| GET/PUT | `.../episodes/:eid/shots` | 镜头 |
+| GET | `.../episodes/:eid/export/fdx` | 导出 FDX |
+| POST | `/api/projects/import-fdx` | 导入 FDX |
+| GET | `/api/projects/:pid/assets` | 资产 |
+
+## Cinema (`cinema.ts`)
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET/POST | `.../episodes/:eid/reels` | Reel 列表 / 创建 |
+| GET/PATCH | `/api/projects/:pid/reels/:reelId` | 单个 Reel |
+| POST | `.../reels/:reelId/storyboard` | 分镜 |
+| POST | `.../reels/:reelId/images` | 出图 |
+| POST | `.../reels/:reelId/films` | 成片 |
+| POST | `.../reels/:reelId/assist` | 辅助 |
+
+## 协作 (`collab.ts`)
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/share/:token` | 解析分享（仍需登录） |
+| GET/PATCH | `/api/projects/:pid/share` | 分享设置 |
+| GET/POST | `/api/projects/:pid/members` | 成员 |
+| GET/POST | `/api/projects/:pid/comments` | 评论 |
+| GET/POST | `/api/projects/:pid/versions` | 项目快照 |
+| POST | `/api/projects/:pid/versions/:versionId/restore` | 恢复 |
+| POST | `/api/projects/:pid/publish` `/unpublish` | 公开库 |
+| GET | `/api/library` `/library/:projectId` | 公开库 |
+| POST | `/api/library/:projectId/copy` | 拷贝 |
+| GET/POST | `/api/library/:projectId/discussions` | 讨论 |
+
+## 对话 (`chat.ts`, `chat-sessions.ts`)
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET/POST | `/api/chat/:pid/messages` | 消息（POST 可 SSE） |
+| POST | `/api/chat/:pid/reset` | 清空 |
+| GET/POST | `/api/chat/:pid/sessions` | 会话 |
+| PATCH/DELETE | `/api/chat/:pid/sessions/:sessionId` | 单会话 |
+
+## 出图 (`generation-jobs.ts`)
+
+`GenerationTask` + SD 池。没有 `GenerationJob` 表。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/images/generations` | `{ projectId, kind: portrait\|location, entityId, prompt, aspectRatio? }` |
 | GET | `/api/jobs` | 任务列表 |
-| GET | `/api/jobs/:jobId` | 任务状态 |
-| POST | `/api/jobs/:jobId/cancel` | 取消任务 |
-| POST | `/api/jobs/:jobId/retry` | 重试任务 |
+| GET | `/api/jobs/stream` | SSE |
+| GET | `/api/jobs/:id` | 状态 |
+| POST | `/api/jobs/:id/cancel` | 取消 |
+| POST | `/api/jobs/:id/retry` | 重试 |
 
-## LLM 配置 (`/api/llm-configs`)
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/llm-configs` | 列出用户配置 |
-| POST | `/api/llm-configs` | 创建配置（API Key AES-256-GCM 加密存储）|
-| PUT | `/api/llm-configs/:id` | 更新配置 |
-| DELETE | `/api/llm-configs/:id` | 删除配置 |
-| POST | `/api/llm-configs/:id/set-default` | 设为默认 |
-| POST | `/api/llm-configs/verify` | 验证配置可达性 |
-
-## 灵感 (`/api/inspirations/`)
+## LLM 配置 (`llm-config.ts`)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/inspirations/:projectId` | 项目灵感 |
-| POST | `/api/inspirations/:projectId/recommend` | AI 推荐灵感 |
-| POST | `/api/inspirations/favorite` | 切换收藏 |
+| GET/POST | `/api/llm-configs` | 列表 / 创建（Key AES-256-GCM） |
+| PUT/DELETE | `/api/llm-configs/:id` | 更新 / 删除 |
+| POST | `/api/llm-configs/:id/set-default` | 默认 |
+| POST | `/api/llm-configs/verify` | 探活 |
 
-## 其他
+## 文件
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/health` | 健康检查 |
-| GET | `/api/tasks/:taskId` | 异步任务状态查询 |
-| POST | `/api/projects/:pid/uploads/image` | 图片上传（返回 url + path）|
+| POST | `/api/projects/:pid/uploads/image` | 上传 |
+| GET | `/api/files/projects/:pid/:filename` | 读文件 |

@@ -34,8 +34,9 @@ AGENTOS_KEY=${AGENTOS_KEY}
 PORT=80
 PUBLIC_URL=http://localhost
 
-# LLM API Key (启动后也可在界面中配置)
-# OPENAI_API_KEY=sk-xxx
+# LLM 在界面「设置 → LLM 配置」里填，不要依赖进程环境变量
+# 出图：给 api 注入宿主机可达的 SD_WORKERS（容器内 127.0.0.1 无效）
+# SD_WORKERS=
 EOF
 
   echo "✅ 已生成 .env"
