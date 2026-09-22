@@ -4,7 +4,7 @@ import { api } from './client';
 // Types
 // ────────────────────────────────────────────────────────
 
-export type LLMConfigType = 'TEXT_LLM' | 'IMAGE_GEN';
+export type LLMConfigType = 'TEXT_LLM';
 
 export interface LLMConfig {
   id: string;

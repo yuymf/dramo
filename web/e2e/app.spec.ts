@@ -114,8 +114,12 @@ test.describe('注册后的书桌', () => {
     await signUp(page);
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: 'AI 模型配置' })).toBeVisible();
+    await expect(page.getByText('用于文本生成')).toBeVisible();
+    await expect(page.getByText('图片生成')).toHaveCount(0);
     await page.getByRole('button', { name: '新建配置' }).click();
     await expect(page.getByRole('heading', { name: '新建配置' })).toBeVisible();
+    await expect(page.getByText('配置类型')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: '图片生成' })).toHaveCount(0);
     await expect(
       page.getByLabel(/API Key|密钥|Key/i).or(page.locator('input[type="password"]')).first()
     ).toBeVisible();
