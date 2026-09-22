@@ -251,7 +251,6 @@ model Screenplay {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  crdt     String              @default("")
   episode  Episode             @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   versions ScreenplayVersion[]
 }

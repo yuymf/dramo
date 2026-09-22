@@ -5,7 +5,6 @@ import { AppException, ErrorCode } from '../lib/errors';
 import { logger } from '../lib/logger';
 import { unwrapWorkflowJson } from '../lib/workflow-json';
 import { LLMConfigService } from './llm-config.service';
-import { mergeNodesIntoCrdt } from '../lib/crdt';
 import { resolveAccess } from './access.service';
 import { deriveFromNodes } from './derive.service';
 import {
@@ -68,7 +67,6 @@ interface LoadedEpisode {
     title: string;
     cover: Prisma.JsonValue;
     nodes: Prisma.JsonValue;
-    crdt?: string;
     updatedAt: Date;
   } | null;
 }
@@ -703,7 +701,6 @@ export class ScreenplayService {
   }) {
     const coverJson = input.cover as unknown as Prisma.InputJsonValue;
     const nodesJson = input.nodes as unknown as Prisma.InputJsonValue;
-    const crdt = mergeNodesIntoCrdt(input.existing?.crdt ?? '', input.nodes);
     let existing = input.existing;
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -713,7 +710,7 @@ export class ScreenplayService {
           const screenplay = current
             ? await tx.screenplay.update({
                 where: { id: current.id },
-                data: { title: input.title, cover: coverJson, nodes: nodesJson, crdt },
+                data: { title: input.title, cover: coverJson, nodes: nodesJson },
               })
             : await tx.screenplay.create({
                 data: {
@@ -721,7 +718,6 @@ export class ScreenplayService {
                   title: input.title,
                   cover: coverJson,
                   nodes: nodesJson,
-                  crdt,
                 },
               });
 
