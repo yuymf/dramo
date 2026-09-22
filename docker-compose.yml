@@ -61,9 +61,7 @@ services:
       PORT: 12322
       AGENTOS_SECURITY_KEY: ${AGENTOS_KEY:-default_agentos_key}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-90}
-      LLM_TIMEOUT_LONG_SECONDS: ${LLM_TIMEOUT_LONG_SECONDS:-180}
       LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
-      LLM_CONCURRENCY: ${LLM_CONCURRENCY:-3}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:12322/health')"]
       interval: 10s

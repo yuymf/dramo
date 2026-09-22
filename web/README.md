@@ -29,10 +29,9 @@ npm run dev:web
 - `/projects/[id]/{outline,beats,characters,locations,props,storyboard,assets}` — 规划 / 前期
 - `/projects/[id]/{worldview,knowledge,advisors,cold-start,spoken}` — 更多
 - `/projects/[id]/reels` `/projects/[id]/tasks` — Cinema
-- `/library` `/settings` `/profile` `/s/[token]`
-- `/projects/[id]/scripts` 与旧 `/scripts/:id` 重定向到 `/screenplay`（见 `next.config.ts`）
+- `/library` `/settings` `/s/[token]`
 
-工作区：`@sidebar` + `@content` 并行路由。侧栏见 `WorkspaceRail`。
+工作区：扁平子路由（`projects/[id]/layout` + 子 `page`）。侧栏见 `WorkspaceRail`。
 
 ## 环境变量
 
@@ -45,9 +44,4 @@ npm run dev:web
 
 ## 关键依赖
 
-- TipTap — 剧本编辑
-- @dnd-kit — 拖拽
-- @xyflow/react — 关系图
-- SWR — 数据获取
-- Zustand — 客户端状态
 - Tailwind CSS v4 + Radix/shadcn

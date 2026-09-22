@@ -57,7 +57,7 @@ docker run -d --name dramo-pg \
   -e POSTGRES_DB=dramo -e POSTGRES_USER=dramo -e POSTGRES_PASSWORD=dramo_secret \
   -p 5432:5432 postgres:15-alpine
 
-cp .env.example server/.env
+cp server/env.example server/.env
 npm run prisma:generate
 npm run prisma:migrate
 npm run dev
@@ -80,7 +80,7 @@ npm run dev
 
 ## 技术栈
 
-- **前端**: Next.js 15 + React 19 + TypeScript + Tailwind CSS v4 + Radix/shadcn + TipTap + @dnd-kit + @xyflow/react
+- **前端**: Next.js 15 + React 19 + TypeScript + Tailwind CSS v4 + Radix/shadcn
 - **后端**: Hono v4 + Prisma 5 + 本地 PostgreSQL + pino + AES-256-GCM
 - **AI**: AgentOS（Agno 工作流；产品路径是剧本 revise）+ 本机 SD worker 池
 - **基建**: Docker Compose + Nginx + npm workspaces + concurrently

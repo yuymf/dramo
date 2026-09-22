@@ -18,9 +18,7 @@ PORT=80
 
 # AgentOS 调参（有默认值）
 # LLM_TIMEOUT_SECONDS=90
-# LLM_TIMEOUT_LONG_SECONDS=180
 # LLM_MAX_RETRIES=2
-# LLM_CONCURRENCY=3
 ```
 
 LLM 密钥在界面里配，进 `UserLLMConfig`。
@@ -39,12 +37,10 @@ ENCRYPTION_KEY=
 STORAGE_LOCAL_DIR=./uploads
 STORAGE_BASE_URL=http://localhost:12321/uploads
 FRONTEND_URL=http://localhost:12323
-# SSE_TIMEOUT_MS=55000
-# SSE_HEARTBEAT_MS=15000
 # 本机 SD 默认 127.0.0.1:7860/7861；要覆盖就设 SD_WORKERS
 ```
 
-代码读取：`server/src/config/index.ts`。AgentOS 另读 `LLM_*`、`DETAIL_REFINER_TIMEOUT_SECONDS`（`agentos/config.py`、工作流）。
+代码读取：`server/src/config/index.ts`。AgentOS 另读 `LLM_TIMEOUT_SECONDS`、`LLM_MAX_RETRIES`（`agentos/config.py`）。
 
 ## 前端 (`web/.env.local`)
 

@@ -4,7 +4,7 @@ Prisma：`server/src/db/schema.prisma`。PostgreSQL：`postgres:15-alpine`。
 
 没有 `default-local-user`。`User` 是注册账号，带 `passwordHash` 和 `Session[]`。
 
-没有 `GenerationJob` / `Script` / `CharacterAsset` / `LocationAsset` / `Storyboard` / `Task` / `Inspiration`。出图表是 `GenerationTask`。
+没有 `GenerationJob` / `Script` / `CharacterAsset` / `LocationAsset` / `Storyboard` / `Task` / `Inspiration` / `ChatSession` / `ChatMessage`。出图表是 `GenerationTask`。`Screenplay` 只有 `nodes`，没有 `crdt`。
 
 ## 模型
 
@@ -16,7 +16,7 @@ Prisma：`server/src/db/schema.prisma`。PostgreSQL：`postgres:15-alpine`。
 | `Project` | 工作区（type / format / share / published） |
 | `ProjectMember` | 成员 + 角色 |
 | `Episode` | 集；挂 screenplay / outline / beats / scenes / shots / reels |
-| `Screenplay` | 正文 JSON `nodes` + `crdt` |
+| `Screenplay` | 正文 JSON `nodes` |
 | `ScreenplayVersion` | 剧本版本 |
 | `Outline` `Beat` | 规划 |
 | `Scene` `Shot` | 前期场次 / 镜头 |
@@ -25,7 +25,6 @@ Prisma：`server/src/db/schema.prisma`。PostgreSQL：`postgres:15-alpine`。
 | `KnowledgeFile` `WorldviewRule` | 知识 / 世界观 |
 | `Asset` | 生成或上传的文件 |
 | `GenerationTask` | SD 池出图队列 |
-| `ChatSession` `ChatMessage` | 对话 |
 | `Comment` `ProjectVersion` | 协作批注 / 快照 |
 | `LibraryDiscussion` | 公开库讨论 |
 
@@ -62,7 +61,6 @@ Project
  ├── Character[] / Location[] / Prop[]
  ├── KnowledgeFile[] / WorldviewRule[]
  ├── Asset[] / GenerationTask[]
- ├── ChatSession[] → ChatMessage[]
  ├── Comment[] / ProjectVersion[]
  └── LibraryDiscussion[]
 ```
