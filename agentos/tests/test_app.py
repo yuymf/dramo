@@ -1,29 +1,30 @@
-import asyncio
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app import agent_os, custom_app, health_check, revise_workflow
+from fastapi.testclient import TestClient
+
+from app import app, agent_os, revise_workflow
+
+client = TestClient(app)
 
 
-def _paths(fastapi_app):
-    return {getattr(route, "path", "") for route in fastapi_app.routes}
+def test_health_matches_compose_and_server():
+    res = client.get("/health")
+    assert res.status_code == 200
+    body = res.json()
+    assert body.get("ok") is True or body.get("status") == "ok"
 
 
-def test_health_payload():
-    result = asyncio.run(health_check())
-    assert result == {"ok": True, "status": "ok", "service": "agentos"}
-
-
-def test_compose_health_route_only():
-    paths = _paths(custom_app)
-    assert "/health" in paths
-    assert "/api/health" not in paths
-    assert "/api/generate-image" not in paths
+def test_dead_custom_routes_gone():
+    assert client.get("/api/health").status_code == 404
+    assert client.get("/api/generate-image").status_code == 404
 
 
 def test_only_revise_workflow_registered():
     assert revise_workflow.name == "ReviseWorkflow"
-    names = [workflow.name for workflow in agent_os.workflows]
-    assert names == ["ReviseWorkflow"]
+    assert [workflow.name for workflow in agent_os.workflows] == ["ReviseWorkflow"]
+    res = client.get("/workflows")
+    assert res.status_code == 200
+    assert [item["id"] for item in res.json()] == ["reviseworkflow"]

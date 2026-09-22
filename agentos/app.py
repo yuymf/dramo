@@ -6,7 +6,6 @@ from env_loader import load_backend_env
 load_backend_env()
 
 from agno.os import AgentOS
-from fastapi import FastAPI
 import logging
 import os
 
@@ -16,18 +15,9 @@ logging.basicConfig(level=logging.INFO)
 
 revise_workflow = ReviseWorkflow()
 
-custom_app = FastAPI(title="Dramo AgentOS", version="2.0.0")
-
-
-@custom_app.get("/health")
-async def health_check():
-    return {"ok": True, "status": "ok", "service": "agentos"}
-
-
 agent_os = AgentOS(
     name="Dramo AgentOS",
     workflows=[revise_workflow],
-    base_app=custom_app,
     telemetry=False,
 )
 
