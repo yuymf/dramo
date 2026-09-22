@@ -247,7 +247,6 @@ export class CollabService {
                     title: source.episodes[0].screenplay.title,
                     cover: source.episodes[0].screenplay.cover as Prisma.InputJsonValue,
                     nodes: source.episodes[0].screenplay.nodes as Prisma.InputJsonArray,
-                    crdt: source.episodes[0].screenplay.crdt,
                   },
                 }
               : undefined,
@@ -300,7 +299,6 @@ export class CollabService {
               title: episode.screenplay.title,
               cover: episode.screenplay.cover,
               nodes: episode.screenplay.nodes,
-              crdt: episode.screenplay.crdt,
             }
           : null,
         outline: episode.outline?.markdown ?? '',
@@ -319,7 +317,6 @@ export class CollabService {
             title: episode.screenplay.title,
             cover: episode.screenplay.cover as Prisma.InputJsonValue,
             nodes: episode.screenplay.nodes as Prisma.InputJsonArray,
-            crdt: episode.screenplay.crdt ?? '',
           },
         });
         const nodes = Array.isArray(episode.screenplay.nodes)
@@ -350,7 +347,6 @@ interface Snapshot {
       title: string;
       cover: unknown;
       nodes: unknown;
-      crdt?: string;
     } | null;
     outline: string;
     beats: unknown;
