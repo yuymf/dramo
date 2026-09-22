@@ -8,9 +8,7 @@ Agno 原生接口：`POST /workflows/reviseworkflow/runs`。
 |----------|------|
 | ReviseWorkflow | 按 `nodeIds` 范围改剧本节点 |
 
-自定义路由：
-
-- `GET /health` — 探活（compose healthcheck 用这条）
+探活：`GET /health`（AgentOS 自带；compose 与 `checkAgentOSHealth` 都打这条）。
 
 ## 本地
 
