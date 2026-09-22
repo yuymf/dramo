@@ -27,10 +27,6 @@ export const config = {
   storageLocalDir: process.env.STORAGE_LOCAL_DIR || './uploads',
   storageBaseUrl: process.env.STORAGE_BASE_URL || `http://localhost:${safeParseInt(process.env.PORT, 12321)}/uploads`,
 
-  // SSE
-  sseTimeoutMs: safeParseInt(process.env.SSE_TIMEOUT_MS, 55000),
-  sseHeartbeatMs: safeParseInt(process.env.SSE_HEARTBEAT_MS, 15000),
-
   // Frontend URL
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:12323',
 
