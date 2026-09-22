@@ -16,7 +16,6 @@ import { preproduction } from './routes/preproduction.js';
 import { cinema } from './routes/cinema.js';
 import { files } from './routes/files.js';
 import { collab } from './routes/collab.js';
-import { uploads } from './routes/uploads.js';
 import { generationTasks } from './routes/generation-tasks.js';
 import { llmConfigs } from './routes/llm-config.js';
 
@@ -44,7 +43,6 @@ app.route('/api/v1', preproduction);
 app.route('/api/v1', cinema);
 app.route('/api/v1', files);
 app.route('/api/v1', collab);
-app.route('/api/v1', uploads);
 app.route('/api/v1', generationTasks);
 app.route('/api/v1', llmConfigs);
 

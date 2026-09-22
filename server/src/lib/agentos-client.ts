@@ -18,13 +18,12 @@ function authHeaders(): Record<string, string> {
 export interface AgentOSCallOptions {
   timeoutMs?: number;
   requestId?: string;
-  stream?: boolean;
   llmHeaders?: Record<string, string>;
 }
 
 /**
  * Start a workflow run via AgentOS native API.
- * Returns the raw Response so callers can choose JSON or SSE consumption.
+ * Returns the raw Response.
  */
 export async function startWorkflowRun(
   workflowId: string,
@@ -50,7 +49,7 @@ export async function startWorkflowRun(
 
   const formData = new URLSearchParams();
   formData.append('message', JSON.stringify(messagePayload));
-  formData.append('stream', opts?.stream ? 'true' : 'false');
+  formData.append('stream', 'false');
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/x-www-form-urlencoded',
@@ -77,7 +76,7 @@ export async function startWorkflowRun(
       throw new Error(`AGENTOS_${res.status}: ${errorText}`);
     }
 
-    logger.info({ duration, url, streaming: opts?.stream }, 'AgentOS workflow started');
+    logger.info({ duration, url }, 'AgentOS workflow started');
     return res;
   } catch (err: unknown) {
     const duration = Date.now() - startTime;

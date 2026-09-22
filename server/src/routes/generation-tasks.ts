@@ -1,8 +1,6 @@
 import { Hono } from 'hono';
-import { streamSSE } from 'hono/streaming';
 import { TaskStoreService } from '../services/task-store.service.js';
 import { TaskRunnerService, type GenerationKind } from '../services/task-runner.service.js';
-import { logger } from '../lib/logger.js';
 import { AppException, ErrorCode } from '../lib/errors.js';
 import type { AuthEnv } from '../middleware/session.js';
 import { asObject, readJson, requireUser } from './helpers.js';
@@ -58,38 +56,6 @@ generationTasks.get('/tasks', async (c) => {
       offset: query.offset ? parseInt(query.offset, 10) : undefined,
     })
   );
-});
-
-generationTasks.get('/tasks/stream', async (c) => {
-  const userId = requireUser(c).userId;
-  const projectId = c.req.query('projectId');
-
-  return streamSSE(c, async (stream) => {
-    const seen = new Map<string, string>();
-    try {
-      for (let i = 0; i < 30; i += 1) {
-        const { tasks } = await store.listTasks({ userId, projectId, limit: 50 });
-        for (const task of tasks) {
-          const updatedAt = task.updatedAt instanceof Date ? task.updatedAt.toISOString() : String(task.updatedAt);
-          const sig = `${updatedAt}:${task.status}:${task.progress}`;
-          if (seen.get(task.id) !== sig) {
-            seen.set(task.id, sig);
-            await stream.writeSSE({
-              event: 'task',
-              data: JSON.stringify(task),
-            });
-          }
-        }
-        await stream.writeSSE({
-          event: 'heartbeat',
-          data: JSON.stringify({ ts: Date.now() }),
-        });
-        await stream.sleep(2000);
-      }
-    } catch (error: unknown) {
-      logger.warn({ error }, 'GenerationTask SSE stream ended');
-    }
-  });
 });
 
 generationTasks.get('/tasks/:id', async (c) => {

@@ -131,7 +131,6 @@
 |------|------|------|
 | POST | `/api/images/generations` | `{ projectId, kind: portrait\|location, entityId, prompt, aspectRatio? }`，返回任务行（`id`） |
 | GET | `/api/tasks` | 任务列表 `{ tasks, total }` |
-| GET | `/api/tasks/stream` | SSE |
 | GET | `/api/tasks/:id` | 状态 |
 | POST | `/api/tasks/:id/cancel` | 取消 |
 | POST | `/api/tasks/:id/retry` | 重试 |
@@ -149,5 +148,4 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/projects/:pid/uploads/image` | 上传 |
 | GET | `/api/files/projects/:pid/:filename` | 读文件 |
