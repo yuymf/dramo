@@ -1,10 +1,10 @@
 import type { MemberRole, Prisma, ShareMode } from '@prisma/client';
-import { prisma } from '../lib/db';
-import { AppException, ErrorCode } from '../lib/errors';
-import { resolveAccess, resolveShareToken } from './access.service';
-import { ScreenplayService } from './screenplay.service';
-import { deriveFromNodes } from './derive.service';
-import type { ScreenplayNode } from '../types/screenplay';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { resolveAccess, resolveShareToken } from './access.service.js';
+import { ScreenplayService } from './screenplay.service.js';
+import { deriveFromNodes } from './derive.service.js';
+import type { ScreenplayNode } from '../types/screenplay.js';
 
 const SHARE_MODES: ShareMode[] = ['invite', 'anyone_view', 'anyone_edit'];
 const ROLES: MemberRole[] = ['OWNER', 'ADMIN', 'EDITOR', 'VIEWER'];

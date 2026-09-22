@@ -1,6 +1,4 @@
-export type ProjectType = "script" | "cinema" | "spoken";
 export type ScreenplayFormat = "hollywood" | "asian";
-export type MemberRole = "OWNER" | "ADMIN" | "EDITOR" | "VIEWER";
 export type NodeType =
   | "scene_heading"
   | "action"
@@ -10,8 +8,6 @@ export type NodeType =
   | "transition"
   | "comment"
   | "subtitle";
-export type TaskStatus = "queued" | "running" | "completed" | "failed" | "canceled";
-export type AssetKind = "portrait" | "location" | "prop" | "storyboard" | "poster";
 
 export interface ScreenplayNode {
   id: string;

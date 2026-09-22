@@ -9,8 +9,8 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
-import { prisma } from '../../lib/db';
-import { sessionMiddleware, type AuthEnv, SESSION_COOKIE } from '../../middleware/session';
+import { prisma } from '../../lib/db.js';
+import { sessionMiddleware, type AuthEnv, SESSION_COOKIE } from '../../middleware/session.js';
 import { cors } from 'hono/cors';
 
 const mocked = (fn: unknown) => fn as any; // eslint-disable-line @typescript-eslint/no-explicit-any

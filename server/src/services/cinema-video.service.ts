@@ -3,7 +3,7 @@ import { access } from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { FILM_DURATION_SEC } from '../types/cinema';
+import { FILM_DURATION_SEC } from '../types/cinema.js';
 
 export const NO_VIDEO_ENCODER_MESSAGE = '没有可用的视频编码器';
 

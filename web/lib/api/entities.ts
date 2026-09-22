@@ -23,7 +23,6 @@ export interface EntityListResponse {
 
 export interface GenerationTask {
   id: string;
-  jobId?: string;
   projectId: string;
   kind?: ImageGenerationKind;
   entityId?: string | null;
@@ -105,8 +104,8 @@ export async function createEntityImage(params: {
   });
 }
 
-export async function getGenerationTask(jobId: string): Promise<GenerationTask> {
-  return api<GenerationTask>(`/api/jobs/${jobId}`, {
+export async function getGenerationTask(taskId: string): Promise<GenerationTask> {
+  return api<GenerationTask>(`/api/tasks/${taskId}`, {
     method: "GET",
     noCache: true,
   });
@@ -133,8 +132,8 @@ export function buildEntityPrompt(name: string, description: string | null | und
   return desc ? `${name.trim()}，${desc}` : name.trim();
 }
 
-export function taskJobId(task: GenerationTask): string {
-  return task.jobId || task.id;
+export function taskId(task: GenerationTask): string {
+  return task.id;
 }
 
 export function isTerminalStatus(status: TaskStatus | string): boolean {

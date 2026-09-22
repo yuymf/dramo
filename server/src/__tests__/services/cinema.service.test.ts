@@ -5,7 +5,7 @@ import {
   normalizeCinemaSettings,
   parsePerformance,
   placeholderStoryboardShots,
-} from '../../types/cinema';
+} from '../../types/cinema.js';
 
 describe('parsePerformance', () => {
   it('reads @角色 #道具 and quoted dialogue', () => {

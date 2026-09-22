@@ -1,5 +1,5 @@
-import { config } from '../config';
-import { logger } from '../lib/logger';
+import { config } from '../config/index.js';
+import { logger } from '../lib/logger.js';
 
 export const NO_SD_WORKER_MESSAGE = '没有可用的 Stable Diffusion worker';
 export const SD_FAILURE_THRESHOLD = 3;
@@ -285,8 +285,4 @@ export function getSdPool(): SdPoolService {
     sharedPool = new SdPoolService();
   }
   return sharedPool;
-}
-
-export function resetSdPoolForTests(): void {
-  sharedPool = undefined;
 }

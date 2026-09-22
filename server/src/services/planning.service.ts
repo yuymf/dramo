@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
-import { prisma } from '../lib/db';
-import { AppException, ErrorCode } from '../lib/errors';
-import { ScreenplayService } from './screenplay.service';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { ScreenplayService } from './screenplay.service.js';
 
 export interface BeatRecord {
   id: string;

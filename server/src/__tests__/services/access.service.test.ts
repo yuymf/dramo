@@ -7,9 +7,9 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
-import { prisma } from '../../lib/db';
-import { resolveAccess } from '../../services/access.service';
-import { ErrorCode } from '../../lib/errors';
+import { prisma } from '../../lib/db.js';
+import { resolveAccess } from '../../services/access.service.js';
+import { ErrorCode } from '../../lib/errors.js';
 
 const mocked = (fn: unknown) => fn as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 

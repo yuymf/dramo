@@ -132,18 +132,18 @@
 | GET/POST | `/api/chat/:pid/sessions` | 会话 |
 | PATCH/DELETE | `/api/chat/:pid/sessions/:sessionId` | 单会话 |
 
-## 出图 (`generation-jobs.ts`)
+## 出图 (`generation-tasks.ts`)
 
-`GenerationTask` + SD 池。没有 `GenerationJob` 表。
+`GenerationTask` + SD 池。肖像/场景与 Cinema 分镜共用 `TaskRunnerService.runTxt2Img`。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/images/generations` | `{ projectId, kind: portrait\|location, entityId, prompt, aspectRatio? }` |
-| GET | `/api/jobs` | 任务列表 |
-| GET | `/api/jobs/stream` | SSE |
-| GET | `/api/jobs/:id` | 状态 |
-| POST | `/api/jobs/:id/cancel` | 取消 |
-| POST | `/api/jobs/:id/retry` | 重试 |
+| POST | `/api/images/generations` | `{ projectId, kind: portrait\|location, entityId, prompt, aspectRatio? }`，返回任务行（`id`） |
+| GET | `/api/tasks` | 任务列表 `{ tasks, total }` |
+| GET | `/api/tasks/stream` | SSE |
+| GET | `/api/tasks/:id` | 状态 |
+| POST | `/api/tasks/:id/cancel` | 取消 |
+| POST | `/api/tasks/:id/retry` | 重试 |
 
 ## LLM 配置 (`llm-config.ts`)
 

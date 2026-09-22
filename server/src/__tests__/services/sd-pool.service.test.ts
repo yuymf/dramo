@@ -8,7 +8,7 @@ import {
   NO_SD_WORKER_MESSAGE,
   isUnreachableError,
   type SdWorkerRuntime,
-} from '../../services/sd-pool.service';
+} from '../../services/sd-pool.service.js';
 
 function runtime(
   overrides: Partial<SdWorkerRuntime> & Pick<SdWorkerRuntime, 'id'>

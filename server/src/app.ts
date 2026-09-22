@@ -1,24 +1,24 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { sessionMiddleware, type AuthEnv } from './middleware/session';
-import { errorHandler } from './middleware/error-handler';
-import { config } from './config';
+import { sessionMiddleware, type AuthEnv } from './middleware/session.js';
+import { errorHandler } from './middleware/error-handler.js';
+import { config } from './config/index.js';
 
 // Route modules
-import { health } from './routes/health';
-import { auth } from './routes/auth';
-import { projects } from './routes/projects';
-import { screenplay } from './routes/screenplay';
-import { entities } from './routes/entities';
-import { planning } from './routes/planning';
-import { assist } from './routes/assist';
-import { preproduction } from './routes/preproduction';
-import { cinema } from './routes/cinema';
-import { files } from './routes/files';
-import { collab } from './routes/collab';
-import { uploads } from './routes/uploads';
-import { generationJobs } from './routes/generation-jobs';
-import { llmConfigs } from './routes/llm-config';
+import { health } from './routes/health.js';
+import { auth } from './routes/auth.js';
+import { projects } from './routes/projects.js';
+import { screenplay } from './routes/screenplay.js';
+import { entities } from './routes/entities.js';
+import { planning } from './routes/planning.js';
+import { assist } from './routes/assist.js';
+import { preproduction } from './routes/preproduction.js';
+import { cinema } from './routes/cinema.js';
+import { files } from './routes/files.js';
+import { collab } from './routes/collab.js';
+import { uploads } from './routes/uploads.js';
+import { generationTasks } from './routes/generation-tasks.js';
+import { llmConfigs } from './routes/llm-config.js';
 
 const app = new Hono<AuthEnv>();
 
@@ -45,7 +45,7 @@ app.route('/api/v1', cinema);
 app.route('/api/v1', files);
 app.route('/api/v1', collab);
 app.route('/api/v1', uploads);
-app.route('/api/v1', generationJobs);
+app.route('/api/v1', generationTasks);
 app.route('/api/v1', llmConfigs);
 
 // --- Error handler ---

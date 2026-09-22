@@ -15,11 +15,11 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
-import { prisma } from '../../lib/db';
-import { auth } from '../../routes/auth';
-import { sessionMiddleware, type AuthEnv, SESSION_COOKIE } from '../../middleware/session';
-import { errorHandler } from '../../middleware/error-handler';
-import { hashPassword } from '../../lib/password';
+import { prisma } from '../../lib/db.js';
+import { auth } from '../../routes/auth.js';
+import { sessionMiddleware, type AuthEnv, SESSION_COOKIE } from '../../middleware/session.js';
+import { errorHandler } from '../../middleware/error-handler.js';
+import { hashPassword } from '../../lib/password.js';
 
 const mocked = (fn: unknown) => fn as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 

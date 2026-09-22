@@ -19,10 +19,10 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
-import { prisma } from '../../lib/db';
-import { LLMConfigService } from '../../services/llm-config.service';
-import { AppException, ErrorCode } from '../../lib/errors';
-import { encrypt } from '../../lib/crypto';
+import { prisma } from '../../lib/db.js';
+import { LLMConfigService } from '../../services/llm-config.service.js';
+import { AppException, ErrorCode } from '../../lib/errors.js';
+import { encrypt } from '../../lib/crypto.js';
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>;
 

@@ -14,7 +14,6 @@ import {
   listDerivedEntities,
   patchEntity,
   patchEntityDescription,
-  taskJobId,
   type DerivedEntity,
   type DerivedEntityKind,
   type ImageGenerationKind,
@@ -240,14 +239,13 @@ function EntityCard({
       });
       showToast("已加入队列", "info");
 
-      const jobId = taskJobId(task);
       const started = Date.now();
       let latest = task;
       while (!controller.signal.aborted && Date.now() - started < POLL_MAX_MS) {
         if (isTerminalStatus(latest.status)) break;
         await sleep(POLL_INTERVAL_MS);
         if (controller.signal.aborted) return;
-        latest = await getGenerationTask(jobId);
+        latest = await getGenerationTask(latest.id);
         setJobStatus(latest.status);
       }
 

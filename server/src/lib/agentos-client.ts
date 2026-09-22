@@ -1,8 +1,8 @@
 /**
  * AgentOS HTTP client. Workflows go through POST /workflows/{id}/runs.
  */
-import { config } from '../config';
-import { logger } from './logger';
+import { config } from '../config/index.js';
+import { logger } from './logger.js';
 
 const AGENTOS_BASE = config.agentosUrl;
 const AGENTOS_KEY = config.agentosSecurityKey;

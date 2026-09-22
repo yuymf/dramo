@@ -1,8 +1,8 @@
 import type { Prisma } from '@prisma/client';
-import { prisma } from '../lib/db';
-import { AppException, ErrorCode } from '../lib/errors';
-import { ScreenplayService } from './screenplay.service';
-import { isBeatCovered, corpusFromNodes } from './planning.service';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { ScreenplayService } from './screenplay.service.js';
+import { isBeatCovered, corpusFromNodes } from './planning.service.js';
 
 export const ADVISORS = [
   {

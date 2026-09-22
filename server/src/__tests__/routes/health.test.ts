@@ -1,4 +1,4 @@
-import app from '../../app';
+import app from '../../app.js';
 
 describe('Health route', () => {
   it('GET /api/v1/health returns 200', async () => {

@@ -3,7 +3,7 @@
  * Storage format: base64(iv):base64(authTag):base64(ciphertext)
  */
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
-import { config } from '../config';
+import { config } from '../config/index.js';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // 96-bit IV recommended for GCM

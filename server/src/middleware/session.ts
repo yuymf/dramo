@@ -1,6 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import { getCookie } from 'hono/cookie';
-import { prisma } from '../lib/db';
+import { prisma } from '../lib/db.js';
 
 export const SESSION_COOKIE = 'dramo_session';
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;

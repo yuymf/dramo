@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { config } from '../config';
-import { logger } from './logger';
+import { config } from '../config/index.js';
+import { logger } from './logger.js';
 
 /** Singleton Prisma client for the long-running Node process. */
 const globalForPrisma = globalThis as unknown as {
@@ -46,9 +46,4 @@ export async function initPrisma(): Promise<void> {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
-}
-
-export async function shutdownPrisma(): Promise<void> {
-  logger.info('Disconnecting Prisma');
-  await prisma.$disconnect();
 }

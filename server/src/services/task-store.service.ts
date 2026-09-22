@@ -1,5 +1,6 @@
-import { prisma } from '../lib/db';
-import type { AppError } from '../lib/errors';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import type { AppError } from '../lib/errors.js';
 
 export interface GenerationTaskUpdate {
   status?: string;
@@ -10,11 +11,9 @@ export interface GenerationTaskUpdate {
   retryCount?: number;
 }
 
-/**
- * Job Store Service — DB access for GenerationTask records.
- */
-export class JobStoreService {
-  async listJobs(params: {
+/** DB access for GenerationTask rows. */
+export class TaskStoreService {
+  async listTasks(params: {
     userId: string;
     status?: string | string[];
     projectId?: string;
@@ -28,16 +27,14 @@ export class JobStoreService {
     } = { userId: params.userId };
 
     if (params.status) {
-      where.status = Array.isArray(params.status)
-        ? { in: params.status }
-        : params.status;
+      where.status = Array.isArray(params.status) ? { in: params.status } : params.status;
     }
 
     if (params.projectId) {
       where.projectId = params.projectId;
     }
 
-    const [jobs, total] = await Promise.all([
+    const [tasks, total] = await Promise.all([
       prisma.generationTask.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -47,25 +44,25 @@ export class JobStoreService {
       prisma.generationTask.count({ where }),
     ]);
 
-    return { jobs, total };
+    return { tasks, total };
   }
 
-  async getJob(jobId: string, userId: string) {
-    const job = await prisma.generationTask.findFirst({
-      where: { id: jobId, userId },
+  async getTask(taskId: string, userId: string) {
+    const task = await prisma.generationTask.findFirst({
+      where: { id: taskId, userId },
     });
 
-    if (!job) {
-      throw new Error('Job not found');
+    if (!task) {
+      throw new AppException(ErrorCode.NOT_FOUND, 'Task not found');
     }
 
-    return job;
+    return task;
   }
 
-  async updateJob(jobId: string, data: GenerationTaskUpdate) {
+  async updateTask(taskId: string, data: GenerationTaskUpdate) {
     const { error, ...rest } = data;
     return prisma.generationTask.update({
-      where: { id: jobId },
+      where: { id: taskId },
       data: {
         ...rest,
         error: error ? (error as object) : undefined,
@@ -78,10 +75,10 @@ export class JobStoreService {
    * Update only if the task is still queued/running.
    * Returns the updated row, or null if canceled / already terminal.
    */
-  async updateJobIfActive(jobId: string, data: GenerationTaskUpdate) {
+  async updateTaskIfActive(taskId: string, data: GenerationTaskUpdate) {
     const { error, ...rest } = data;
     const result = await prisma.generationTask.updateMany({
-      where: { id: jobId, status: { in: ['queued', 'running'] } },
+      where: { id: taskId, status: { in: ['queued', 'running'] } },
       data: {
         ...rest,
         error: error ? (error as object) : undefined,
@@ -89,6 +86,6 @@ export class JobStoreService {
       },
     });
     if (result.count === 0) return null;
-    return prisma.generationTask.findFirst({ where: { id: jobId } });
+    return prisma.generationTask.findFirst({ where: { id: taskId } });
   }
 }

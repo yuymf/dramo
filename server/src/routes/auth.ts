@@ -2,15 +2,15 @@ import { randomBytes } from 'node:crypto';
 import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { Prisma } from '@prisma/client';
-import { prisma } from '../lib/db';
-import { AppException, ErrorCode } from '../lib/errors';
-import { hashPassword, verifyPassword } from '../lib/password';
-import { config } from '../config';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { hashPassword, verifyPassword } from '../lib/password.js';
+import { config } from '../config/index.js';
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
   type AuthEnv,
-} from '../middleware/session';
+} from '../middleware/session.js';
 
 const auth = new Hono<AuthEnv>();
 

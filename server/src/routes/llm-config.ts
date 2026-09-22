@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import { LLMConfigService } from '../services/llm-config.service';
-import { validateBaseUrl, validateResolvedIPs } from '../lib/url-validator';
-import { sanitizeHeaderValue } from '../lib/crypto';
-import { AppException, ErrorCode } from '../lib/errors';
-import { logger } from '../lib/logger';
-import type { AuthEnv } from '../middleware/session';
+import { LLMConfigService } from '../services/llm-config.service.js';
+import { validateBaseUrl, validateResolvedIPs } from '../lib/url-validator.js';
+import { sanitizeHeaderValue } from '../lib/crypto.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
+import { logger } from '../lib/logger.js';
+import type { AuthEnv } from '../middleware/session.js';
 
 const llmConfigs = new Hono<AuthEnv>();
 const llmConfigService = new LLMConfigService();

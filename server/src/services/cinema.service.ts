@@ -1,10 +1,9 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import type { Prisma } from '@prisma/client';
-import { config } from '../config';
-import { prisma } from '../lib/db';
-import { AppException, ErrorCode } from '../lib/errors';
-import { logger } from '../lib/logger';
+import { config } from '../config/index.js';
+import { prisma } from '../lib/db.js';
+import { AppException, ErrorCode } from '../lib/errors.js';
 import {
   DEFAULT_CINEMA_SETTINGS,
   FILM_DURATION_SEC,
@@ -22,17 +21,11 @@ import {
   type ReelFilmRecord,
   type ReelImage,
   type ReelShot,
-} from '../types/cinema';
-import { ScreenplayService } from './screenplay.service';
-import { StorageService } from './storage.service';
-import { encodeFifteenSecondFilm, NO_VIDEO_ENCODER_MESSAGE } from './cinema-video.service';
-import {
-  getSdPool,
-  NO_SD_WORKER_MESSAGE,
-  SD_DEFAULT_STEPS,
-  type SdPoolService,
-} from './sd-pool.service';
-import { resolveTxt2ImgSize } from './job-runner.service';
+} from '../types/cinema.js';
+import { ScreenplayService } from './screenplay.service.js';
+import { StorageService } from './storage.service.js';
+import { encodeFifteenSecondFilm, NO_VIDEO_ENCODER_MESSAGE } from './cinema-video.service.js';
+import { TaskRunnerService } from './task-runner.service.js';
 
 export interface ReelDoc {
   id: string;
@@ -53,11 +46,11 @@ export interface ReelDoc {
 export class CinemaService {
   private screenplay = new ScreenplayService();
   private storage: StorageService;
-  private pool: SdPoolService;
+  private runner: TaskRunnerService;
 
-  constructor(storage?: StorageService, pool?: SdPoolService) {
+  constructor(storage?: StorageService, runner?: TaskRunnerService) {
     this.storage = storage ?? new StorageService();
-    this.pool = pool ?? getSdPool();
+    this.runner = runner ?? new TaskRunnerService(undefined, undefined, this.storage);
   }
 
   private async requireCinema(
@@ -209,85 +202,17 @@ export class CinemaService {
     const settings = normalizeCinemaSettings(project.cinemaSettings);
     const images: ReelImage[] = [];
     for (const shot of shots) {
-      const task = await prisma.generationTask.create({
-        data: {
-          userId,
-          projectId,
-          kind: 'cinema_frame',
-          entityType: 'reel',
-          entityId: reel.id,
-          prompt: framePrompt(settings, shot),
-          aspectRatio: settings.aspectRatio,
-          status: 'queued',
-          progress: 0,
-        },
-      });
-      const worker = await this.pool.pickWorker({
-        capability: 'txt2img',
+      const { taskId, url } = await this.runner.runTxt2Img({
+        userId,
+        projectId,
+        kind: 'cinema_frame',
+        entityType: 'reel',
+        entityId: reel.id,
+        prompt: framePrompt(settings, shot),
+        aspectRatio: settings.aspectRatio,
         stickyKey: reel.id,
       });
-      if (!worker) {
-        await prisma.generationTask.update({
-          where: { id: task.id },
-          data: {
-            status: 'failed',
-            error: { code: 'NO_SD_WORKER', message: NO_SD_WORKER_MESSAGE, retryable: true },
-          },
-        });
-        throw new AppException(ErrorCode.GENERATION_ERROR, NO_SD_WORKER_MESSAGE);
-      }
-      try {
-        await prisma.generationTask.update({
-          where: { id: task.id },
-          data: { status: 'running', progress: 10, workerId: worker.id },
-        });
-        const size = resolveTxt2ImgSize(settings.aspectRatio === '2.39:1' ? '16:9' : settings.aspectRatio);
-        const base64 = await this.pool.txt2img(worker, {
-          prompt: framePrompt(settings, shot),
-          width: size.width,
-          height: size.height,
-          steps: SD_DEFAULT_STEPS,
-        });
-        const stored = await this.storage.uploadImageFromBase64(
-          projectId,
-          base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`
-        );
-        const url = toApiFileUrl(stored.url, stored.path);
-        await prisma.asset.create({
-          data: {
-            projectId,
-            kind: 'cinema_frame',
-            entityType: 'reel',
-            entityId: reel.id,
-            url,
-            taskId: task.id,
-          },
-        });
-        await prisma.generationTask.update({
-          where: { id: task.id },
-          data: { status: 'completed', progress: 100, resultUrl: url, workerId: worker.id },
-        });
-        images.push({ shotId: shot.id, url, taskId: task.id });
-      } catch (err) {
-        logger.error({ err, reelId, shotId: shot.id }, 'Cinema frame generation failed');
-        await prisma.generationTask.update({
-          where: { id: task.id },
-          data: {
-            status: 'failed',
-            error: {
-              code: 'GENERATION_ERROR',
-              message: err instanceof Error ? err.message : NO_SD_WORKER_MESSAGE,
-              retryable: true,
-            },
-          },
-        });
-        throw new AppException(
-          ErrorCode.GENERATION_ERROR,
-          err instanceof Error ? err.message : NO_SD_WORKER_MESSAGE
-        );
-      } finally {
-        this.pool.release(worker.id);
-      }
+      images.push({ shotId: shot.id, url, taskId });
     }
     const updated = await prisma.reel.update({
       where: { id: reel.id },
@@ -510,14 +435,6 @@ function toReelDoc(row: {
     stage: deriveReelStage({ performance: row.performance, shots, images, films }),
     parsed: parsePerformance(row.performance),
   };
-}
-
-function toApiFileUrl(publicUrl: string, storagePath: string): string {
-  const match = storagePath.match(/^projects\/([^/]+)\/([^/]+)$/);
-  if (match) return `/api/files/projects/${match[1]}/${match[2]}`;
-  const uploaded = publicUrl.match(/\/uploads\/projects\/([^/]+)\/([^/?#]+)/);
-  if (uploaded) return `/api/files/projects/${uploaded[1]}/${uploaded[2]}`;
-  return publicUrl;
 }
 
 export { DEFAULT_CINEMA_SETTINGS };

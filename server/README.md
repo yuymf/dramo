@@ -18,12 +18,11 @@ Docker：根目录 `docker compose up -d`。入口脚本先跑 `prisma migrate d
 
 ```
 src/
-  app.ts                 # 16 个路由模块，挂在 /api/v1
+  app.ts                 # 路由模块，挂在 /api/v1
   server.ts
   routes/                # auth, projects, screenplay, entities, planning,
                          # assist, preproduction, cinema, files, collab,
-                         # chat, chat-sessions, uploads, generation-jobs,
-                         # llm-config, health
+                         # uploads, generation-tasks, llm-config, health
   services/
   lib/agentos-client.ts  # 工作流 POST /workflows/{id}/runs
   middleware/session.ts  # dramo_session cookie；公开路径仅 /auth/* /health
@@ -37,6 +36,6 @@ src/
 | 命令 | 说明 |
 |------|------|
 | `npm run dev` | 热重载 |
-| `npm run build` | tsc + ESM import 修补 |
+| `npm run build` | tsc（源码带 `.js` 扩展名） |
 | `npm test` | Jest |
 | `npm run prisma:studio` | 看库 |

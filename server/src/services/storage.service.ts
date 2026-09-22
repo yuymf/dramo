@@ -1,5 +1,5 @@
-import { config } from '../config';
-import { logger } from '../lib/logger';
+import { config } from '../config/index.js';
+import { logger } from '../lib/logger.js';
 import fs from 'fs/promises';
 import path from 'path';
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { validateBaseUrl, isPrivateIP } from '../../lib/url-validator';
+import { validateBaseUrl, isPrivateIP } from '../../lib/url-validator.js';
 
 describe('url-validator', () => {
   describe('validateBaseUrl', () => {

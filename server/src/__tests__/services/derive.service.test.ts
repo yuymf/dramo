@@ -4,7 +4,7 @@ jest.mock('../../lib/db', () => ({
   prisma: {},
 }));
 
-import { parsePropNames } from '../../services/derive.service';
+import { parsePropNames } from '../../services/derive.service.js';
 
 describe('parsePropNames', () => {
   it('extracts #道具名 and stops at whitespace or punctuation', () => {

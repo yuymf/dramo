@@ -1,5 +1,5 @@
-import { prisma } from '../lib/db';
-import type { ScreenplayNode } from '../types/screenplay';
+import { prisma } from '../lib/db.js';
+import type { ScreenplayNode } from '../types/screenplay.js';
 
 /**
  * Leading slug on a scene heading: INT./EXT./内景/外景 (and INT./EXT. combos).
