@@ -6,7 +6,7 @@ Hono + Prisma + 本地 PostgreSQL。Cookie session 鉴权；静帧出图走 SD w
 
 ```bash
 # 在仓库根目录
-cp .env.example server/.env   # DATABASE_URL、ENCRYPTION_KEY、AGENTOS_BASE_URL、SD_WORKERS
+cp server/env.example server/.env   # DATABASE_URL、ENCRYPTION_KEY、AGENTOS_BASE_URL、SD_WORKERS
 npm run prisma:generate
 npm run prisma:migrate
 npm run dev:server            # :12321

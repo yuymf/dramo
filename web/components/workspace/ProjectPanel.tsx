@@ -47,10 +47,7 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
   const [loading, setLoading] = useState(true);
 
   const onScreenplay =
-    !!pathname &&
-    (pathname.includes("/screenplay") ||
-      pathname.includes("/cover") ||
-      pathname.includes("/scripts"));
+    !!pathname && (pathname.includes("/screenplay") || pathname.includes("/cover"));
   const onCover = !!pathname && pathname.includes("/cover");
 
   useEffect(() => {

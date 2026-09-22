@@ -84,11 +84,7 @@ function activeDim(pathname: string | null): DimId | null {
   if (pathname.includes("/assets")) return "assets";
   if (pathname.includes("/outline")) return "outline";
   if (pathname.includes("/beats")) return "beats";
-  if (
-    pathname.includes("/screenplay") ||
-    pathname.includes("/cover") ||
-    pathname.includes("/scripts")
-  ) {
+  if (pathname.includes("/screenplay") || pathname.includes("/cover")) {
     return "screenplay";
   }
   return null;

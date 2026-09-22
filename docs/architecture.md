@@ -42,13 +42,11 @@ Browser → fetch('/api/projects', { credentials: 'include' })
 
 实现：`server/src/middleware/session.ts`。注册 / 登录写 `Session` 行并 `Set-Cookie`。没有 `default-local-user`，没有 `SESSION_SECRET`（token 存在库里，不签名）。
 
-16 个路由模块见 `server/src/app.ts`，清单见 [api-reference.md](api-reference.md)。
+14 个路由模块见 `server/src/app.ts`，清单见 [api-reference.md](api-reference.md)。
 
 ## SSE
 
-- 对话、`GET /api/tasks/stream`
-- 超时 55s（nginx `proxy_read_timeout` 600s）
-- 实现：`server/src/lib/sse.ts`
+仅 `GET /api/tasks/stream`（`hono/streaming`，任务状态轮询约 60s 后结束）。没有对话 SSE，没有 `server/src/lib/sse.ts`。nginx `proxy_read_timeout` 仍是 600s。
 
 ## 图片生成
 
@@ -92,13 +90,10 @@ Nginx：`/api/*` → api，`/uploads/*` → volume，其余 → web。
 
 ## AgentOS
 
-产品写作用 `POST /workflows/reviseworkflow/runs`（`server/src/services/screenplay.service.ts`）。
-
-仓库里还挂着 Storyboard / Script / Characters / Locations / Polish / Clarification / Inspirations。出图不走 AgentOS。
+产品写作用 `POST /workflows/reviseworkflow/runs`（`server/src/services/screenplay.service.ts`）。只注册 ReviseWorkflow。出图不走 AgentOS。
 
 ## 前端
 
 - 落地页 `/`：猫咪品牌（现行）。`web/DESIGN.md` 是书桌目标视觉。
-- 工作区 `/projects/[id]/*`：并行路由 `@sidebar` + `@content`；主路径 `/screenplay`。
-- `/projects/[id]/scripts` 与 `/scripts/:id` 重定向到 `/screenplay`。
+- 工作区 `/projects/[id]/*`：扁平子路由（`layout` + 子 `page`）；主路径 `/screenplay`。
 - 登录态走 cookie，没有「无认证默认用户」。

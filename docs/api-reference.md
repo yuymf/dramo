@@ -4,7 +4,7 @@
 
 除 `/auth/*` 与 `/health` 外需要 cookie `dramo_session`。未登录 401 `UNAUTHORIZED`。实现：`server/src/middleware/session.ts`。
 
-16 个模块：`server/src/app.ts`。
+14 个模块：`server/src/app.ts`。
 
 ## 错误信封
 
@@ -122,15 +122,6 @@
 | GET | `/api/library` `/library/:projectId` | 公开库 |
 | POST | `/api/library/:projectId/copy` | 拷贝 |
 | GET/POST | `/api/library/:projectId/discussions` | 讨论 |
-
-## 对话 (`chat.ts`, `chat-sessions.ts`)
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET/POST | `/api/chat/:pid/messages` | 消息（POST 可 SSE） |
-| POST | `/api/chat/:pid/reset` | 清空 |
-| GET/POST | `/api/chat/:pid/sessions` | 会话 |
-| PATCH/DELETE | `/api/chat/:pid/sessions/:sessionId` | 单会话 |
 
 ## 出图 (`generation-tasks.ts`)
 
