@@ -54,10 +54,6 @@ export async function publishProject(projectId: string, allowCopy = true) {
   return api(`/api/projects/${projectId}/publish`, { method: "POST", body: { allowCopy }, noCache: true });
 }
 
-export async function unpublishProject(projectId: string) {
-  return api(`/api/projects/${projectId}/unpublish`, { method: "POST", body: {}, noCache: true });
-}
-
 export async function listLibrary() {
   return api<{ projects: Array<{ id: string; name: string; type: string; publishedAt: string | null; allowCopy: boolean }> }>(
     `/api/library`,
