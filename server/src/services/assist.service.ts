@@ -59,15 +59,6 @@ export interface DoctorNote {
   body: string;
 }
 
-const EMPTY_COLD: ColdStartDoc = {
-  gate: 1,
-  premise: { character: '', desire: '', obstacle: '', cost: '', format: '' },
-  structure: { causality: '', ending: '' },
-  beatsNote: '',
-  entitiesNote: '',
-  writingNote: '',
-};
-
 export function normalizeColdStart(raw: Prisma.JsonValue | null | undefined): ColdStartDoc {
   const obj = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const premise = obj.premise && typeof obj.premise === 'object' ? (obj.premise as Record<string, unknown>) : {};

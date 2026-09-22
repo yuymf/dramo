@@ -50,7 +50,7 @@ export function parseCharacterName(text: string): string | null {
   let value = text.trim();
   if (!value) return null;
   value = value.replace(/^@\s*/, '');
-  value = value.replace(/\s*[\(（][^)）]*[\)）]\s*/g, ' ');
+  value = value.replace(/\s*[(（][^)）]*[)）]\s*/g, ' ');
   value = value.replace(/[:：]\s*$/g, '');
   value = value.replace(MULTI_SPACE, ' ').trim();
   return value || null;
