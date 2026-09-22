@@ -140,3 +140,45 @@ export function taskJobId(task: GenerationTask): string {
 export function isTerminalStatus(status: TaskStatus | string): boolean {
   return status === "completed" || status === "failed" || status === "canceled";
 }
+
+export interface ProjectAssetImage {
+  id: string;
+  url: string;
+  createdAt: string;
+}
+
+export interface ProjectAssets {
+  characters: Array<{
+    id: string;
+    name: string;
+    images: ProjectAssetImage[];
+  }>;
+  locations: Array<{
+    id: string;
+    name: string;
+    images: ProjectAssetImage[];
+  }>;
+}
+
+export async function getProjectAssets(projectId: string): Promise<ProjectAssets> {
+  const [characters, locations] = await Promise.all([
+    listDerivedEntities("character", projectId).catch(() => [] as DerivedEntity[]),
+    listDerivedEntities("location", projectId).catch(() => [] as DerivedEntity[]),
+  ]);
+
+  const toImages = (images: unknown): ProjectAssetImage[] =>
+    imageUrls(images).map((url, index) => ({ id: `${index}`, url, createdAt: "" }));
+
+  return {
+    characters: characters.map((row) => ({
+      id: row.id,
+      name: row.name,
+      images: toImages(row.images),
+    })),
+    locations: locations.map((row) => ({
+      id: row.id,
+      name: row.name,
+      images: toImages(row.images),
+    })),
+  };
+}

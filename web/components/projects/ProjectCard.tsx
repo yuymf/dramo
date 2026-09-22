@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { type Project } from "@/lib/api/projects";
-import { getProjectAssets } from "@/lib/utils/exporter";
+import { getProjectAssets } from "@/lib/api/entities";
 
 interface ProjectCardProps {
   project: Project;
