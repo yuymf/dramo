@@ -1,5 +1,5 @@
 /**
- * AgentOS HTTP/SSE client. Workflows go through POST /workflows/{id}/runs.
+ * AgentOS HTTP client. Workflows go through POST /workflows/{id}/runs.
  */
 import { config } from '../config';
 import { logger } from './logger';
@@ -93,84 +93,6 @@ export async function startWorkflowRun(
 }
 
 /**
- * Generic JSON POST to AgentOS custom endpoints.
- */
-export async function postAgentOS<T>(
-  path: string,
-  body: unknown,
-  opts?: AgentOSCallOptions
-): Promise<T> {
-  const url = `${AGENTOS_BASE}${path}`;
-  const timeoutMs = opts?.timeoutMs ?? 55000;
-  const startTime = Date.now();
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'X-Request-Id': opts?.requestId || '',
-    ...authHeaders(),
-    ...(opts?.llmHeaders || {}),
-  };
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-
-    const duration = Date.now() - startTime;
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      logger.error({ status: res.status, error: errorText, duration, url }, 'AgentOS call failed');
-      throw new Error(`AGENTOS_${res.status}: ${errorText}`);
-    }
-
-    const result = (await res.json()) as T;
-    logger.info({ duration, url }, 'AgentOS call succeeded');
-    return result;
-  } catch (err: unknown) {
-    const duration = Date.now() - startTime;
-
-    if (err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
-      logger.error({ duration, url }, 'AgentOS call timeout');
-      throw new Error('AGENTOS_TIMEOUT');
-    }
-
-    logger.error({ err, duration, url }, 'AgentOS call error');
-    throw err;
-  }
-}
-
-/**
- * Generic JSON GET from AgentOS.
- */
-export async function getAgentOS<T>(path: string, opts?: AgentOSCallOptions): Promise<T> {
-  const url = `${AGENTOS_BASE}${path}`;
-  const timeoutMs = opts?.timeoutMs ?? 10000;
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...authHeaders(),
-    ...(opts?.llmHeaders || {}),
-  };
-
-  const res = await fetch(url, {
-    method: 'GET',
-    headers,
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`AGENTOS_${res.status}: ${errorText}`);
-  }
-
-  return (await res.json()) as T;
-}
-
-/**
  * Check AgentOS health.
  */
 export async function checkAgentOSHealth(): Promise<boolean> {
@@ -189,45 +111,4 @@ export async function checkAgentOSHealth(): Promise<boolean> {
     logger.warn({ err }, 'AgentOS health check failed');
     return false;
   }
-}
-
-/**
- * Image generation types and function.
- */
-export interface ImageGenerationParams {
-  prompt: string;
-  referenceImages?: string[];
-  mode?: 'single' | 'sequence';
-  stream?: boolean;
-  generationType?: string;
-  size?: string;
-  watermark?: boolean;
-  max_images?: number;
-  style?: string;
-}
-
-export interface ImageItem {
-  url: string;
-  width?: number;
-  height?: number;
-}
-
-export interface ImageGenerationResult {
-  success: boolean;
-  mode: string;
-  type: string;
-  images: ImageItem[];
-}
-
-/**
- * Seedream / AgentOS image generation is no longer the main path.
- * Phase 1 still frames go through SdPoolService (A1111 txt2img).
- */
-export async function runImageGeneration(
-  _params: ImageGenerationParams,
-  _opts?: AgentOSCallOptions
-): Promise<ImageGenerationResult> {
-  throw new Error(
-    'runImageGeneration 已停用：出图主路径已切换到 SD worker 池，禁止回退 Seedream'
-  );
 }
