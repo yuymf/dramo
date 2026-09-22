@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_SC } from "next/font/google";
 import "./globals.css";
-import { GenerationJobsProviderWrapper } from "./generation-jobs-provider";
 import { AppProviders } from "./providers";
 
 const notoSansSC = Noto_Sans_SC({
@@ -36,9 +35,7 @@ export default function RootLayout({
           FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
         */}
         <AppProviders>
-          <GenerationJobsProviderWrapper>
-            {children}
-          </GenerationJobsProviderWrapper>
+          {children}
         </AppProviders>
       </body>
     </html>
