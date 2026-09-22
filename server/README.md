@@ -22,7 +22,7 @@ src/
   server.ts
   routes/                # auth, projects, screenplay, entities, planning,
                          # assist, preproduction, cinema, files, collab,
-                         # uploads, generation-tasks, llm-config, health
+                         # generation-tasks, llm-config, health
   services/
   lib/agentos-client.ts  # 工作流 POST /workflows/{id}/runs
   middleware/session.ts  # dramo_session cookie；公开路径仅 /auth/* /health
