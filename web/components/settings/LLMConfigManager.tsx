@@ -33,12 +33,6 @@ import {
 
 const CONFIG_TYPE_LABELS: Record<LLMConfigType, string> = {
   TEXT_LLM: '文本生成',
-  IMAGE_GEN: '图片生成',
-};
-
-const CONFIG_TYPE_DESCRIPTIONS: Record<LLMConfigType, string> = {
-  TEXT_LLM: '用于剧本生成、角色提取、场景分析等文本 AI 任务',
-  IMAGE_GEN: '用于分镜图、角色立绘、场景图等图片生成任务',
 };
 
 const PRESET_PROVIDERS = [
@@ -93,8 +87,8 @@ function TypeBadge({ type }: { type: LLMConfigType }) {
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium tracking-wide"
       style={{
-        background: type === 'TEXT_LLM' ? 'rgba(37, 99, 235, 0.08)' : 'rgba(168, 85, 247, 0.08)',
-        color: type === 'TEXT_LLM' ? '#2563eb' : '#a855f7',
+        background: 'rgba(37, 99, 235, 0.08)',
+        color: '#2563eb',
       }}>
       {CONFIG_TYPE_LABELS[type]}
     </span>
@@ -236,7 +230,6 @@ function ConfigForm({ editConfig, onSave, onCancel }: ConfigFormProps) {
   const isEdit = !!editConfig;
 
   const [name, setName] = useState(editConfig?.name ?? '');
-  const [type, setType] = useState<LLMConfigType>(editConfig?.type ?? 'TEXT_LLM');
   const [baseUrl, setBaseUrl] = useState(editConfig?.baseUrl ?? '');
   const [apiKey, setApiKey] = useState('');
   const [modelId, setModelId] = useState(editConfig?.modelId ?? '');
@@ -276,7 +269,7 @@ function ConfigForm({ editConfig, onSave, onCancel }: ConfigFormProps) {
     setVerifyResult(null);
     setError(null);
     try {
-      const result = await verifyLLMConfig({ baseUrl, apiKey, modelId, type });
+      const result = await verifyLLMConfig({ baseUrl, apiKey, modelId, type: 'TEXT_LLM' });
       setVerifyResult(result);
     } catch (err) {
       setVerifyResult({ success: false, error: err instanceof Error ? err.message : '验证请求失败' });
@@ -305,11 +298,11 @@ function ConfigForm({ editConfig, onSave, onCancel }: ConfigFormProps) {
     setSaving(true);
     try {
       if (isEdit && editConfig) {
-        const payload: Record<string, unknown> = { name, type, baseUrl, modelId, isDefault };
+        const payload: Record<string, unknown> = { name, type: 'TEXT_LLM', baseUrl, modelId, isDefault };
         if (apiKey.trim()) payload.apiKey = apiKey;
         await updateLLMConfig(editConfig.id, payload);
       } else {
-        const payload: CreateLLMConfigInput = { name, type, baseUrl, apiKey, modelId, isDefault };
+        const payload: CreateLLMConfigInput = { name, type: 'TEXT_LLM', baseUrl, apiKey, modelId, isDefault };
         await createLLMConfig(payload);
       }
       onSave();
@@ -367,28 +360,6 @@ function ConfigForm({ editConfig, onSave, onCancel }: ConfigFormProps) {
               className="ink-input"
               maxLength={100}
             />
-          </div>
-
-          {/* Type */}
-          <div>
-            <label className="block text-[13px] font-medium mb-1.5" style={{ color: 'var(--ink-wash)' }}>
-              配置类型 <span style={{ color: 'var(--persimmon)' }}>*</span>
-            </label>
-            <div className="ink-tab-bar" style={{ maxWidth: '320px' }}>
-              {(['TEXT_LLM', 'IMAGE_GEN'] as const).map(t => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setType(t)}
-                  className={`ink-tab ${type === t ? 'ink-tab-active' : ''}`}
-                >
-                  {CONFIG_TYPE_LABELS[t]}
-                </button>
-              ))}
-            </div>
-            <p className="mt-1.5 text-[12px]" style={{ color: 'var(--ink-light)' }}>
-              {CONFIG_TYPE_DESCRIPTIONS[type]}
-            </p>
           </div>
 
           {/* Base URL */}
@@ -630,9 +601,7 @@ export function LLMConfigManager() {
     setEditConfig(null);
   };
 
-  // Group by type
   const textConfigs = configs.filter(c => c.type === 'TEXT_LLM');
-  const imageConfigs = configs.filter(c => c.type === 'IMAGE_GEN');
 
   if (loading) {
     return (
@@ -673,7 +642,7 @@ export function LLMConfigManager() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[13px] mt-0.5" style={{ color: 'var(--ink-light)' }}>
-            配置 AI 服务商的 API Key、端点和模型，用于文本生成与图片生成
+            配置 AI 服务商的 API Key、端点和模型，用于文本生成
           </p>
         </div>
         {!showForm && (
@@ -718,29 +687,8 @@ export function LLMConfigManager() {
         </section>
       )}
 
-      {/* Configs list - Image Gen */}
-      {imageConfigs.length > 0 && (
-        <section>
-          <div className="ink-section-header">
-            <h3 className="ink-section-title">图片生成</h3>
-            <span className="ink-count-badge">{imageConfigs.length}</span>
-          </div>
-          <div className="space-y-3">
-            {imageConfigs.map(config => (
-              <ConfigCard
-                key={config.id}
-                config={config}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onSetDefault={handleSetDefault}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* Empty state */}
-      {configs.length === 0 && !showForm && (
+      {textConfigs.length === 0 && !showForm && (
         <div className="ink-empty-state">
           <div className="ink-empty-state-icon">
             <Zap className="w-12 h-12" />
@@ -772,7 +720,7 @@ export function LLMConfigManager() {
         </p>
         <ul className="space-y-0.5 list-disc list-inside" style={{ color: 'var(--ink-light)' }}>
           <li>支持所有 OpenAI 兼容的 API 服务（OpenAI、DeepSeek、月之暗面等）</li>
-          <li>每种类型（文本/图片）的<strong>默认配置</strong>将用于所有 AI 操作</li>
+          <li><strong>默认配置</strong>将用于所有文本 AI 操作</li>
           <li>API Key 使用 AES-256-GCM 加密存储，仅展示掩码</li>
           <li>建议使用「测试连接」按钮验证配置是否可用</li>
         </ul>
