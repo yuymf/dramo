@@ -1,6 +1,6 @@
 # Dramo
 
-AI 直播台本生成助手 — Docker Compose 一键部署的全栈 Monorepo 应用。
+AI 剧本工作区 — Docker Compose 一键部署的全栈 Monorepo。需要注册 / 登录（cookie session `dramo_session`）。
 
 ## 架构概览
 
@@ -12,7 +12,7 @@ AI 直播台本生成助手 — Docker Compose 一键部署的全栈 Monorepo �
          /  /api/*       /
        Web (:12323)   API (:12321) — Hono v4 + Prisma 5 + PostgreSQL
                          |
-                    AgentOS (:12322) — FastAPI + Agno 多智能体工作流
+                    AgentOS (:12322) — FastAPI + Agno
 ```
 
 | 服务 | 技术栈 | 端口 |
@@ -21,7 +21,9 @@ AI 直播台本生成助手 — Docker Compose 一键部署的全栈 Monorepo �
 | **server** | Hono v4 + Prisma 5 + 本地 PostgreSQL | 12321 |
 | **agentos** | Python FastAPI + Agno | 12322 |
 
-> 纯工具型单用户应用，**无登录、无计费**。所有请求由后端默认用户中间件自动注入。
+鉴权：`server/src/middleware/session.ts`。除 `/auth/*` 与 `/health` 外，未带有效 session cookie 一律 401。不存在 `default-local-user`。
+
+静帧出图走 `SD_WORKERS`（A1111 兼容池，`server/src/services/sd-pool.service.ts`）。
 
 ## 快速开始（生产 / 一键部署）
 
@@ -35,39 +37,29 @@ git clone <repo-url> && cd dramo
 
 ```bash
 cp .env.example .env
-# 编辑 .env，至少填入 ENCRYPTION_KEY (openssl rand -hex 32)
+# 至少填 ENCRYPTION_KEY (openssl rand -hex 32)
+# 出图还需 SD_WORKERS（Docker 内 127.0.0.1 指向容器自己，不可用）
 docker compose up -d --build
 ```
 
-部署辅助脚本：
-
 ```bash
-./deploy/logs.sh [service] [-f] # 查看容器日志
-./deploy/update.sh              # 拉取代码 + 重建 + 重启
+./deploy/logs.sh [service] [-f]
+./deploy/update.sh
 ```
 
 ## 本地开发（无 Docker）
 
 ```bash
-# 1. 安装依赖（npm workspaces）
-npm install
-
-# 2. Python 依赖
+npm install                     # 生成 / 更新根目录 package-lock.json（npm workspaces 需要）
 cd agentos && pip install -r requirements.txt && cd ..
 
-# 3. 启动本地 PostgreSQL（推荐用 Docker）
 docker run -d --name dramo-pg \
   -e POSTGRES_DB=dramo -e POSTGRES_USER=dramo -e POSTGRES_PASSWORD=dramo_secret \
   -p 5432:5432 postgres:15-alpine
 
-# 4. 配置 server/.env（DATABASE_URL、ENCRYPTION_KEY 等）
 cp .env.example server/.env
-
-# 5. 数据库迁移
 npm run prisma:generate
 npm run prisma:migrate
-
-# 6. 一键启动三个服务（concurrently）
 npm run dev
 ```
 
@@ -88,9 +80,9 @@ npm run dev
 
 ## 技术栈
 
-- **前端**: Next.js 15 + React 19 + TypeScript strict + Tailwind CSS v4 + Radix/shadcn + TipTap + @dnd-kit + @xyflow/react
+- **前端**: Next.js 15 + React 19 + TypeScript + Tailwind CSS v4 + Radix/shadcn + TipTap + @dnd-kit + @xyflow/react
 - **后端**: Hono v4 + Prisma 5 + 本地 PostgreSQL + pino + AES-256-GCM
-- **AI**: Python FastAPI + Agno 多智能体框架（OpenAI / Hunyuan / ARK Seedream）
+- **AI**: AgentOS（Agno 工作流；产品路径是剧本 revise）+ 本机 SD worker 池
 - **基建**: Docker Compose + Nginx + npm workspaces + concurrently
 - **节点**: Node.js 20+
 
@@ -106,8 +98,7 @@ npm run dev
 
 ## 注意事项
 
-- 环境变量统一在根目录 `.env` 管理，由 docker-compose 注入到各容器
-- 本地开发时 `server/.env` 与 `agentos` 共享变量（agentos `env_loader.py` 从 `../server/.env` 读取）
-- 无外部依赖：本地 PostgreSQL 容器自动启动；存储使用本地文件系统 (`/app/uploads` volume)
-- 需要注册/登录；不再注入 `default-local-user`
-- 静帧出图走 `SD_WORKERS` 多实例池，不再走 Seedream
+- 根目录 `.env` 由 docker-compose 注入各容器。只保留 compose 会注入、且代码会读的变量。
+- 本地开发：`server/.env`；AgentOS 经 `env_loader.py` 读 `../server/.env`。
+- LLM 密钥存在库里（`UserLLMConfig`），调用时写入 workflow `message` 的 `_llm_config`。
+- `npm ci` 需要根目录 `package-lock.json`。没有时在仓库根跑 `npm install` 生成。

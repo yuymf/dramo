@@ -31,13 +31,13 @@ services:
       PORT: 12321
       DATABASE_URL: postgresql://dramo:${DB_PASSWORD:-dramo_secret}@postgres:5432/dramo
       DIRECT_URL: postgresql://dramo:${DB_PASSWORD:-dramo_secret}@postgres:5432/dramo
-      STORAGE_DRIVER: local
       STORAGE_LOCAL_DIR: /app/uploads
       STORAGE_BASE_URL: ${PUBLIC_URL:-http://localhost}/uploads
       AGENTOS_BASE_URL: http://agentos:12322
       AGENTOS_SECURITY_KEY: ${AGENTOS_KEY:-default_agentos_key}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       FRONTEND_URL: ${PUBLIC_URL:-http://localhost}
+      SD_WORKERS: ${SD_WORKERS:-}
     volumes:
       - uploads:/app/uploads
     healthcheck:
@@ -60,20 +60,6 @@ services:
     environment:
       PORT: 12322
       AGENTOS_SECURITY_KEY: ${AGENTOS_KEY:-default_agentos_key}
-      OS_SECURITY_KEY: ${AGENTOS_KEY:-default_agentos_key}
-      # AI provider selection — fallback used only when frontend doesn't pass per-user config
-      AI_PROVIDER: ${AI_PROVIDER:-openai}
-      # OpenAI / OpenAI-compatible
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_API_BASE: ${OPENAI_API_BASE:-}
-      OPENAI_MODEL_ID: ${OPENAI_MODEL_ID:-gpt-4-turbo-preview}
-      # Tencent Hunyuan
-      HUNYUAN_OPENAPI_KEY: ${HUNYUAN_OPENAPI_KEY:-}
-      HUNYUAN_OPENAPI_URL: ${HUNYUAN_OPENAPI_URL:-}
-      HUNYUAN_MODEL_ID: ${HUNYUAN_MODEL_ID:-hunyuan-turbos-latest}
-      # Volcengine ARK (image generation)
-      ARK_API_KEY: ${ARK_API_KEY:-}
-      # LLM tuning
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-90}
       LLM_TIMEOUT_LONG_SECONDS: ${LLM_TIMEOUT_LONG_SECONDS:-180}
       LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
