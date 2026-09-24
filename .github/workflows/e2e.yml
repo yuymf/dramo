@@ -1,0 +1,102 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dramo-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    name: Playwright e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write Compose env (no LLM/SD secrets)
+        run: |
+          umask 077
+          {
+            echo "DB_PASSWORD=dramo_ci_secret"
+            echo "ENCRYPTION_KEY=$(openssl rand -hex 32)"
+            echo "AGENTOS_KEY=ci_agentos_key"
+            echo "PORT=12323"
+            echo "PUBLIC_URL=http://localhost:12323"
+            # Empty list → immediate Chinese SD failure (matches web/e2e assertions)
+            echo 'SD_WORKERS=[]'
+          } > .env
+
+      - name: Build and start Docker Compose stack
+        run: docker compose up -d --build
+
+      - name: Wait for web + API on :12323
+        run: |
+          set -e
+          for i in $(seq 1 90); do
+            health_ok=0
+            page_ok=0
+            if curl -sf "http://localhost:12323/api/v1/health" >/dev/null; then
+              health_ok=1
+            fi
+            code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:12323/" || echo 000)
+            case "$code" in
+              200|301|302|303|307|308) page_ok=1 ;;
+            esac
+            if [ "$health_ok" = 1 ] && [ "$page_ok" = 1 ]; then
+              echo "Stack ready on http://localhost:12323 (attempt $i, homepage HTTP $code)"
+              curl -s "http://localhost:12323/api/v1/health" || true
+              exit 0
+            fi
+            echo "Waiting for stack... ($i/90) health=$health_ok homepage=$code"
+            sleep 5
+          done
+          echo "::error::Stack did not become ready on :12323"
+          docker compose ps -a
+          docker compose logs --no-color --tail=200
+          exit 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npm exec -w @dramo/web -- playwright install --with-deps chromium
+
+      - name: Run Playwright e2e
+        run: npm run test:e2e -w @dramo/web
+        env:
+          CI: true
+          PLAYWRIGHT_BASE_URL: http://localhost:12323
+
+      - name: Compose logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=400
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            web/test-results/
+            web/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Tear down Compose
+        if: always()
+        run: docker compose down -v

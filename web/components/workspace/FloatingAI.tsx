@@ -314,7 +314,6 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   if (collapsed) {
     return (
       <button
-        ref={panelRef}
         type="button"
         aria-label="展开 AI 浮层"
         onClick={() => setCollapsed(false)}
