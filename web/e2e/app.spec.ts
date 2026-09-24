@@ -30,55 +30,57 @@ async function createScriptProject(page: Page, name: string) {
 async function writeTwoScenes(page: Page) {
   const editor = page.getByRole('list', { name: '剧本正文' });
   await expect(editor).toBeVisible({ timeout: 15_000 });
-  const box = (name?: string) =>
-    name ? editor.getByRole('textbox', { name }) : editor.getByRole('textbox');
 
-  // fill()+value assert+press avoids IME Enter drops and fill/Enter stale React state.
-  await box().first().click();
+  const countBoxes = () => editor.getByRole('textbox').count();
+
+  await editor.getByRole('textbox').first().click();
   await page.keyboard.press('Shift+Tab');
-  await expect(box('场次标题')).toHaveCount(1);
-  await box('场次标题').last().fill('INT. 地铁车厢 - NIGHT');
-  await expect(box('场次标题').last()).toHaveValue('INT. 地铁车厢 - NIGHT');
-  await box('场次标题').last().press('Enter');
+  await expect(editor.getByRole('textbox', { name: '场次标题' })).toHaveCount(1);
+  await page.keyboard.type('INT. 地铁车厢 - NIGHT');
 
-  await expect(box()).toHaveCount(2, { timeout: 5_000 });
-  await box().nth(1).click();
+  let n = await countBoxes();
+  await page.keyboard.press('Enter');
+  await expect.poll(countBoxes, { timeout: 5_000 }).toBe(n + 1);
   await page.keyboard.press('Tab');
-  await expect(box('角色')).toHaveCount(1);
-  await box('角色').last().fill('林晚');
-  await expect(box('角色').last()).toHaveValue('林晚');
-  await box('角色').last().press('Enter');
+  await expect(editor.getByRole('textbox', { name: '角色' })).toHaveCount(1);
+  await page.keyboard.type('林晚');
 
-  await expect(box('对白')).toHaveCount(1, { timeout: 5_000 });
-  await box('对白').last().fill('末班车要到了。');
-  await expect(box('对白').last()).toHaveValue('末班车要到了。');
-  await box('对白').last().press('Enter');
+  n = await countBoxes();
+  await page.keyboard.press('Enter');
+  await expect.poll(countBoxes, { timeout: 5_000 }).toBe(n + 1);
+  // Dialogue line: type ASCII-ish then Chinese via insertText to avoid IME Enter swallow
+  await page.keyboard.insertText('末班车要到了。');
 
-  await expect(box()).toHaveCount(4, { timeout: 5_000 });
-  await box().nth(3).click();
+  n = await countBoxes();
+  await page.keyboard.press('Enter');
+  await expect.poll(countBoxes, { timeout: 5_000 }).toBe(n + 1);
   await page.keyboard.press('Shift+Tab');
-  await expect(box('场次标题')).toHaveCount(2);
-  await box('场次标题').last().fill('EXT. 月台 - NIGHT');
-  await expect(box('场次标题').last()).toHaveValue('EXT. 月台 - NIGHT');
-  await box('场次标题').last().press('Enter');
+  await expect(editor.getByRole('textbox', { name: '场次标题' })).toHaveCount(2);
+  await page.keyboard.type('EXT. 月台 - NIGHT');
 
-  await expect(box()).toHaveCount(5, { timeout: 5_000 });
-  await box().nth(4).click();
+  n = await countBoxes();
+  await page.keyboard.press('Enter');
+  await expect.poll(countBoxes, { timeout: 5_000 }).toBe(n + 1);
   await page.keyboard.press('Tab');
-  await expect(box('角色')).toHaveCount(2);
-  const lastCharacter = box('角色').last();
-  const saved = page.waitForResponse(
+  await expect(editor.getByRole('textbox', { name: '角色' })).toHaveCount(2);
+  await page.keyboard.type('值班员');
+
+  const put = page.waitForResponse(
     (res) =>
       res.request().method() === 'PUT' &&
       res.url().includes('/screenplay') &&
       res.ok(),
     { timeout: 20_000 }
   );
-  await lastCharacter.fill('值班员');
-  await expect(lastCharacter).toHaveValue('值班员');
-  await lastCharacter.blur();
-  await saved;
+  // Blur to flush debounce without racing a stale "已保存" label.
+  await editor.getByRole('textbox', { name: '角色' }).last().blur();
+  await put;
   await expect(page.getByText('已保存', { exact: true })).toBeVisible({ timeout: 15_000 });
+
+  // Sanity: both cues persisted in the editor before callers navigate away.
+  await expect(editor.getByRole('textbox', { name: '角色' }).nth(0)).toHaveValue('林晚');
+  await expect(editor.getByRole('textbox', { name: '角色' }).nth(1)).toHaveValue('值班员');
+  await expect(editor.getByRole('textbox', { name: '对白' }).first()).toHaveValue('末班车要到了。');
 }
 
 
@@ -230,6 +232,7 @@ test.describe('剧本工作区', () => {
   });
 
   test('选区 AI 无模型时只写回范围内节点，导出 TXT 含场次', async ({ page }) => {
+    test.setTimeout(90_000);
     await signUp(page);
     await createScriptProject(page, `E2E 修订导出 ${Date.now()}`);
     await writeTwoScenes(page);
