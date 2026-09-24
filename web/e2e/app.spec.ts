@@ -30,40 +30,38 @@ async function createScriptProject(page: Page, name: string) {
 async function writeTwoScenes(page: Page) {
   const editor = page.getByRole('list', { name: '剧本正文' });
   await expect(editor).toBeVisible({ timeout: 15_000 });
+  const box = (name?: string) =>
+    name ? editor.getByRole('textbox', { name }) : editor.getByRole('textbox');
 
-  const countBoxes = () => editor.getByRole('textbox').count();
-
-  await editor.getByRole('textbox').first().click();
+  // fill + press Enter (not keyboard.type) — IME composition in CI swallows Enter after Chinese.
+  await box().first().click();
   await page.keyboard.press('Shift+Tab');
-  await expect(editor.getByRole('textbox', { name: '场次标题' })).toHaveCount(1);
-  await page.keyboard.type('INT. 地铁车厢 - NIGHT');
+  await expect(box('场次标题')).toHaveCount(1);
+  await box('场次标题').last().fill('INT. 地铁车厢 - NIGHT');
+  await box('场次标题').last().press('Enter');
 
-  let n = await countBoxes();
-  await page.keyboard.press('Enter');
-  await expect.poll(countBoxes, { timeout: 5_000 }).toBe(n + 1);
+  await expect(box()).toHaveCount(2, { timeout: 5_000 });
+  await box().nth(1).click();
   await page.keyboard.press('Tab');
-  await expect(editor.getByRole('textbox', { name: '角色' })).toHaveCount(1);
-  await page.keyboard.type('林晚');
+  await expect(box('角色')).toHaveCount(1);
+  await box('角色').last().fill('林晚');
+  await box('角色').last().press('Enter');
 
-  n = await countBoxes();
-  await page.keyboard.press('Enter');
-  await expect.poll(countBoxes, { timeout: 5_000 }).toBe(n + 1);
-  // Dialogue line: type ASCII-ish then Chinese via insertText to avoid IME Enter swallow
-  await page.keyboard.insertText('末班车要到了。');
+  await expect(box('对白')).toHaveCount(1, { timeout: 5_000 });
+  await box('对白').last().fill('末班车要到了。');
+  await box('对白').last().press('Enter');
 
-  n = await countBoxes();
-  await page.keyboard.press('Enter');
-  await expect.poll(countBoxes, { timeout: 5_000 }).toBe(n + 1);
+  await expect(box()).toHaveCount(4, { timeout: 5_000 });
+  await box().nth(3).click();
   await page.keyboard.press('Shift+Tab');
-  await expect(editor.getByRole('textbox', { name: '场次标题' })).toHaveCount(2);
-  await page.keyboard.type('EXT. 月台 - NIGHT');
+  await expect(box('场次标题')).toHaveCount(2);
+  await box('场次标题').last().fill('EXT. 月台 - NIGHT');
+  await box('场次标题').last().press('Enter');
 
-  n = await countBoxes();
-  await page.keyboard.press('Enter');
-  await expect.poll(countBoxes, { timeout: 5_000 }).toBe(n + 1);
+  await expect(box()).toHaveCount(5, { timeout: 5_000 });
+  await box().nth(4).click();
   await page.keyboard.press('Tab');
-  await expect(editor.getByRole('textbox', { name: '角色' })).toHaveCount(2);
-  await page.keyboard.type('值班员');
+  await expect(box('角色')).toHaveCount(2);
 
   const put = page.waitForResponse(
     (res) =>
@@ -72,15 +70,13 @@ async function writeTwoScenes(page: Page) {
       res.ok(),
     { timeout: 20_000 }
   );
-  // Blur to flush debounce without racing a stale "已保存" label.
-  await editor.getByRole('textbox', { name: '角色' }).last().blur();
+  await box('角色').last().fill('值班员');
+  // Click the first scene heading to blur and let debounce flush.
+  await box('场次标题').first().click();
   await put;
   await expect(page.getByText('已保存', { exact: true })).toBeVisible({ timeout: 15_000 });
-
-  // Sanity: both cues persisted in the editor before callers navigate away.
-  await expect(editor.getByRole('textbox', { name: '角色' }).nth(0)).toHaveValue('林晚');
-  await expect(editor.getByRole('textbox', { name: '角色' }).nth(1)).toHaveValue('值班员');
-  await expect(editor.getByRole('textbox', { name: '对白' }).first()).toHaveValue('末班车要到了。');
+  await expect(box('角色').nth(0)).toHaveValue('林晚');
+  await expect(box('角色').nth(1)).toHaveValue('值班员');
 }
 
 
