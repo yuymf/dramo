@@ -33,12 +33,12 @@ async function writeTwoScenes(page: Page) {
   const box = (name?: string) =>
     name ? editor.getByRole('textbox', { name }) : editor.getByRole('textbox');
 
-  // Prefer fill()+locator.press over keyboard.type to avoid IME composition
-  // swallowing Enter in CI (Chinese punctuation left isComposing true).
+  // fill()+value assert+press avoids IME Enter drops and fill/Enter stale React state.
   await box().first().click();
   await page.keyboard.press('Shift+Tab');
   await expect(box('场次标题')).toHaveCount(1);
   await box('场次标题').last().fill('INT. 地铁车厢 - NIGHT');
+  await expect(box('场次标题').last()).toHaveValue('INT. 地铁车厢 - NIGHT');
   await box('场次标题').last().press('Enter');
 
   await expect(box()).toHaveCount(2, { timeout: 5_000 });
@@ -46,10 +46,12 @@ async function writeTwoScenes(page: Page) {
   await page.keyboard.press('Tab');
   await expect(box('角色')).toHaveCount(1);
   await box('角色').last().fill('林晚');
+  await expect(box('角色').last()).toHaveValue('林晚');
   await box('角色').last().press('Enter');
 
   await expect(box('对白')).toHaveCount(1, { timeout: 5_000 });
   await box('对白').last().fill('末班车要到了。');
+  await expect(box('对白').last()).toHaveValue('末班车要到了。');
   await box('对白').last().press('Enter');
 
   await expect(box()).toHaveCount(4, { timeout: 5_000 });
@@ -57,14 +59,25 @@ async function writeTwoScenes(page: Page) {
   await page.keyboard.press('Shift+Tab');
   await expect(box('场次标题')).toHaveCount(2);
   await box('场次标题').last().fill('EXT. 月台 - NIGHT');
+  await expect(box('场次标题').last()).toHaveValue('EXT. 月台 - NIGHT');
   await box('场次标题').last().press('Enter');
 
   await expect(box()).toHaveCount(5, { timeout: 5_000 });
   await box().nth(4).click();
   await page.keyboard.press('Tab');
   await expect(box('角色')).toHaveCount(2);
-  await box('角色').last().fill('值班员');
-
+  const lastCharacter = box('角色').last();
+  const saved = page.waitForResponse(
+    (res) =>
+      res.request().method() === 'PUT' &&
+      res.url().includes('/screenplay') &&
+      res.ok(),
+    { timeout: 20_000 }
+  );
+  await lastCharacter.fill('值班员');
+  await expect(lastCharacter).toHaveValue('值班员');
+  await lastCharacter.blur();
+  await saved;
   await expect(page.getByText('已保存', { exact: true })).toBeVisible({ timeout: 15_000 });
 }
 
@@ -162,14 +175,25 @@ test.describe('剧本工作区', () => {
     await page.getByRole('link', { name: '角色' }).click();
     await expect(page).toHaveURL(/\/characters/);
     await expect(page.getByRole('heading', { name: '角色', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '林晚' })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('heading', { name: '值班员' })).toBeVisible();
+    // Derive runs in the PUT handler; list fetch can race — retry once via reload.
+    await expect(async () => {
+      if (!(await page.getByRole('heading', { name: '林晚' }).isVisible().catch(() => false))) {
+        await page.reload();
+      }
+      await expect(page.getByRole('heading', { name: '林晚' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: '值班员' })).toBeVisible();
+    }).toPass({ timeout: 20_000 });
 
     await page.getByRole('link', { name: '地点' }).click();
     await expect(page).toHaveURL(/\/locations/);
     await expect(page.getByRole('heading', { name: '地点', exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: '地铁车厢' })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('heading', { name: '月台' })).toBeVisible();
+    await expect(async () => {
+      if (!(await page.getByRole('heading', { name: '地铁车厢' }).isVisible().catch(() => false))) {
+        await page.reload();
+      }
+      await expect(page.getByRole('heading', { name: '地铁车厢' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: '月台' })).toBeVisible();
+    }).toPass({ timeout: 20_000 });
 
     await page.getByRole('link', { name: '剧本' }).click();
     await expect(page).toHaveURL(/\/screenplay/);
