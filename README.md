@@ -105,6 +105,10 @@ npm run dev                     # web :12323 + server :12321 + agentos :12322
 | `npm run prisma:studio` | 打开数据库浏览器 |
 | `npm run test:e2e -w @dramo/web` | Playwright 本地 e2e（需先起 web，默认 `http://localhost:12323`） |
 
+## CI
+
+Push / PR 到 `main` 时，[`.github/workflows/ci.yml`](.github/workflows/ci.yml) 硬门禁跑 **lint**、**server Jest**（含 `prisma:generate`）和 **AgentOS pytest**（无密钥）。Playwright e2e 仍由独立的 [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml) 门禁，不在本 workflow 内。
+
 ## 技术栈
 
 - **前端**: Next.js 15 + React 19 + TypeScript + Tailwind CSS v4 + Radix/shadcn
