@@ -1,6 +1,70 @@
+<div align="center">
+  <img src="docs/assets/logo.png" alt="Dramo" width="72" height="72">
+
 # Dramo
 
-AI 剧本工作区 — Docker Compose 一键部署的全栈 Monorepo。需要注册 / 登录（cookie session `dramo_session`）。
+**AI 剧本工作区 — 从大纲到分镜，一处写完。**
+
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen?style=flat-square)](https://nodejs.org)
+[![Docker](https://img.shields.io/badge/docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white)](./docker-compose.yml)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](./web)
+[![Hono](https://img.shields.io/badge/Hono-v4-e36002?style=flat-square)](./server)
+
+</div>
+
+<p align="center">
+  <img src="docs/assets/cover.jpg" alt="Dramo — AI screenplay workspace" width="100%">
+</p>
+
+Dramo 是 Docker Compose 一键部署的全栈 Monorepo：Next.js 工作台 + Hono API + AgentOS（Agno）剧本 revise。需要注册 / 登录（cookie session `dramo_session`）。不存在 `default-local-user`。
+
+```
+Nginx (:80)  →  Web (:12323)  +  /api/* → Server (:12321)  →  AgentOS (:12322)
+```
+
+## 快速开始
+
+### 1. 生产 / 一键部署（推荐）
+
+```bash
+git clone https://github.com/yuymf/dramo.git && cd dramo
+./deploy/setup-dramo.sh         # 自动生成密钥 + 启动所有容器
+# 访问 http://localhost
+```
+
+或手动：
+
+```bash
+cp .env.example .env
+# 至少填 ENCRYPTION_KEY（openssl rand -hex 32）
+# 出图还需 SD_WORKERS（Docker 内 127.0.0.1 指向容器自己，不可用）
+docker compose up -d --build
+```
+
+运维脚本：
+
+```bash
+./deploy/logs.sh [service] [-f]
+./deploy/update.sh
+```
+
+### 2. 本地开发（无 Docker 全栈）
+
+```bash
+npm install                     # 生成 / 更新根目录 package-lock.json（npm workspaces）
+cd agentos && pip install -r requirements.txt && cd ..
+
+docker run -d --name dramo-pg \
+  -e POSTGRES_DB=dramo -e POSTGRES_USER=dramo -e POSTGRES_PASSWORD=dramo_secret \
+  -p 5432:5432 postgres:15-alpine
+
+cp server/env.example server/.env
+npm run prisma:generate
+npm run prisma:migrate
+npm run dev                     # web :12323 + server :12321 + agentos :12322
+```
+
+浏览器走相对路径 `/api/*`；Next.js 代理到 `BACKEND_API_URL`（默认 `http://localhost:12321`）。
 
 ## 架构概览
 
@@ -21,47 +85,9 @@ AI 剧本工作区 — Docker Compose 一键部署的全栈 Monorepo。需要注
 | **server** | Hono v4 + Prisma 5 + 本地 PostgreSQL | 12321 |
 | **agentos** | Python FastAPI + Agno | 12322 |
 
-鉴权：`server/src/middleware/session.ts`。除 `/auth/*` 与 `/health` 外，未带有效 session cookie 一律 401。不存在 `default-local-user`。
+鉴权：`server/src/middleware/session.ts`。除 `/auth/*` 与 `/health` 外，未带有效 session cookie 一律 401。
 
 静帧出图走 `SD_WORKERS`（A1111 兼容池，`server/src/services/sd-pool.service.ts`）。
-
-## 快速开始（生产 / 一键部署）
-
-```bash
-git clone <repo-url> && cd dramo
-./deploy/setup-dramo.sh         # 自动生成密钥 + 启动所有容器
-# 访问 http://localhost
-```
-
-或手动：
-
-```bash
-cp .env.example .env
-# 至少填 ENCRYPTION_KEY (openssl rand -hex 32)
-# 出图还需 SD_WORKERS（Docker 内 127.0.0.1 指向容器自己，不可用）
-docker compose up -d --build
-```
-
-```bash
-./deploy/logs.sh [service] [-f]
-./deploy/update.sh
-```
-
-## 本地开发（无 Docker）
-
-```bash
-npm install                     # 生成 / 更新根目录 package-lock.json（npm workspaces 需要）
-cd agentos && pip install -r requirements.txt && cd ..
-
-docker run -d --name dramo-pg \
-  -e POSTGRES_DB=dramo -e POSTGRES_USER=dramo -e POSTGRES_PASSWORD=dramo_secret \
-  -p 5432:5432 postgres:15-alpine
-
-cp server/env.example server/.env
-npm run prisma:generate
-npm run prisma:migrate
-npm run dev
-```
 
 ## 常用命令
 
@@ -77,6 +103,7 @@ npm run dev
 | `npm run prisma:generate` | 生成 Prisma Client |
 | `npm run prisma:migrate` | 运行数据库迁移 |
 | `npm run prisma:studio` | 打开数据库浏览器 |
+| `npm run test:e2e -w @dramo/web` | Playwright 本地 e2e（需先起 web，默认 `http://localhost:12323`） |
 
 ## 技术栈
 
