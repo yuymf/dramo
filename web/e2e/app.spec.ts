@@ -429,6 +429,43 @@ test.describe('剧本工作区', () => {
     );
   });
 
+  // Phase2 Outline slice acceptance: write → save → reload → still there.
+  // 【事实】Outline UI/API already on main; this gates the user-visible persistence path.
+  test('大纲可写读且刷新后仍在', async ({ page }) => {
+    await signUp(page);
+    await createScriptProject(page, `E2E 大纲切片 ${Date.now()}`);
+    const marker = `大纲前提 ${Date.now()}：林晚必须在末班车前交出旧怀表。`;
+
+    await page.getByRole('link', { name: '大纲' }).click();
+    await expect(page).toHaveURL(/\/outline/);
+    await expect(page.getByRole('heading', { name: '大纲', exact: true })).toBeVisible();
+
+    const outline = page.getByLabel('大纲正文');
+    await expect(outline).toBeVisible({ timeout: 15_000 });
+
+    const put = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'PUT' &&
+        res.url().includes('/outline') &&
+        res.ok(),
+      { timeout: 20_000 }
+    );
+    await outline.fill(marker);
+    await outline.blur();
+    await put;
+    await expect(page.getByText('已保存', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+    await page.reload();
+    await expect(page.getByLabel('大纲正文')).toHaveValue(marker, { timeout: 15_000 });
+    await expect(page.getByText('已保存', { exact: true })).toBeVisible();
+
+    // Navigate away and back — still persisted.
+    await page.getByRole('link', { name: '剧本' }).click();
+    await expect(page).toHaveURL(/\/screenplay/);
+    await page.getByRole('link', { name: '大纲' }).click();
+    await expect(page.getByLabel('大纲正文')).toHaveValue(marker, { timeout: 15_000 });
+  });
+
   test('编辑后刷新剧本仍在', async ({ page }) => {
     await signUp(page);
     await createScriptProject(page, `E2E 编辑 ${Date.now()}`);
