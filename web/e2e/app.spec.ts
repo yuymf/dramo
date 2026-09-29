@@ -817,11 +817,6 @@ test.describe('剧本工作区', () => {
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
     ).toBe(true);
 
-    await page.screenshot({
-      path: '/workspace/dramo-pr5-laper-gap/1024-panel-collapsed.png',
-      fullPage: false,
-    });
-
     await page.getByRole('button', { name: '展开项目面板' }).click();
     await expect(page.getByRole('complementary', { name: '项目面板' })).toBeVisible();
     await page.getByRole('button', { name: '收起项目面板' }).click();
@@ -839,10 +834,6 @@ test.describe('剧本工作区', () => {
     await expect(page.getByRole('complementary', { name: '项目面板' })).toBeVisible();
     await expect(page.getByRole('button', { name: '收起项目面板' })).toBeVisible();
 
-    await page.screenshot({
-      path: '/workspace/dramo-pr5-laper-gap/1440-panel-open.png',
-      fullPage: false,
-    });
   });
 
   test('深链进入大纲/Beats 且刷新保留路由与内容', async ({ page }) => {
@@ -875,11 +866,6 @@ test.describe('剧本工作区', () => {
     await page.reload();
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/outline`));
     await expect(page.getByLabel('大纲正文')).toHaveValue(outlineMarker, { timeout: 15_000 });
-    await page.screenshot({
-      path: '/workspace/dramo-pr5-laper-gap/outline-after-reload.png',
-      fullPage: false,
-    });
-
     await page.goto(`/projects/${projectId}/beats`);
     await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/beats`));
     await expect(page.getByRole('heading', { name: 'Beats', exact: true })).toBeVisible({
