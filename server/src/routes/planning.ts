@@ -88,6 +88,32 @@ planning.put(`${EPISODE}/outline`, async (c) => {
   return c.json(result);
 });
 
+planning.post(`${EPISODE}/outline/revise`, async (c) => {
+  const userId = requireUser(c).userId;
+  const requestId = c.get('requestId');
+  const body = asObject(await readJson(c));
+  const result = await planningService.previewOutlineRevise(
+    c.req.param('projectId'),
+    c.req.param('episodeId'),
+    userId,
+    body,
+    requestId
+  );
+  return c.json(result);
+});
+
+planning.post(`${EPISODE}/outline/revise/accept`, async (c) => {
+  const userId = requireUser(c).userId;
+  const body = asObject(await readJson(c));
+  const result = await planningService.acceptOutlineRevise(
+    c.req.param('projectId'),
+    c.req.param('episodeId'),
+    userId,
+    body
+  );
+  return c.json(result);
+});
+
 planning.get(`${EPISODE}/beats`, async (c) => {
   const userId = requireUser(c).userId;
   const result = await planningService.getBeats(
@@ -116,6 +142,32 @@ planning.get(`${EPISODE}/beats/coverage`, async (c) => {
     c.req.param('projectId'),
     c.req.param('episodeId'),
     userId
+  );
+  return c.json(result);
+});
+
+planning.post(`${EPISODE}/beats/revise`, async (c) => {
+  const userId = requireUser(c).userId;
+  const requestId = c.get('requestId');
+  const body = asObject(await readJson(c));
+  const result = await planningService.previewBeatRevise(
+    c.req.param('projectId'),
+    c.req.param('episodeId'),
+    userId,
+    body,
+    requestId
+  );
+  return c.json(result);
+});
+
+planning.post(`${EPISODE}/beats/revise/accept`, async (c) => {
+  const userId = requireUser(c).userId;
+  const body = asObject(await readJson(c));
+  const result = await planningService.acceptBeatRevise(
+    c.req.param('projectId'),
+    c.req.param('episodeId'),
+    userId,
+    body
   );
   return c.json(result);
 });

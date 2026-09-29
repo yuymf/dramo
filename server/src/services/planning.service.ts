@@ -2,6 +2,17 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/db.js';
 import { AppException, ErrorCode } from '../lib/errors.js';
 import { ScreenplayService } from './screenplay.service.js';
+import {
+  applyBeatFieldPatch,
+  applyOutlineParagraphPatch,
+  formatBeatProposalText,
+  formatProposalText,
+  reviseBeatFieldsWithLlm,
+  reviseOutlineParagraphWithLlm,
+  splitOutlineParagraphs,
+  wrapOutlineParagraphAsNodes,
+  type BeatFields,
+} from './planning-revise.js';
 
 export interface BeatRecord {
   id: string;
@@ -310,5 +321,198 @@ export class PlanningService {
     });
 
     return { rules: saved.map((row) => ({ key: row.key, value: row.value })) };
+  }
+
+  private parseInstruction(value: unknown): string {
+    if (value === undefined || value === null) return '';
+    if (typeof value !== 'string') {
+      throw new AppException(ErrorCode.INVALID_INPUT, 'instruction 必须是字符串');
+    }
+    return value;
+  }
+
+  private parseOutlineReviseScope(value: unknown): { type: 'paragraph'; index: number } {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new AppException(ErrorCode.INVALID_INPUT, 'scope 格式无效');
+    }
+    const raw = value as Record<string, unknown>;
+    if (raw.type !== 'paragraph') {
+      throw new AppException(ErrorCode.INVALID_INPUT, 'scope.type 必须是 paragraph');
+    }
+    if (typeof raw.index !== 'number' || !Number.isInteger(raw.index) || raw.index < 0) {
+      throw new AppException(ErrorCode.INVALID_INPUT, 'scope.index 必须是非负整数');
+    }
+    return { type: 'paragraph', index: raw.index };
+  }
+
+  private parseBeatReviseScope(value: unknown): { type: 'beat'; beatId: string } {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new AppException(ErrorCode.INVALID_INPUT, 'scope 格式无效');
+    }
+    const raw = value as Record<string, unknown>;
+    if (raw.type !== 'beat') {
+      throw new AppException(ErrorCode.INVALID_INPUT, 'scope.type 必须是 beat');
+    }
+    if (typeof raw.beatId !== 'string' || !raw.beatId.trim()) {
+      throw new AppException(ErrorCode.INVALID_INPUT, '请先保存该 Beat');
+    }
+    return { type: 'beat', beatId: raw.beatId.trim() };
+  }
+
+  private parseRevisedText(value: unknown): string {
+    if (typeof value !== 'string') {
+      throw new AppException(ErrorCode.INVALID_INPUT, 'revisedText 必须是字符串');
+    }
+    return value;
+  }
+
+  private parseBeatFields(value: unknown): BeatFields {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new AppException(ErrorCode.INVALID_INPUT, 'revised 必须是对象');
+    }
+    const raw = value as Record<string, unknown>;
+    for (const field of ['action', 'intent', 'outcome'] as const) {
+      if (typeof raw[field] !== 'string') {
+        throw new AppException(ErrorCode.INVALID_INPUT, `revised.${field} 必须是字符串`);
+      }
+    }
+    return {
+      action: raw.action as string,
+      intent: raw.intent as string,
+      outcome: raw.outcome as string,
+    };
+  }
+
+  /**
+   * Preview outline paragraph revise: LLM only for that paragraph; no putOutline.
+   */
+  async previewOutlineRevise(
+    projectId: string,
+    episodeId: string,
+    userId: string,
+    body: { instruction?: unknown; scope?: unknown },
+    requestId?: string
+  ): Promise<{
+    instruction: string;
+    scope: { type: 'paragraph'; index: number };
+    revisedText: string;
+    proposalText: string;
+  }> {
+    await this.requireEpisode(projectId, episodeId, userId, { write: true });
+    const instruction = this.parseInstruction(body.instruction);
+    const scope = this.parseOutlineReviseScope(body.scope);
+    const row = await prisma.outline.findUnique({ where: { episodeId } });
+    const markdown = row?.markdown ?? '';
+    const paragraphs = splitOutlineParagraphs(markdown);
+    if (scope.index >= paragraphs.length) {
+      throw new AppException(ErrorCode.INVALID_INPUT, '段落索引无效');
+    }
+    const paragraph = paragraphs[scope.index];
+    const revisedText = await reviseOutlineParagraphWithLlm({
+      paragraph,
+      index: scope.index,
+      instruction,
+      userId,
+      requestId,
+    });
+    // Validate patch without writing.
+    applyOutlineParagraphPatch(markdown, scope.index, revisedText);
+    const proposalText = formatProposalText(
+      wrapOutlineParagraphAsNodes(scope.index, revisedText)
+    );
+    return { instruction, scope, revisedText, proposalText };
+  }
+
+  /**
+   * Accept outline paragraph revise: patch that index only, then putOutline.
+   */
+  async acceptOutlineRevise(
+    projectId: string,
+    episodeId: string,
+    userId: string,
+    body: { scope?: unknown; revisedText?: unknown }
+  ): Promise<{ markdown: string }> {
+    await this.requireEpisode(projectId, episodeId, userId, { write: true });
+    const scope = this.parseOutlineReviseScope(body.scope);
+    const revisedText = this.parseRevisedText(body.revisedText);
+    const row = await prisma.outline.findUnique({ where: { episodeId } });
+    const markdown = row?.markdown ?? '';
+    const next = applyOutlineParagraphPatch(markdown, scope.index, revisedText);
+    return this.putOutline(projectId, episodeId, userId, next);
+  }
+
+  /**
+   * Preview beat revise: LLM for that beat's three fields; no putBeats.
+   */
+  async previewBeatRevise(
+    projectId: string,
+    episodeId: string,
+    userId: string,
+    body: { instruction?: unknown; scope?: unknown },
+    requestId?: string
+  ): Promise<{
+    instruction: string;
+    scope: { type: 'beat'; beatId: string };
+    revised: BeatFields;
+    proposalText: string;
+  }> {
+    await this.requireEpisode(projectId, episodeId, userId, { write: true });
+    const instruction = this.parseInstruction(body.instruction);
+    const scope = this.parseBeatReviseScope(body.scope);
+    const rows = await prisma.beat.findMany({
+      where: { episodeId },
+      orderBy: { sortOrder: 'asc' },
+    });
+    const beat = rows.find((row) => row.id === scope.beatId);
+    if (!beat) {
+      throw new AppException(ErrorCode.NOT_FOUND, 'Beat 不存在');
+    }
+    const fields: BeatFields = {
+      action: beat.action,
+      intent: beat.intent,
+      outcome: beat.outcome,
+    };
+    const revised = await reviseBeatFieldsWithLlm({
+      beatId: scope.beatId,
+      fields,
+      instruction,
+      userId,
+      requestId,
+    });
+    // Validate isolation without writing.
+    applyBeatFieldPatch(rows.map(toBeat), scope.beatId, revised);
+    return {
+      instruction,
+      scope,
+      revised,
+      proposalText: formatBeatProposalText(revised),
+    };
+  }
+
+  /**
+   * Accept beat revise: merge fields into that beat only via putBeats.
+   */
+  async acceptBeatRevise(
+    projectId: string,
+    episodeId: string,
+    userId: string,
+    body: { scope?: unknown; revised?: unknown }
+  ): Promise<{ beats: BeatRecord[] }> {
+    await this.requireEpisode(projectId, episodeId, userId, { write: true });
+    const scope = this.parseBeatReviseScope(body.scope);
+    const revised = this.parseBeatFields(body.revised);
+    const { beats } = await this.getBeats(projectId, episodeId, userId);
+    const patched = applyBeatFieldPatch(beats, scope.beatId, revised);
+    return this.putBeats(
+      projectId,
+      episodeId,
+      userId,
+      patched.map((beat) => ({
+        id: beat.id,
+        action: beat.action,
+        intent: beat.intent,
+        outcome: beat.outcome,
+      }))
+    );
   }
 }

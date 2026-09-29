@@ -9,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+import { usePathname } from "next/navigation";
 import { Loader2, Minus, Send } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { assistReel } from "@/lib/api/cinema";
@@ -23,6 +24,18 @@ import {
   type ScreenplayScopeDetail,
   type ScreenplayScopeType,
 } from "@/components/screenplay/scope";
+import {
+  BEAT_SCOPE_EVENT,
+  OUTLINE_SCOPE_EVENT,
+  dispatchBeatRevised,
+  dispatchOutlineRevised,
+  requestBeatFlush,
+  requestBeatScope,
+  requestOutlineFlush,
+  requestOutlineScope,
+  type BeatScopeDetail,
+  type OutlineScopeDetail,
+} from "@/components/planning/scope";
 
 export interface FloatingAISendPayload {
   projectId: string;
@@ -71,13 +84,36 @@ interface ChatLine {
   text: string;
 }
 
-interface PendingProposal {
+type PlanningPageKind = "script" | "outline" | "beats";
+
+interface ScriptPendingProposal {
+  kind: "script";
   instruction: string;
   scope: { type: ScreenplayScopeType; nodeIds: string[] };
   replacements: ScreenplayNode[];
   proposalText: string;
   lineIndex: number;
 }
+
+interface OutlinePendingProposal {
+  kind: "outline";
+  instruction: string;
+  scope: { type: "paragraph"; index: number };
+  revisedText: string;
+  proposalText: string;
+  lineIndex: number;
+}
+
+interface BeatPendingProposal {
+  kind: "beats";
+  instruction: string;
+  scope: { type: "beat"; beatId: string };
+  revised: { action: string; intent: string; outcome: string };
+  proposalText: string;
+  lineIndex: number;
+}
+
+type PendingProposal = ScriptPendingProposal | OutlinePendingProposal | BeatPendingProposal;
 
 interface ProjectDetail {
   id: string;
@@ -100,6 +136,12 @@ function pickEpisodeId(project: ProjectDetail): string | null {
 }
 
 export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }: FloatingAIProps) {
+  const pathname = usePathname() ?? "";
+  const pageKind: PlanningPageKind = pathname.includes("/outline")
+    ? "outline"
+    : pathname.includes("/beats")
+      ? "beats"
+      : "script";
   const [collapsed, setCollapsed] = useState(false);
   const [frame, setFrame] = useState<Frame | null>(null);
   const [text, setText] = useState("");
@@ -114,6 +156,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     type: "selection",
     nodeIds: scopeNodeIds,
   });
+  const [outlineIndex, setOutlineIndex] = useState<number | null>(null);
+  const [beatId, setBeatId] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const editorRef = useRef<{ element: HTMLTextAreaElement; start: number; end: number } | null>(null);
@@ -242,6 +286,33 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   }, []);
 
   useEffect(() => {
+    const onOutline = (event: Event) => {
+      const detail = (event as CustomEvent<OutlineScopeDetail>).detail;
+      if (!detail || typeof detail.index !== "number") return;
+      setOutlineIndex(detail.index);
+    };
+    window.addEventListener(OUTLINE_SCOPE_EVENT, onOutline);
+    return () => window.removeEventListener(OUTLINE_SCOPE_EVENT, onOutline);
+  }, []);
+
+  useEffect(() => {
+    const onBeat = (event: Event) => {
+      const detail = (event as CustomEvent<BeatScopeDetail>).detail;
+      if (!detail) return;
+      setBeatId(typeof detail.beatId === "string" && detail.beatId.trim() ? detail.beatId : null);
+    };
+    window.addEventListener(BEAT_SCOPE_EVENT, onBeat);
+    return () => window.removeEventListener(BEAT_SCOPE_EVENT, onBeat);
+  }, []);
+
+  useEffect(() => {
+    // Clear cross-page pending proposal when navigating between outline/beats/script.
+    setPendingProposal(null);
+    if (pageKind === "outline") requestOutlineScope();
+    if (pageKind === "beats") requestBeatScope();
+  }, [pageKind]);
+
+  useEffect(() => {
     linesEndRef.current?.scrollIntoView({ block: "end" });
   }, [lines, sending, pendingProposal]);
 
@@ -279,8 +350,14 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     window.requestAnimationFrame(returnToEditor);
   };
 
+  const requestPageScope = () => {
+    if (pageKind === "outline") requestOutlineScope();
+    else if (pageKind === "beats") requestBeatScope();
+    else requestScreenplayScope();
+  };
+
   const restore = () => {
-    requestScreenplayScope();
+    requestPageScope();
     setFrame((previous) => fitFrame(previous ?? currentFrame(), getBounds()));
     setCollapsed(false);
     window.requestAnimationFrame(() => promptRef.current?.focus());
@@ -288,7 +365,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
 
   const onDragStart = (e: ReactPointerEvent) => {
     rememberEditor();
-    requestScreenplayScope();
+    requestPageScope();
     dragRef.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -317,7 +394,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
 
   const onResizeStart = (e: ReactPointerEvent, axis: ResizeAxis) => {
     rememberEditor();
-    requestScreenplayScope();
+    requestPageScope();
     resizeRef.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
@@ -397,20 +474,159 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       return;
     }
 
+    if (pendingProposal) {
+      setLines((prev) => [
+        ...prev,
+        { role: "assistant", text: "请先接受或拒绝当前修订提案" },
+      ]);
+      return;
+    }
+
+    if (pageKind === "outline") {
+      if (outlineIndex === null || outlineIndex < 0) {
+        setLines((prev) => [...prev, { role: "assistant", text: "请先把光标放在大纲段落内" }]);
+        return;
+      }
+      setText("");
+      setSending(true);
+      setLines((prev) => [...prev, { role: "user", text: next }]);
+      try {
+        await requestOutlineFlush();
+        const episodeId = await resolveEpisodeId();
+        const proposal = unwrap(
+          await api<
+            | {
+                instruction: string;
+                scope: { type: "paragraph"; index: number };
+                revisedText: string;
+                proposalText: string;
+              }
+            | {
+                data: {
+                  instruction: string;
+                  scope: { type: "paragraph"; index: number };
+                  revisedText: string;
+                  proposalText: string;
+                };
+              }
+          >(`/api/projects/${projectId}/episodes/${episodeId}/outline/revise`, {
+            method: "POST",
+            body: {
+              instruction: next,
+              scope: { type: "paragraph", index: outlineIndex },
+            },
+            noCache: true,
+            timeoutMs: 120_000,
+          })
+        );
+        const proposalText =
+          typeof proposal.proposalText === "string" && proposal.proposalText.trim()
+            ? proposal.proposalText
+            : "（提案为空）";
+        setLines((prev) => [...prev, { role: "assistant", text: `修订提案（尚未写入）：\n${proposalText}` }]);
+        setPendingProposal({
+          kind: "outline",
+          instruction: proposal.instruction ?? next,
+          scope: {
+            type: "paragraph",
+            index:
+              typeof proposal.scope?.index === "number" ? proposal.scope.index : outlineIndex,
+          },
+          revisedText: typeof proposal.revisedText === "string" ? proposal.revisedText : "",
+          proposalText,
+          lineIndex: -1,
+        });
+        onSend?.({ projectId, text: next, scopeNodeIds: [] });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "修订失败";
+        setPendingProposal(null);
+        setLines((prev) => [...prev, { role: "assistant", text: message }]);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    if (pageKind === "beats") {
+      if (!beatId) {
+        setLines((prev) => [...prev, { role: "assistant", text: "请先保存该 Beat" }]);
+        return;
+      }
+      setText("");
+      setSending(true);
+      setLines((prev) => [...prev, { role: "user", text: next }]);
+      try {
+        await requestBeatFlush();
+        const episodeId = await resolveEpisodeId();
+        const proposal = unwrap(
+          await api<
+            | {
+                instruction: string;
+                scope: { type: "beat"; beatId: string };
+                revised: { action: string; intent: string; outcome: string };
+                proposalText: string;
+              }
+            | {
+                data: {
+                  instruction: string;
+                  scope: { type: "beat"; beatId: string };
+                  revised: { action: string; intent: string; outcome: string };
+                  proposalText: string;
+                };
+              }
+          >(`/api/projects/${projectId}/episodes/${episodeId}/beats/revise`, {
+            method: "POST",
+            body: {
+              instruction: next,
+              scope: { type: "beat", beatId },
+            },
+            noCache: true,
+            timeoutMs: 120_000,
+          })
+        );
+        const proposalText =
+          typeof proposal.proposalText === "string" && proposal.proposalText.trim()
+            ? proposal.proposalText
+            : "（提案为空）";
+        setLines((prev) => [...prev, { role: "assistant", text: `修订提案（尚未写入）：\n${proposalText}` }]);
+        setPendingProposal({
+          kind: "beats",
+          instruction: proposal.instruction ?? next,
+          scope: {
+            type: "beat",
+            beatId:
+              typeof proposal.scope?.beatId === "string" && proposal.scope.beatId.trim()
+                ? proposal.scope.beatId
+                : beatId,
+          },
+          revised:
+            proposal.revised && typeof proposal.revised === "object"
+              ? {
+                  action: String(proposal.revised.action ?? ""),
+                  intent: String(proposal.revised.intent ?? ""),
+                  outcome: String(proposal.revised.outcome ?? ""),
+                }
+              : { action: "", intent: "", outcome: "" },
+          proposalText,
+          lineIndex: -1,
+        });
+        onSend?.({ projectId, text: next, scopeNodeIds: [] });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "修订失败";
+        setPendingProposal(null);
+        setLines((prev) => [...prev, { role: "assistant", text: message }]);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
     if (scope.nodeIds.length === 0) {
       const hint =
         scopeMode === "scene"
           ? "请先把光标放在某一场内"
           : "请先在剧本里选中要改的句子";
       setLines((prev) => [...prev, { role: "assistant", text: hint }]);
-      return;
-    }
-
-    if (pendingProposal) {
-      setLines((prev) => [
-        ...prev,
-        { role: "assistant", text: "请先接受或拒绝当前修订提案" },
-      ]);
       return;
     }
 
@@ -424,7 +640,12 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       // Preview only — do not write until Accept.
       const proposal = unwrap(
         await api<
-          | PendingProposal
+          | {
+              instruction: string;
+              scope: { type: ScreenplayScopeType; nodeIds: string[] };
+              replacements: ScreenplayNode[];
+              proposalText: string;
+            }
           | {
               data: {
                 instruction: string;
@@ -453,6 +674,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
 
       setLines((prev) => [...prev, { role: "assistant", text: assistantLine }]);
       setPendingProposal({
+        kind: "script",
         instruction: proposal.instruction ?? next,
         scope: {
           type:
@@ -482,8 +704,60 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     if (!pendingProposal || sending) return;
     setSending(true);
     try {
-      await requestScreenplayFlush();
       const episodeId = await resolveEpisodeId();
+      if (pendingProposal.kind === "outline") {
+        await requestOutlineFlush();
+        const doc = unwrap(
+          await api<{ markdown: string } | { data: { markdown: string } }>(
+            `/api/projects/${projectId}/episodes/${episodeId}/outline/revise/accept`,
+            {
+              method: "POST",
+              body: {
+                scope: pendingProposal.scope,
+                revisedText: pendingProposal.revisedText,
+              },
+              noCache: true,
+              timeoutMs: 60_000,
+            }
+          )
+        );
+        dispatchOutlineRevised(doc.markdown);
+        setPendingProposal(null);
+        setLines((prev) => [
+          ...prev,
+          { role: "assistant", text: "已接受提案并写回当前段落" },
+        ]);
+        return;
+      }
+      if (pendingProposal.kind === "beats") {
+        await requestBeatFlush();
+        const doc = unwrap(
+          await api<
+            | { beats: BeatPendingProposal["revised"][] }
+            | { data: { beats: Array<{ id?: string; action: string; intent: string; outcome: string }> } }
+          >(`/api/projects/${projectId}/episodes/${episodeId}/beats/revise/accept`, {
+            method: "POST",
+            body: {
+              scope: pendingProposal.scope,
+              revised: pendingProposal.revised,
+            },
+            noCache: true,
+            timeoutMs: 60_000,
+          })
+        );
+        const beats = Array.isArray((doc as { beats?: unknown }).beats)
+          ? (doc as { beats: Array<{ id?: string; action: string; intent: string; outcome: string }> }).beats
+          : [];
+        dispatchBeatRevised(beats);
+        setPendingProposal(null);
+        setLines((prev) => [
+          ...prev,
+          { role: "assistant", text: "已接受提案并写回当前 Beat" },
+        ]);
+        return;
+      }
+
+      await requestScreenplayFlush();
       const doc = unwrap(
         await api<ScreenplayDoc | { data: ScreenplayDoc }>(
           `/api/projects/${projectId}/episodes/${episodeId}/screenplay/revise/accept`,
@@ -535,11 +809,19 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   const scopeLabel =
     mode === "cinema"
       ? `Cinema · ${cinemaTarget === "scene" ? "场景" : cinemaTarget === "shots" ? "镜头" : "表演"}`
-      : scope.nodeIds.length > 0
-        ? `${scopeMode === "scene" ? "本场" : "选区"} ${scope.nodeIds.length} 个节点`
-        : scopeMode === "scene"
-          ? "本场 · 未定位"
-          : "未选中节点";
+      : pageKind === "outline"
+        ? outlineIndex !== null && outlineIndex >= 0
+          ? `当前段落 · 第 ${outlineIndex + 1} 段`
+          : "当前段落 · 未定位"
+        : pageKind === "beats"
+          ? beatId
+            ? "当前 Beat"
+            : "当前 Beat · 未保存"
+          : scope.nodeIds.length > 0
+            ? `${scopeMode === "scene" ? "本场" : "选区"} ${scope.nodeIds.length} 个节点`
+            : scopeMode === "scene"
+              ? "本场 · 未定位"
+              : "未选中节点";
 
   return (
     <>
@@ -547,7 +829,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         type="button"
         aria-label="展开 AI 浮层"
         title="展开 AI 浮层"
-        onPointerDownCapture={() => { rememberEditor(); requestScreenplayScope(); }}
+        onPointerDownCapture={() => { rememberEditor(); requestPageScope(); }}
         onClick={restore}
         className="absolute z-20 h-10 px-3.5 rounded-lg text-sm font-medium"
         style={{
@@ -563,7 +845,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       </button>
     <div
       ref={panelRef}
-      onPointerDownCapture={() => { rememberEditor(); requestScreenplayScope(); }}
+      onPointerDownCapture={() => { rememberEditor(); requestPageScope(); }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.stopPropagation();
@@ -621,7 +903,11 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
             <p className="text-[11px] leading-5" style={{ color: "var(--ws-muted, #a8a29e)" }}>
               {mode === "cinema"
                 ? "只改当前 Reel 的场景、表演或文字镜头，不会动剧本项目。"
-                : "选中对白或动作，或切换「本场」后把光标放在某一场内，写下指令。预览不写稿，接受后才改对应范围。"}
+                : pageKind === "outline"
+                  ? "把光标放在要改的段落内，写下指令。预览不写大纲，接受后只改当前段落。"
+                  : pageKind === "beats"
+                    ? "先保存并聚焦一个 Beat，写下指令。预览不写 Beats，接受后只改当前 Beat。"
+                    : "选中对白或动作，或切换「本场」后把光标放在某一场内，写下指令。预览不写稿，接受后才改对应范围。"}
             </p>
           )}
           {lines.map((line, index) => (
@@ -670,7 +956,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           )}
           <div ref={linesEndRef} />
         </div>
-        {mode === "script" && (
+        {mode === "script" && pageKind === "script" && (
           <div
             className="mb-2 flex gap-1 shrink-0"
             role="radiogroup"
@@ -693,7 +979,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
                 onClick={() => {
                   setScopeMode(item.id);
                   setScope((prev) => ({ ...prev, type: item.id }));
-                  requestScreenplayScope();
+                  requestPageScope();
                 }}
                 className="px-2.5 py-1 rounded-md text-[11px] font-medium"
                 style={{
@@ -722,9 +1008,13 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
             }
           }}
           placeholder={
-            scopeMode === "scene"
-              ? "写一条指令… 将修订当前场所在节点"
-              : "写一条指令… 选区会随消息送出"
+            pageKind === "outline"
+              ? "写一条指令… 将修订当前段落"
+              : pageKind === "beats"
+                ? "写一条指令… 将修订当前 Beat"
+                : scopeMode === "scene"
+                  ? "写一条指令… 将修订当前场所在节点"
+                  : "写一条指令… 选区会随消息送出"
           }
           aria-label="AI 指令"
           disabled={sending}

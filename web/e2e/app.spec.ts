@@ -513,6 +513,82 @@ test.describe('剧本工作区', () => {
     }
   });
 
+  test('大纲 AI 无模型时中文失败且不写段落', async ({ page }) => {
+    test.setTimeout(90_000);
+    await signUp(page);
+    await createScriptProject(page, `E2E 大纲修订 ${Date.now()}`);
+
+    await page.getByRole('link', { name: '大纲' }).click();
+    await expect(page).toHaveURL(/\/outline/);
+    const outline = page.getByLabel('大纲正文');
+    await expect(outline).toBeVisible({ timeout: 15_000 });
+    const marker = `大纲段落甲 ${Date.now()}\n\n大纲段落乙保持不动`;
+    const saved = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'PUT' &&
+        res.url().includes('/outline') &&
+        res.ok(),
+      { timeout: 20_000 }
+    );
+    await outline.fill(marker);
+    await outline.blur();
+    await saved;
+    await expect(page.getByText('已保存', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+    await outline.click();
+    await outline.press('Home');
+    await expect(page.getByText(/当前段落 ·/)).toBeVisible({ timeout: 10_000 });
+
+    await page.getByLabel('AI 指令').fill('把这段改短一点');
+    await page.getByRole('button', { name: '发送' }).click();
+    await expect(
+      page.getByText(/未配置默认文本模型|请先在设置中配置 LLM|请先把光标放在大纲段落内|修订失败/)
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('ai-revise-accept')).toHaveCount(0);
+    await expect(outline).toHaveValue(marker);
+  });
+
+  test('Beats AI 无模型时中文失败且不写 Beat', async ({ page }) => {
+    test.setTimeout(90_000);
+    await signUp(page);
+    await createScriptProject(page, `E2E Beats修订 ${Date.now()}`);
+
+    await page.getByRole('link', { name: 'Beats' }).click();
+    await expect(page).toHaveURL(/\/beats/);
+    await page.getByRole('button', { name: '添加 Beat' }).click();
+    await page.getByLabel('动作 1').fill('交出旧怀表');
+    await page.getByLabel('意图 1').fill('求他放行');
+    await page.getByLabel('结果 1').fill('门开了');
+    await page.getByRole('button', { name: '添加 Beat' }).click();
+    await page.getByLabel('动作 2').fill('值班员拦下她');
+    await page.getByLabel('意图 2').fill('查清来历');
+    await page.getByLabel('结果 2').fill('对峙升级');
+    const saved = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'PUT' &&
+        res.url().includes('/beats') &&
+        res.ok(),
+      { timeout: 20_000 }
+    );
+    await page.getByRole('button', { name: '保存 Beats' }).click();
+    await saved;
+    await expect(page.getByText('未兑现')).toHaveCount(2, { timeout: 10_000 });
+
+    await page.getByLabel('动作 1').click();
+    await expect(page.getByText('当前 Beat', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+    await page.getByLabel('AI 指令').fill('把这个 Beat 写紧一点');
+    await page.getByRole('button', { name: '发送' }).click();
+    await expect(
+      page.getByText(/未配置默认文本模型|请先在设置中配置 LLM|请先保存该 Beat|修订失败/)
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('ai-revise-accept')).toHaveCount(0);
+    await expect(page.getByLabel('动作 1')).toHaveValue('交出旧怀表');
+    await expect(page.getByLabel('动作 2')).toHaveValue('值班员拦下她');
+    await expect(page.getByLabel('意图 1')).toHaveValue('求他放行');
+    await expect(page.getByLabel('结果 2')).toHaveValue('对峙升级');
+  });
+
   test('无 SD worker 时生成肖像给出中文失败原因', async ({ page }) => {
     await signUp(page);
     await createScriptProject(page, `E2E 出图 ${Date.now()}`);

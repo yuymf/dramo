@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,14 @@ import {
   putBeats,
   type Beat,
 } from "@/lib/api/planning";
+import {
+  BEAT_FLUSH_EVENT,
+  BEAT_REVISED_EVENT,
+  BEAT_SCOPE_REQUEST_EVENT,
+  dispatchBeatScope,
+  type BeatRevisedDetail,
+  type FlushDetail,
+} from "@/components/planning/scope";
 
 function emptyBeat(): Beat {
   return { action: "", intent: "", outcome: "" };
@@ -25,6 +33,24 @@ export default function BeatsPage() {
   const [beats, setBeats] = useState<Beat[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeBeatId, setActiveBeatId] = useState<string | null>(null);
+  const beatsRef = useRef(beats);
+  const episodeIdRef = useRef(episodeId);
+  const savingRef = useRef(saving);
+  const activeBeatIdRef = useRef(activeBeatId);
+
+  useEffect(() => {
+    beatsRef.current = beats;
+  }, [beats]);
+  useEffect(() => {
+    episodeIdRef.current = episodeId;
+  }, [episodeId]);
+  useEffect(() => {
+    savingRef.current = saving;
+  }, [saving]);
+  useEffect(() => {
+    activeBeatIdRef.current = activeBeatId;
+  }, [activeBeatId]);
 
   const loadCoverage = useCallback(
     async (eid: string, current: Beat[]) => {
@@ -84,6 +110,69 @@ export default function BeatsPage() {
       setSaving(false);
     }
   };
+
+  const focusBeat = useCallback((beatId: string | undefined) => {
+    const id = beatId ?? null;
+    setActiveBeatId(id);
+    dispatchBeatScope(id);
+  }, []);
+
+  useEffect(() => {
+    const onRequest = () => {
+      dispatchBeatScope(activeBeatIdRef.current);
+    };
+    const onRevised = (event: Event) => {
+      const detail = (event as CustomEvent<BeatRevisedDetail>).detail;
+      if (!detail || !Array.isArray(detail.beats)) return;
+      const eid = episodeIdRef.current;
+      if (!eid) {
+        setBeats(detail.beats);
+        return;
+      }
+      void loadCoverage(eid, detail.beats)
+        .then(setBeats)
+        .catch(() => setBeats(detail.beats));
+    };
+    const onFlush = (event: Event) => {
+      const detail = (event as CustomEvent<FlushDetail>).detail;
+      const done = detail?.done;
+      void (async () => {
+        try {
+          const eid = episodeIdRef.current;
+          if (eid && !savingRef.current) {
+            setSaving(true);
+            try {
+              const saved = await putBeats(
+                projectId,
+                eid,
+                beatsRef.current.map((beat) => ({
+                  id: beat.id,
+                  action: beat.action,
+                  intent: beat.intent,
+                  outcome: beat.outcome,
+                }))
+              );
+              setBeats(await loadCoverage(eid, saved.beats));
+            } finally {
+              setSaving(false);
+            }
+          }
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : "保存 Beats 失败", "error");
+        } finally {
+          done?.();
+        }
+      })();
+    };
+    window.addEventListener(BEAT_SCOPE_REQUEST_EVENT, onRequest);
+    window.addEventListener(BEAT_REVISED_EVENT, onRevised);
+    window.addEventListener(BEAT_FLUSH_EVENT, onFlush);
+    return () => {
+      window.removeEventListener(BEAT_SCOPE_REQUEST_EVENT, onRequest);
+      window.removeEventListener(BEAT_REVISED_EVENT, onRevised);
+      window.removeEventListener(BEAT_FLUSH_EVENT, onFlush);
+    };
+  }, [loadCoverage, projectId, showToast]);
 
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
@@ -160,6 +249,7 @@ export default function BeatsPage() {
                       aria-label={`${label} ${index + 1}`}
                       value={beat[field] ?? ""}
                       placeholder={placeholder}
+                      onFocus={() => focusBeat(beat.id)}
                       onChange={(e) =>
                         setBeats((prev) =>
                           prev.map((row, i) => (i === index ? { ...row, [field]: e.target.value } : row))
