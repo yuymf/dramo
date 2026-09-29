@@ -16,6 +16,8 @@ import { assistReel } from "@/lib/api/cinema";
 import { firstEpisodeId } from "@/lib/api/planning";
 import type { CinemaAssistTarget } from "@/lib/types/cinema";
 import type { ScreenplayDoc, ScreenplayNode } from "@/lib/types/screenplay";
+import type { DerivedEntityKind } from "@/lib/api/entities";
+import { entityRevisedEvent, entityScopeEvent, requestEntityScope } from "@/components/entities/scope";
 import {
   SCREENPLAY_SCOPE_EVENT,
   dispatchScreenplayRevised,
@@ -84,7 +86,7 @@ interface ChatLine {
   text: string;
 }
 
-type PlanningPageKind = "script" | "outline" | "beats";
+type PlanningPageKind = "script" | "outline" | "beats" | DerivedEntityKind;
 
 interface ScriptPendingProposal {
   kind: "script";
@@ -113,7 +115,14 @@ interface BeatPendingProposal {
   lineIndex: number;
 }
 
-type PendingProposal = ScriptPendingProposal | OutlinePendingProposal | BeatPendingProposal;
+interface EntityPendingProposal {
+  kind: DerivedEntityKind;
+  id: string;
+  diff: Array<{ field: string; before: string | null; after: string }>;
+  proposalText: string;
+}
+
+type PendingProposal = ScriptPendingProposal | OutlinePendingProposal | BeatPendingProposal | EntityPendingProposal;
 
 interface ProjectDetail {
   id: string;
@@ -141,6 +150,10 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     ? "outline"
     : pathname.includes("/beats")
       ? "beats"
+      : pathname.includes("/characters")
+        ? "character"
+        : pathname.includes("/locations")
+          ? "location"
       : "script";
   const [collapsed, setCollapsed] = useState(false);
   const [frame, setFrame] = useState<Frame | null>(null);
@@ -158,6 +171,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   });
   const [outlineIndex, setOutlineIndex] = useState<number | null>(null);
   const [beatId, setBeatId] = useState<string | null>(null);
+  const [entityId, setEntityId] = useState<string | null>(null);
+  const entityIdRef = useRef<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const editorRef = useRef<{ element: HTMLTextAreaElement; start: number; end: number } | null>(null);
@@ -306,10 +321,27 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   }, []);
 
   useEffect(() => {
-    // Clear cross-page pending proposal when navigating between outline/beats/script.
+    if (pageKind !== "character" && pageKind !== "location") return;
+    const onEntity = (event: Event) => {
+      const id = (event as CustomEvent<{ id?: unknown }>).detail?.id;
+      const nextId = typeof id === "string" && id.trim() ? id : null;
+      if (entityIdRef.current !== nextId) setPendingProposal(null);
+      entityIdRef.current = nextId;
+      setEntityId(nextId);
+    };
+    window.addEventListener(entityScopeEvent(pageKind), onEntity);
+    requestEntityScope(pageKind);
+    return () => window.removeEventListener(entityScopeEvent(pageKind), onEntity);
+  }, [pageKind]);
+
+  useEffect(() => {
+    // Clear cross-page pending proposal when navigating.
     setPendingProposal(null);
+    entityIdRef.current = null;
+    setEntityId(null);
     if (pageKind === "outline") requestOutlineScope();
     if (pageKind === "beats") requestBeatScope();
+    if (pageKind === "character" || pageKind === "location") requestEntityScope(pageKind);
   }, [pageKind]);
 
   useEffect(() => {
@@ -353,6 +385,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   const requestPageScope = () => {
     if (pageKind === "outline") requestOutlineScope();
     else if (pageKind === "beats") requestBeatScope();
+    else if (pageKind === "character" || pageKind === "location") requestEntityScope(pageKind);
     else requestScreenplayScope();
   };
 
@@ -479,6 +512,35 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         ...prev,
         { role: "assistant", text: "请先接受或拒绝当前修订提案" },
       ]);
+      return;
+    }
+
+    if (pageKind === "character" || pageKind === "location") {
+      if (!entityId) {
+        setLines((prev) => [...prev, { role: "assistant", text: "请先选择角色/地点" }]);
+        return;
+      }
+      setText("");
+      setSending(true);
+      setLines((prev) => [...prev, { role: "user", text: next }]);
+      try {
+        const proposal = unwrap(await api<{
+          scope: { type: DerivedEntityKind; id: string };
+          diff: EntityPendingProposal["diff"];
+          proposalText: string;
+        }>(`/api/projects/${projectId}/entities/${pageKind}/${entityId}/revise/preview`, {
+          method: "POST", body: { instruction: next }, noCache: true, timeoutMs: 120_000,
+        }));
+        const proposalText = proposal.proposalText || "（无改动）";
+        setLines((prev) => [...prev, { role: "assistant", text: `修订提案（尚未写入）：\n${proposalText}` }]);
+        setPendingProposal({ kind: pageKind, id: entityId, diff: proposal.diff, proposalText });
+        onSend?.({ projectId, text: next, scopeNodeIds: [] });
+      } catch (err) {
+        setPendingProposal(null);
+        setLines((prev) => [...prev, { role: "assistant", text: err instanceof Error ? err.message : "修订失败" }]);
+      } finally {
+        setSending(false);
+      }
       return;
     }
 
@@ -704,6 +766,18 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     if (!pendingProposal || sending) return;
     setSending(true);
     try {
+      if (pendingProposal.kind === "character" || pendingProposal.kind === "location") {
+        if (pendingProposal.id !== entityId) throw new Error("当前选择已变化，请重新预览");
+        if (pendingProposal.diff.length > 0) {
+          await api(`/api/projects/${projectId}/entities/${pendingProposal.kind}/${pendingProposal.id}/revise/accept`, {
+            method: "POST", body: { diff: pendingProposal.diff }, noCache: true,
+          });
+          window.dispatchEvent(new Event(entityRevisedEvent(pendingProposal.kind)));
+        }
+        setPendingProposal(null);
+        setLines((prev) => [...prev, { role: "assistant", text: "已接受提案并写回当前实体" }]);
+        return;
+      }
       const episodeId = await resolveEpisodeId();
       if (pendingProposal.kind === "outline") {
         await requestOutlineFlush();
@@ -756,6 +830,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         ]);
         return;
       }
+
+      if (pendingProposal.kind !== "script") throw new Error("修订范围已变化，请重新预览");
 
       await requestScreenplayFlush();
       const doc = unwrap(
@@ -817,6 +893,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           ? beatId
             ? "当前 Beat"
             : "当前 Beat · 未保存"
+          : pageKind === "character" || pageKind === "location"
+            ? entityId ? `当前${pageKind === "character" ? "角色" : "地点"}` : "角色/地点 · 未选择"
           : scope.nodeIds.length > 0
             ? `${scopeMode === "scene" ? "本场" : "选区"} ${scope.nodeIds.length} 个节点`
             : scopeMode === "scene"
@@ -907,6 +985,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
                   ? "把光标放在要改的段落内，写下指令。预览不写大纲，接受后只改当前段落。"
                   : pageKind === "beats"
                     ? "先保存并聚焦一个 Beat，写下指令。预览不写 Beats，接受后只改当前 Beat。"
+                    : pageKind === "character" || pageKind === "location"
+                      ? "先选择一个角色或地点，写下指令。预览不写入，接受后只改当前实体。"
                     : "选中对白或动作，或切换「本场」后把光标放在某一场内，写下指令。预览不写稿，接受后才改对应范围。"}
             </p>
           )}
@@ -1012,6 +1092,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
               ? "写一条指令… 将修订当前段落"
               : pageKind === "beats"
                 ? "写一条指令… 将修订当前 Beat"
+                : pageKind === "character" || pageKind === "location"
+                  ? `写一条指令… 将修订当前${pageKind === "character" ? "角色" : "地点"}`
                 : scopeMode === "scene"
                   ? "写一条指令… 将修订当前场所在节点"
                   : "写一条指令… 选区会随消息送出"

@@ -2,10 +2,12 @@ import { Hono } from 'hono';
 import { AppException, ErrorCode } from '../lib/errors.js';
 import type { AuthEnv } from '../middleware/session.js';
 import { ScreenplayService } from '../services/screenplay.service.js';
+import { EntityReviseService, parseEntityType } from '../services/entity-revise.js';
 import { asObject, readJson, requireUser } from './helpers.js';
 
 const entities = new Hono<AuthEnv>();
 const screenplayService = new ScreenplayService();
+const entityReviseService = new EntityReviseService();
 
 function optionalNullableString(value: unknown, field: string): string | null | undefined {
   if (value === undefined) return undefined;
@@ -63,6 +65,25 @@ entities.patch('/projects/:projectId/locations/:locationId', async (c) => {
     storyPlace,
     shootPlace,
   });
+  return c.json(result);
+});
+
+entities.post('/projects/:projectId/entities/:type/:id/revise/preview', async (c) => {
+  const userId = requireUser(c).userId;
+  const body = asObject(await readJson(c));
+  const result = await entityReviseService.preview(
+    parseEntityType(c.req.param('type')), c.req.param('projectId'), c.req.param('id'),
+    userId, body, c.get('requestId')
+  );
+  return c.json(result);
+});
+
+entities.post('/projects/:projectId/entities/:type/:id/revise/accept', async (c) => {
+  const userId = requireUser(c).userId;
+  const body = asObject(await readJson(c));
+  const result = await entityReviseService.accept(
+    parseEntityType(c.req.param('type')), c.req.param('projectId'), c.req.param('id'), userId, body
+  );
   return c.json(result);
 });
 
