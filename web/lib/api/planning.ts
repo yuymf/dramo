@@ -124,3 +124,64 @@ export async function putWorldview(
     noCache: true,
   });
 }
+
+export interface OutlineReviseProposal {
+  instruction: string;
+  scope: { type: "paragraph"; index: number };
+  revisedText: string;
+  proposalText: string;
+}
+
+export interface BeatReviseProposal {
+  instruction: string;
+  scope: { type: "beat"; beatId: string };
+  revised: { action: string; intent: string; outcome: string };
+  proposalText: string;
+}
+
+export async function previewOutlineRevise(
+  projectId: string,
+  episodeId: string,
+  body: { instruction: string; scope: { type: "paragraph"; index: number } }
+): Promise<OutlineReviseProposal> {
+  return api<OutlineReviseProposal>(
+    `/api/projects/${projectId}/episodes/${episodeId}/outline/revise`,
+    { method: "POST", body, noCache: true, timeoutMs: 120_000 }
+  );
+}
+
+export async function acceptOutlineRevise(
+  projectId: string,
+  episodeId: string,
+  body: { scope: { type: "paragraph"; index: number }; revisedText: string }
+): Promise<OutlineDoc> {
+  return api<OutlineDoc>(
+    `/api/projects/${projectId}/episodes/${episodeId}/outline/revise/accept`,
+    { method: "POST", body, noCache: true, timeoutMs: 60_000 }
+  );
+}
+
+export async function previewBeatRevise(
+  projectId: string,
+  episodeId: string,
+  body: { instruction: string; scope: { type: "beat"; beatId: string } }
+): Promise<BeatReviseProposal> {
+  return api<BeatReviseProposal>(
+    `/api/projects/${projectId}/episodes/${episodeId}/beats/revise`,
+    { method: "POST", body, noCache: true, timeoutMs: 120_000 }
+  );
+}
+
+export async function acceptBeatRevise(
+  projectId: string,
+  episodeId: string,
+  body: {
+    scope: { type: "beat"; beatId: string };
+    revised: { action: string; intent: string; outcome: string };
+  }
+): Promise<BeatsDoc> {
+  return api<BeatsDoc>(
+    `/api/projects/${projectId}/episodes/${episodeId}/beats/revise/accept`,
+    { method: "POST", body, noCache: true, timeoutMs: 60_000 }
+  );
+}
