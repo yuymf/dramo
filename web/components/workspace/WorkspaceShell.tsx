@@ -28,11 +28,12 @@ const SCRIPT_ONLY = [
   "/cold-start",
 ];
 const CINEMA_ONLY = ["/reels", "/tasks"];
+const EMPTY_SCOPE_NODE_IDS: string[] = [];
 
 export function WorkspaceShell({
   projectId,
   children,
-  scopeNodeIds = [],
+  scopeNodeIds = EMPTY_SCOPE_NODE_IDS,
   onSend,
 }: WorkspaceShellProps) {
   const pathname = usePathname();

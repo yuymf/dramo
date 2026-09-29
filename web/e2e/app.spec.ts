@@ -191,6 +191,84 @@ test.describe('剧本工作区', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1024);
   });
 
+  test('AI 浮层拖动缩放后保留选区和草稿，收起后焦点回到正文', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signUp(page);
+    await createScriptProject(page, `E2E AI 浮层 ${Date.now()}`);
+    await writeTwoScenes(page);
+
+    const editor = page.getByRole('list', { name: '剧本正文' });
+    const input = editor.getByRole('textbox', { name: '对白' });
+    await input.click();
+    await input.evaluate((element: HTMLTextAreaElement) => {
+      element.focus();
+      element.setSelectionRange(0, 2);
+    });
+    await expect(input.locator('..')).toHaveClass(/is-selected/);
+
+    const handle = page.getByRole('button', { name: '拖动 AI 浮层' });
+    const panel = handle.locator('../..');
+    await page.getByLabel('AI 指令').fill('请改短这段');
+    await handle.click();
+    await expect(page.getByText('选区 1 个节点')).toBeVisible();
+    const before = await panel.boundingBox();
+    expect(before).not.toBeNull();
+    const message = panel.getByText('选中对白或动作，写下指令后发送。只会改选区内的节点，不会生成整本。');
+    const messageBox = await message.boundingBox();
+    expect(messageBox).not.toBeNull();
+    await page.mouse.move(messageBox!.x + 20, messageBox!.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(messageBox!.x - 80, messageBox!.y + 8, { steps: 5 });
+    await page.mouse.up();
+    const afterBodyDrag = await panel.boundingBox();
+    expect(afterBodyDrag!.x).toBe(before!.x);
+    expect(afterBodyDrag!.y).toBe(before!.y);
+    const handleBox = await handle.boundingBox();
+    expect(handleBox).not.toBeNull();
+    await page.mouse.move(handleBox!.x + 40, handleBox!.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(-100, 700, { steps: 8 });
+    await page.mouse.up();
+    const dragged = await panel.boundingBox();
+    expect(dragged).not.toBeNull();
+    expect(dragged!.x).toBeLessThan(before!.x);
+    const workspaceLeft = await panel.evaluate((element) => element.parentElement!.getBoundingClientRect().left);
+    expect(dragged!.x).toBeGreaterThanOrEqual(workspaceLeft + 8);
+    expect(dragged!.y + dragged!.height).toBeLessThanOrEqual(900);
+
+    const corner = panel.getByRole('separator', { name: '调整 AI 大小' });
+    const cornerBox = await corner.boundingBox();
+    expect(cornerBox).not.toBeNull();
+    await page.mouse.move(cornerBox!.x + 10, cornerBox!.y + 10);
+    await page.mouse.down();
+    await page.mouse.move(cornerBox!.x - 500, cornerBox!.y - 500, { steps: 8 });
+    await page.mouse.up();
+    const shrunk = await panel.boundingBox();
+    expect(shrunk!.width).toBeGreaterThanOrEqual(280);
+    expect(shrunk!.height).toBeGreaterThanOrEqual(220);
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    const clamped = await panel.boundingBox();
+    expect(clamped).not.toBeNull();
+    expect(clamped!.x).toBeGreaterThanOrEqual(0);
+    expect(clamped!.y).toBeGreaterThanOrEqual(0);
+    expect(clamped!.x + clamped!.width).toBeLessThanOrEqual(1024);
+    expect(clamped!.y + clamped!.height).toBeLessThanOrEqual(768);
+    await expect(page.getByLabel('AI 指令')).toHaveValue('请改短这段');
+    await expect(page.getByText('选区 1 个节点')).toBeVisible();
+
+    await page.getByLabel('AI 指令').press('Escape');
+    const restore = page.getByRole('button', { name: '展开 AI 浮层' });
+    await expect(restore).toBeVisible();
+    await expect(input).toBeFocused();
+    expect(await input.evaluate((element: HTMLTextAreaElement) => [element.selectionStart, element.selectionEnd])).toEqual([0, 2]);
+    await restore.focus();
+    await restore.press('Enter');
+    await expect(page.getByLabel('AI 指令')).toBeFocused();
+    await expect(page.getByLabel('AI 指令')).toHaveValue('请改短这段');
+    await expect(page.getByText('选区 1 个节点')).toBeVisible();
+  });
+
   test('写下两场后角色和地点从剧本推导出来', async ({ page }) => {
     await signUp(page);
     await createScriptProject(page, `E2E 推导 ${Date.now()}`);
@@ -628,4 +706,3 @@ test.describe('第四期 Cinema', () => {
     await expect(dialog.getByLabel('导入 FDX')).toHaveCount(0);
   });
 });
-

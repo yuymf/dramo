@@ -1,6 +1,7 @@
 import type { ScreenplayDoc } from "@/lib/types/screenplay";
 
 export const SCREENPLAY_SCOPE_EVENT = "screenplay-scope";
+export const SCREENPLAY_SCOPE_REQUEST_EVENT = "screenplay-scope-request";
 export const SCREENPLAY_REVISED_EVENT = "screenplay-revised";
 export const SCREENPLAY_FLUSH_EVENT = "screenplay-flush";
 
@@ -25,6 +26,11 @@ export function dispatchScreenplayScope(
       detail: { type, nodeIds },
     })
   );
+}
+
+export function requestScreenplayScope(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(SCREENPLAY_SCOPE_REQUEST_EVENT));
 }
 
 export function dispatchScreenplayRevised(doc: ScreenplayDoc): void {
