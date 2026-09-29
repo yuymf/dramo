@@ -31,12 +31,27 @@ screenplay.post(`${EPISODE_PATH}/revise`, async (c) => {
   const userId = requireUser(c).userId;
   const requestId = c.get('requestId');
   const body = await readJson(c);
-  const result = await screenplayService.reviseScreenplay(
+  // Preview only: LLM proposal, no persist/version.
+  const result = await screenplayService.previewRevise(
     projectId,
     episodeId,
     userId,
     body as { instruction?: unknown; scope?: unknown },
     requestId
+  );
+  return c.json(result);
+});
+
+screenplay.post(`${EPISODE_PATH}/revise/accept`, async (c) => {
+  const projectId = c.req.param('projectId');
+  const episodeId = c.req.param('episodeId');
+  const userId = requireUser(c).userId;
+  const body = await readJson(c);
+  const result = await screenplayService.acceptRevise(
+    projectId,
+    episodeId,
+    userId,
+    body as { replacements?: unknown; scope?: unknown }
   );
   return c.json(result);
 });
