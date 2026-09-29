@@ -14,7 +14,7 @@ import { api } from "@/lib/api/client";
 import { assistReel } from "@/lib/api/cinema";
 import { firstEpisodeId } from "@/lib/api/planning";
 import type { CinemaAssistTarget } from "@/lib/types/cinema";
-import type { ScreenplayDoc } from "@/lib/types/screenplay";
+import type { ScreenplayDoc, ScreenplayNode } from "@/lib/types/screenplay";
 import {
   SCREENPLAY_SCOPE_EVENT,
   dispatchScreenplayRevised,
@@ -71,6 +71,14 @@ interface ChatLine {
   text: string;
 }
 
+interface PendingProposal {
+  instruction: string;
+  scope: { type: ScreenplayScopeType; nodeIds: string[] };
+  replacements: ScreenplayNode[];
+  proposalText: string;
+  lineIndex: number;
+}
+
 interface ProjectDetail {
   id: string;
   episodes?: Array<{ id: string; sortOrder?: number }>;
@@ -99,6 +107,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   const [cinemaTarget, setCinemaTarget] = useState<CinemaAssistTarget>("performance");
   const [cinemaReelId, setCinemaReelId] = useState<string | null>(null);
   const [lines, setLines] = useState<ChatLine[]>([]);
+  const [pendingProposal, setPendingProposal] = useState<PendingProposal | null>(null);
   const [scope, setScope] = useState<ScreenplayScopeDetail>({
     type: "selection",
     nodeIds: scopeNodeIds,
@@ -224,7 +233,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
 
   useEffect(() => {
     linesEndRef.current?.scrollIntoView({ block: "end" });
-  }, [lines, sending]);
+  }, [lines, sending, pendingProposal]);
 
   const resolveEpisodeId = useCallback(async () => {
     if (episodeIdRef.current) return episodeIdRef.current;
@@ -383,6 +392,14 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       return;
     }
 
+    if (pendingProposal) {
+      setLines((prev) => [
+        ...prev,
+        { role: "assistant", text: "请先接受或拒绝当前修订提案" },
+      ]);
+      return;
+    }
+
     setText("");
     setSending(true);
     setLines((prev) => [...prev, { role: "user", text: next }]);
@@ -390,33 +407,97 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     try {
       await requestScreenplayFlush();
       const episodeId = await resolveEpisodeId();
+      // Preview only — do not write until Accept.
+      const proposal = unwrap(
+        await api<
+          | PendingProposal
+          | {
+              data: {
+                instruction: string;
+                scope: { type: ScreenplayScopeType; nodeIds: string[] };
+                replacements: ScreenplayNode[];
+                proposalText: string;
+              };
+            }
+        >(`/api/projects/${projectId}/episodes/${episodeId}/screenplay/revise`, {
+          method: "POST",
+          body: {
+            instruction: next,
+            scope: { type: scope.type, nodeIds: scope.nodeIds },
+          },
+          noCache: true,
+          timeoutMs: 120_000,
+        })
+      );
+
+      const proposalText =
+        typeof proposal.proposalText === "string" && proposal.proposalText.trim()
+          ? proposal.proposalText
+          : "（提案为空）";
+      const assistantLine = `修订提案（尚未写入）：\n${proposalText}`;
+
+      setLines((prev) => [...prev, { role: "assistant", text: assistantLine }]);
+      setPendingProposal({
+        instruction: proposal.instruction ?? next,
+        scope: {
+          type: proposal.scope?.type === "scene" ? "scene" : "selection",
+          nodeIds: Array.isArray(proposal.scope?.nodeIds)
+            ? proposal.scope.nodeIds
+            : scope.nodeIds,
+        },
+        replacements: Array.isArray(proposal.replacements) ? proposal.replacements : [],
+        proposalText,
+        lineIndex: -1,
+      });
+      onSend?.({ projectId, text: next, scopeNodeIds: scope.nodeIds });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "修订失败";
+      setPendingProposal(null);
+      setLines((prev) => [...prev, { role: "assistant", text: message }]);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const acceptProposal = async () => {
+    if (!pendingProposal || sending) return;
+    setSending(true);
+    try {
+      await requestScreenplayFlush();
+      const episodeId = await resolveEpisodeId();
       const doc = unwrap(
         await api<ScreenplayDoc | { data: ScreenplayDoc }>(
-          `/api/projects/${projectId}/episodes/${episodeId}/screenplay/revise`,
+          `/api/projects/${projectId}/episodes/${episodeId}/screenplay/revise/accept`,
           {
             method: "POST",
             body: {
-              instruction: next,
-              scope: { type: scope.type, nodeIds: scope.nodeIds },
+              replacements: pendingProposal.replacements,
+              scope: pendingProposal.scope,
             },
             noCache: true,
-            timeoutMs: 120_000,
+            timeoutMs: 60_000,
           }
         )
       );
       dispatchScreenplayRevised(doc);
       const count = Array.isArray(doc.nodes) ? doc.nodes.length : 0;
+      setPendingProposal(null);
       setLines((prev) => [
         ...prev,
-        { role: "assistant", text: `已按选区写回编辑器（全文 ${count} 个节点）` },
+        { role: "assistant", text: `已接受提案并写回选区（全文 ${count} 个节点）` },
       ]);
-      onSend?.({ projectId, text: next, scopeNodeIds: scope.nodeIds });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "修订失败";
+      const message = err instanceof Error ? err.message : "接受修订失败";
       setLines((prev) => [...prev, { role: "assistant", text: message }]);
     } finally {
       setSending(false);
     }
+  };
+
+  const rejectProposal = () => {
+    if (sending) return;
+    setPendingProposal(null);
+    setLines((prev) => [...prev, { role: "assistant", text: "已拒绝提案，草稿未改动" }]);
   };
 
   const positionStyle: CSSProperties = frame
@@ -529,11 +610,39 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
               {line.text}
             </p>
           ))}
-          {sending && (
+          {sending && !pendingProposal && (
             <p className="text-[11px] inline-flex items-center gap-1" style={{ color: "var(--ws-action-text, #c2410c)" }}>
               <Loader2 size={11} className="animate-spin" />
-              正在按选区修订…
+              正在生成修订提案…
             </p>
+          )}
+          {pendingProposal && mode === "script" && (
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                data-testid="ai-revise-accept"
+                onClick={() => void acceptProposal()}
+                disabled={sending}
+                className="h-7 px-2.5 rounded-md text-[11px] font-medium disabled:opacity-40"
+                style={{ background: "var(--ws-accent, #c2410c)", color: "#ffffff" }}
+              >
+                接受
+              </button>
+              <button
+                type="button"
+                data-testid="ai-revise-reject"
+                onClick={rejectProposal}
+                disabled={sending}
+                className="h-7 px-2.5 rounded-md text-[11px] font-medium disabled:opacity-40"
+                style={{
+                  background: "var(--ws-canvas, #fafaf9)",
+                  color: "var(--ws-secondary, #57534e)",
+                  border: "1px solid var(--ws-border, #e7e5e4)",
+                }}
+              >
+                拒绝
+              </button>
+            </div>
           )}
           <div ref={linesEndRef} />
         </div>
@@ -588,11 +697,11 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           <button
             type="button"
             onClick={() => void submit()}
-            disabled={!text.trim() || sending}
+            disabled={!text.trim() || sending || !!pendingProposal}
             className="h-8 px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-30"
             style={{
-              background: text.trim() && !sending ? "var(--ws-accent, #c2410c)" : "var(--ws-border, #e7e5e4)",
-              color: text.trim() && !sending ? "#ffffff" : "var(--ws-secondary, #78716c)",
+              background: text.trim() && !sending && !pendingProposal ? "var(--ws-accent, #c2410c)" : "var(--ws-border, #e7e5e4)",
+              color: text.trim() && !sending && !pendingProposal ? "#ffffff" : "var(--ws-secondary, #78716c)",
             }}
           >
             {sending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} strokeWidth={2} />}

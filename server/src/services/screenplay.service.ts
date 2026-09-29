@@ -123,9 +123,18 @@ export function applyNodePatch(
   return next;
 }
 
+export interface ReviseProposal {
+  instruction: string;
+  scope: { type: 'selection' | 'scene'; nodeIds: string[] };
+  replacements: ScreenplayNode[];
+  /** Human-readable proposal text for Floating AI (before Accept writes). */
+  proposalText: string;
+}
+
 /**
  * Call AgentOS ReviseWorkflow and return replacement nodes for the scoped span.
- * Falls back to an in-range no-op if the workflow is unavailable or out of range.
+ * Empty instruction → in-range placeholder copy (unit tests / no-op).
+ * Nonempty instruction → real LLM only; never silent placeholder success.
  */
 export async function reviseWithLlm(input: {
   nodes: ScreenplayNode[];
@@ -136,11 +145,24 @@ export async function reviseWithLlm(input: {
   userId?: string;
   requestId?: string;
 }): Promise<ScreenplayNode[]> {
-  const fromAgent = await tryAgentOsRevise(input);
-  if (fromAgent && replacementsStayInRange(input.nodes, input.nodeIds, fromAgent)) {
-    return fromAgent;
+  if (!input.instruction.trim()) {
+    return placeholderRevise(input.nodes, input.nodeIds, input.instruction);
   }
-  return placeholderRevise(input.nodes, input.nodeIds, input.instruction);
+
+  if (!input.userId) {
+    throw new AppException(ErrorCode.LLM_NOT_CONFIGURED, '未配置默认文本模型，请先在设置中配置 LLM');
+  }
+
+  const fromAgent = await tryAgentOsRevise(input);
+  if (!fromAgent) {
+    throw new AppException(ErrorCode.UPSTREAM_ERROR, 'AI 修订服务暂不可用，请稍后重试', {
+      retryable: true,
+    });
+  }
+  if (!replacementsStayInRange(input.nodes, input.nodeIds, fromAgent)) {
+    throw new AppException(ErrorCode.INVALID_INPUT, 'AI 修订结果超出选区范围');
+  }
+  return fromAgent;
 }
 
 function replacementsStayInRange(
@@ -156,18 +178,33 @@ function replacementsStayInRange(
   }
 }
 
-function placeholderRevise(
+/** In-range no-op copy. Only for empty instruction or explicit unit tests — never silent success for real revise. */
+export function placeholderRevise(
   nodes: ScreenplayNode[],
   nodeIds: string[],
-  instruction: string
+  _instruction: string
 ): ScreenplayNode[] {
   const span = sliceScope(nodes, nodeIds);
-  if (!instruction.trim()) {
-    return span.map((node) => ({ ...node }));
-  }
-
-  // instruction 非空：范围内 dialogue/action 只原样保留，末尾不加戏。
   return span.map((node) => ({ ...node }));
+}
+
+export function formatProposalText(replacements: ScreenplayNode[]): string {
+  if (replacements.length === 0) return '（无改动）';
+  return replacements
+    .map((node) => {
+      const label =
+        node.type === 'dialogue'
+          ? '对白'
+          : node.type === 'action'
+            ? '动作'
+            : node.type === 'character'
+              ? '角色'
+              : node.type === 'scene_heading'
+                ? '场景'
+                : node.type;
+      return `【${label}】${node.text}`;
+    })
+    .join('\n');
 }
 
 function sliceScope(nodes: ScreenplayNode[], nodeIds: string[]): ScreenplayNode[] {
@@ -195,13 +232,18 @@ async function tryAgentOsRevise(input: {
   userId?: string;
   requestId?: string;
 }): Promise<ScreenplayNode[] | null> {
-  if (!input.userId) return null;
+  if (!input.userId) {
+    throw new AppException(ErrorCode.LLM_NOT_CONFIGURED, '未配置默认文本模型，请先在设置中配置 LLM');
+  }
 
   let llmHeaders: Record<string, string>;
   try {
     llmHeaders = await llmConfigService.getLLMHeaders(input.userId, 'TEXT_LLM');
-  } catch {
-    return null;
+  } catch (err) {
+    if (err instanceof AppException) {
+      throw new AppException(ErrorCode.LLM_NOT_CONFIGURED, '未配置默认文本模型，请先在设置中配置 LLM');
+    }
+    throw new AppException(ErrorCode.LLM_NOT_CONFIGURED, '未配置默认文本模型，请先在设置中配置 LLM');
   }
 
   const scoped = sliceScope(input.nodes, input.nodeIds);
@@ -220,11 +262,12 @@ async function tryAgentOsRevise(input: {
     const parsed = parseRevisePayload(await res.json());
     if (!parsed) {
       logger.warn({ requestId: input.requestId }, 'reviseworkflow returned no usable nodes');
-      return null;
+      throw new AppException(ErrorCode.UPSTREAM_ERROR, 'AI 返回的修订结果无效', { retryable: true });
     }
     return parsed;
   } catch (err) {
-    logger.info({ err, requestId: input.requestId }, 'reviseworkflow unavailable; using placeholder');
+    if (err instanceof AppException) throw err;
+    logger.info({ err, requestId: input.requestId }, 'reviseworkflow unavailable');
     return null;
   }
 }
@@ -548,13 +591,17 @@ export class ScreenplayService {
     return toDoc(screenplay, loaded.access.format);
   }
 
-  async reviseScreenplay(
+  /**
+   * Preview revise: run LLM and return proposed scoped replacements without persist/version.
+   * On LLM/AgentOS failure with nonempty instruction: throw Chinese AppException; draft untouched.
+   */
+  async previewRevise(
     projectId: string,
     episodeId: string,
     userId: string,
     body: { instruction?: unknown; scope?: unknown },
     requestId?: string
-  ): Promise<ScreenplayDoc> {
+  ): Promise<ReviseProposal> {
     const loaded = await this.loadEpisode(projectId, episodeId, userId, { write: true });
     if (!loaded.screenplay) {
       throw new AppException(ErrorCode.NOT_FOUND, '剧本不存在');
@@ -574,6 +621,38 @@ export class ScreenplayService {
       requestId,
     });
 
+    // Validate range safety without writing.
+    applyNodePatch(current, replacements, scope.nodeIds);
+
+    return {
+      instruction,
+      scope,
+      replacements,
+      proposalText: formatProposalText(replacements),
+    };
+  }
+
+  /**
+   * Accept a previously previewed proposal: apply scoped replacements, persist + version + derive.
+   */
+  async acceptRevise(
+    projectId: string,
+    episodeId: string,
+    userId: string,
+    body: { replacements?: unknown; scope?: unknown }
+  ): Promise<ScreenplayDoc> {
+    const loaded = await this.loadEpisode(projectId, episodeId, userId, { write: true });
+    if (!loaded.screenplay) {
+      throw new AppException(ErrorCode.NOT_FOUND, '剧本不存在');
+    }
+
+    const scope = this.parseScope(body.scope);
+    const replacements = parseNodesInput(body.replacements);
+    if (replacements.length === 0) {
+      throw new AppException(ErrorCode.INVALID_INPUT, 'replacements 不能为空');
+    }
+
+    const current = normalizeNodes(loaded.screenplay.nodes);
     const nodes = applyNodePatch(current, replacements, scope.nodeIds);
     const cover = normalizeCover(loaded.screenplay.cover);
     const screenplay = await this.persistWithVersion({
@@ -587,6 +666,21 @@ export class ScreenplayService {
 
     await deriveFromNodes(projectId, nodes, episodeId);
     return toDoc(screenplay, loaded.access.format);
+  }
+
+  /** @deprecated Prefer previewRevise + acceptRevise. Kept only if callers still expect one-shot. */
+  async reviseScreenplay(
+    projectId: string,
+    episodeId: string,
+    userId: string,
+    body: { instruction?: unknown; scope?: unknown },
+    requestId?: string
+  ): Promise<ScreenplayDoc> {
+    const proposal = await this.previewRevise(projectId, episodeId, userId, body, requestId);
+    return this.acceptRevise(projectId, episodeId, userId, {
+      replacements: proposal.replacements,
+      scope: proposal.scope,
+    });
   }
 
   async listCharacters(projectId: string, userId: string): Promise<{ data: CharacterRecord[] }> {
