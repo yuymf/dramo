@@ -12,7 +12,7 @@ Night writing desk. One ember accent (`#c2410c`). Off-black landing, warm paper 
 
 The project layout mounts `components/workspace/WorkspaceShell.tsx` once per project. `WorkspaceRail` owns route navigation; `ProjectPanel` owns project settings, real format/view switches, sharing and versions. `ScreenplayView` / `CoverView` retain their document hooks; Outline and Beats retain their page state and API calls. `FloatingAI` retains the PR2 container and revise behavior.
 
-- Rail: 56px; panel: 232px, manually collapsible. Canvas gets the remaining space; the AI window overlays it. No fixed right chat slot.
+- Rail: 56px; panel: 232px, manually collapsible. On viewports ≤1024px the panel defaults collapsed so the canvas is usable; ≥1280/1440 stays open by default. Explicit user toggle always wins. Canvas gets the remaining space; the AI window overlays it. No fixed right chat slot.
 - Script primary navigation: screenplay, Outline, Beats, characters, locations, props, storyboard and assets, all existing routes. Worldview, knowledge, advisors, cold start and **口播** remain under **更多**. The menu supports arrow keys, Home/End and Escape with focus return.
 - The panel shows the actual first document name. No new Episode CRUD, entity views or permission placeholders. Hollywood / Asian change real screenplay formatting; 正文 / 封面 open real views.
 - Export has one entry: the project panel while open, otherwise the active editor toolbar. The active editor still owns the document and export hook; no second fetch or document instance is introduced. TXT/PDF/DOCX/FDX are unchanged. The menu portal stays inside the workspace so it inherits the theme.
@@ -49,7 +49,7 @@ There is **no existing theme preference setting or account preference API**. Wor
 | Paper / decorative effects | Neutral manuscript surface and shell-scoped suppression; landing unchanged |
 | Publishing an already published project | Existing status remains visible and is disabled |
 
-Visual baseline: same project at 1440×900, Script / Outline / Beats in light and dark, plus 更多 open. Check toolbar overflow at 1280×800 and 1024×800; PR2 keeps its 1024×768 drag/resize checks. Playwright writes evidence under ignored `web/test-results/`; screenshots and logs are never committed. The layout retains Dramo's document editor and page-count sidebar; it does not claim semantic-editor parity or new Laper behavior. A live Laper side-by-side comparison is not part of automated verification.
+Visual baseline: same project at 1440×900, Script / Outline / Beats in light and dark, plus 更多 open. Check toolbar overflow at 1280×800 and 1024×800; at 1024×768 the project panel should start collapsed (Laper live-gap). PR2 keeps its 1024×768 drag/resize checks. Playwright writes evidence under ignored `web/test-results/`; screenshots and logs are never committed. The layout retains Dramo's document editor and page-count sidebar; it does not claim semantic-editor parity or new Laper behavior. A live Laper side-by-side comparison is not part of automated verification.
 
 ## Rules
 
