@@ -1008,7 +1008,7 @@ test.describe('剧本工作区', () => {
 });
 
 test.describe('角色和地点 AI 定向修订', () => {
-  test('角色选择、预览、拒绝和接受只写目标角色', async ({ page }) => {
+  test('角色选角备注预览显示标签，拒绝不写、接受只写备注', async ({ page }) => {
     test.setTimeout(120_000);
     await signUp(page);
     await createScriptProject(page, `E2E 角色修订 ${Date.now()}`);
@@ -1017,7 +1017,7 @@ test.describe('角色和地点 AI 定向修订', () => {
     await page.goto(`/projects/${projectId}/characters`);
     await expect(page.getByRole('heading', { name: '林晚' })).toBeVisible({ timeout: 20_000 });
     const rows = await page.evaluate(async (id) =>
-      (await (await fetch(`/api/projects/${id}/characters`)).json()).data as Array<{ id: string; name: string; description: string | null }>, projectId);
+      (await (await fetch(`/api/projects/${id}/characters`)).json()).data as Array<{ id: string; name: string; description: string | null; castingNotes: string | null }>, projectId);
     const target = rows.find((row) => row.name === '林晚')!;
     const sibling = rows.find((row) => row.name === '值班员')!;
     const accepts: string[] = [];
@@ -1031,27 +1031,32 @@ test.describe('角色和地点 AI 定向修订', () => {
     await expect(page.getByText('当前角色', { exact: true })).toBeVisible();
     await page.route(`**/entities/character/${target.id}/revise/preview`, async (route) => {
       await route.fulfill({ json: { scope: { type: 'character', id: target.id },
-        diff: [{ field: 'description', before: target.description, after: '新的角色描述' }],
-        proposalText: '【描述】新的角色描述' } });
+        diff: [{ field: 'castingNotes', before: target.castingNotes, after: '适合沉稳的演员' }],
+        proposalText: '【选角备注】适合沉稳的演员' } });
     });
     await page.getByLabel('AI 指令').fill('写得更鲜明');
     await page.getByRole('button', { name: '发送' }).click();
     await expect(page.getByText(/修订提案（尚未写入）/)).toBeVisible();
+    await expect(page.getByText(/【选角备注】适合沉稳的演员/)).toBeVisible();
     await page.getByTestId('ai-revise-reject').click();
     await expect(page.getByTestId('ai-revise-accept')).toHaveCount(0);
     expect(accepts).toHaveLength(0);
+    const afterReject = await page.evaluate(async (id) =>
+      (await (await fetch(`/api/projects/${id}/characters`)).json()).data as Array<{ id: string; castingNotes: string | null }>, projectId);
+    expect(afterReject.find((row) => row.id === target.id)?.castingNotes).toBe(target.castingNotes);
     await page.getByLabel('AI 指令').fill('写得更鲜明');
     await page.getByRole('button', { name: '发送' }).click();
     await page.getByTestId('ai-revise-accept').click();
-    await expect(page.getByTestId(`entity-${target.id}`).getByRole('textbox', { name: '描述' })).toHaveValue('新的角色描述');
+    await expect(page.getByTestId(`entity-${target.id}`).getByLabel('选角备注')).toHaveValue('适合沉稳的演员');
     const after = await page.evaluate(async (id) =>
-      (await (await fetch(`/api/projects/${id}/characters`)).json()).data as Array<{ id: string; description: string | null }>, projectId);
-    expect(after.find((row) => row.id === target.id)?.description).toBe('新的角色描述');
-    expect(after.find((row) => row.id === sibling.id)?.description).toBe(sibling.description);
+      (await (await fetch(`/api/projects/${id}/characters`)).json()).data as Array<{ id: string; description: string | null; castingNotes: string | null }>, projectId);
+    expect(after.find((row) => row.id === target.id)?.castingNotes).toBe('适合沉稳的演员');
+    expect(after.find((row) => row.id === target.id)?.description).toBe(target.description);
+    expect(after.find((row) => row.id === sibling.id)?.castingNotes).toBe(sibling.castingNotes);
     expect(accepts).toHaveLength(1);
   });
 
-  test('地点预览接受只写故事地点和实拍地；无模型中文失败不写', async ({ page }) => {
+  test('地点描述预览接受只写描述；无模型中文失败不写', async ({ page }) => {
     test.setTimeout(120_000);
     await signUp(page);
     await createScriptProject(page, `E2E 地点修订 ${Date.now()}`);
@@ -1060,7 +1065,7 @@ test.describe('角色和地点 AI 定向修订', () => {
     await page.goto(`/projects/${projectId}/locations`);
     await expect(page.getByRole('heading', { name: '地铁车厢' })).toBeVisible({ timeout: 20_000 });
     const rows = await page.evaluate(async (id) =>
-      (await (await fetch(`/api/projects/${id}/locations`)).json()).data as Array<{ id: string; name: string; storyPlace: string | null; shootPlace: string | null }>, projectId);
+      (await (await fetch(`/api/projects/${id}/locations`)).json()).data as Array<{ id: string; name: string; description: string | null; storyPlace: string | null; shootPlace: string | null }>, projectId);
     const target = rows.find((row) => row.name === '地铁车厢')!;
     const sibling = rows.find((row) => row.name === '月台')!;
     await page.getByRole('button', { name: '选择地点 地铁车厢' }).click();
@@ -1070,19 +1075,21 @@ test.describe('角色和地点 AI 定向修订', () => {
     await expect(page.getByTestId('ai-revise-accept')).toHaveCount(0);
     await page.route(`**/entities/location/${target.id}/revise/preview`, async (route) => {
       await route.fulfill({ json: { scope: { type: 'location', id: target.id },
-        diff: [
-          { field: 'storyPlace', before: target.storyPlace, after: '苏州' },
-          { field: 'shootPlace', before: target.shootPlace, after: '老厂房' },
-        ], proposalText: '【故事地点】苏州\n【实拍地】老厂房' } });
+        diff: [{ field: 'description', before: target.description, after: '昏黄灯光下的末班车厢' }],
+        proposalText: '【描述】昏黄灯光下的末班车厢' } });
     });
     await page.getByLabel('AI 指令').fill('换一个地点');
     await page.getByRole('button', { name: '发送' }).click();
     await expect(page.getByText(/修订提案（尚未写入）/)).toBeVisible();
+    await expect(page.getByText(/【描述】昏黄灯光下的末班车厢/)).toBeVisible();
     await page.getByTestId('ai-revise-accept').click();
-    await expect(page.getByTestId(`entity-${target.id}`).getByLabel('故事地点')).toHaveValue('苏州');
-    await expect(page.getByTestId(`entity-${target.id}`).getByLabel('实拍地')).toHaveValue('老厂房');
+    await expect(page.getByTestId(`entity-${target.id}`).getByRole('textbox', { name: '描述' })).toHaveValue('昏黄灯光下的末班车厢');
     const after = await page.evaluate(async (id) =>
-      (await (await fetch(`/api/projects/${id}/locations`)).json()).data as Array<{ id: string; storyPlace: string | null; shootPlace: string | null }>, projectId);
+      (await (await fetch(`/api/projects/${id}/locations`)).json()).data as Array<{ id: string; description: string | null; storyPlace: string | null; shootPlace: string | null }>, projectId);
+    expect(after.find((row) => row.id === target.id)?.description).toBe('昏黄灯光下的末班车厢');
+    expect(after.find((row) => row.id === target.id)?.storyPlace).toBe(target.storyPlace);
+    expect(after.find((row) => row.id === target.id)?.shootPlace).toBe(target.shootPlace);
+    expect(after.find((row) => row.id === sibling.id)?.description).toBe(sibling.description);
     expect(after.find((row) => row.id === sibling.id)?.storyPlace).toBe(sibling.storyPlace);
     expect(after.find((row) => row.id === sibling.id)?.shootPlace).toBe(sibling.shootPlace);
   });

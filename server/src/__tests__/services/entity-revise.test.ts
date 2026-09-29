@@ -46,14 +46,56 @@ beforeEach(() => {
 describe('entity revise scope and allowlist', () => {
   it('rejects unsupported entity types and identity fields before any write', () => {
     expect(() => parseEntityType('prop')).toThrow(AppException);
-    expect(() => parseEntityDiff('character', [{ field: 'name', before: '林晚', after: '别人' }])).toThrow(AppException);
+    for (const type of ['character', 'location'] as const) {
+      for (const field of ['name', 'id', 'projectId', 'unknownField']) {
+        expect(() => parseEntityDiff(type, [{ field, before: '旧', after: '新' }])).toThrow(AppException);
+      }
+    }
     expect(() => parseEntityDiff('location', [{ field: 'castingNotes', before: null, after: 'x' }])).toThrow(AppException);
+    expect(() => parseEntityDiff('character', [{ field: 'storyPlace', before: null, after: 'x' }])).toThrow(AppException);
     expect(() => parseEntityDiff('character', [{ field: 'description', before: '旧', after: '新', name: 'x' }])).toThrow(AppException);
     expect(() => parseEntityDiff('character', [
       { field: 'description', before: '旧', after: '新' },
       { field: 'description', before: '旧', after: '另一个' },
     ])).toThrow(AppException);
     expect(updateCharacter).not.toHaveBeenCalled();
+    expect(updateLocation).not.toHaveBeenCalled();
+  });
+
+  it('previews and accepts castingNotes alone, leaving description out of the patch', async () => {
+    llmNodes([{ id: 'c1:castingNotes', type: 'action', text: '适合沉稳的演员' }]);
+    const proposal = await service.preview('character', 'p1', 'c1', 'u1', { instruction: '只修改选角备注' });
+    expect(proposal.diff).toEqual([{ field: 'castingNotes', before: '旧备注', after: '适合沉稳的演员' }]);
+    expect(proposal.proposalText).toContain('【选角备注】');
+    expect(updateCharacter).not.toHaveBeenCalled();
+    await service.accept('character', 'p1', 'c1', 'u1', { diff: proposal.diff });
+    expect(updateCharacter).toHaveBeenCalledWith('p1', 'c1', 'u1', { castingNotes: '适合沉稳的演员' });
+    expect(updateLocation).not.toHaveBeenCalled();
+  });
+
+  it('previews and accepts location description alone, leaving places out of the patch', async () => {
+    llmNodes([{ id: 'l1:description', type: 'action', text: '昏黄灯光下的末班车厢' }]);
+    const proposal = await service.preview('location', 'p1', 'l1', 'u1', { instruction: '只修改地点描述' });
+    expect(proposal.diff).toEqual([{ field: 'description', before: '旧场景', after: '昏黄灯光下的末班车厢' }]);
+    expect(proposal.proposalText).toContain('【描述】');
+    expect(updateLocation).not.toHaveBeenCalled();
+    await service.accept('location', 'p1', 'l1', 'u1', { diff: proposal.diff });
+    expect(updateLocation).toHaveBeenCalledWith('p1', 'l1', 'u1', { description: '昏黄灯光下的末班车厢' });
+    expect(updateCharacter).not.toHaveBeenCalled();
+  });
+
+  it('rejects name, identity, and unknown fields at accept without writing', async () => {
+    for (const type of ['character', 'location'] as const) {
+      for (const field of ['name', 'id', 'projectId', 'unknownField']) {
+        await expect(service.accept(type, 'p1', type === 'character' ? 'c1' : 'l1', 'u1', {
+          diff: [{ field, before: '旧', after: '新' }],
+        })).rejects.toMatchObject({ code: ErrorCode.INVALID_INPUT });
+      }
+    }
+    expect(updateCharacter).not.toHaveBeenCalled();
+    expect(updateLocation).not.toHaveBeenCalled();
+    expect(mockCharacterFind).not.toHaveBeenCalled();
+    expect(mockLocationFind).not.toHaveBeenCalled();
   });
 
   it('preview produces field diff and never writes any entity or screenplay node', async () => {
