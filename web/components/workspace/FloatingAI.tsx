@@ -7,6 +7,7 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { Loader2, Minus, Send } from "lucide-react";
 import { api } from "@/lib/api/client";
@@ -17,6 +18,7 @@ import type { ScreenplayDoc } from "@/lib/types/screenplay";
 import {
   SCREENPLAY_SCOPE_EVENT,
   dispatchScreenplayRevised,
+  requestScreenplayScope,
   requestScreenplayFlush,
   type ScreenplayScopeDetail,
   type ScreenplayScopeType,
@@ -39,6 +41,30 @@ const MIN_W = 280;
 const MIN_H = 220;
 const DEFAULT_W = 360;
 const DEFAULT_H = 400;
+const INSET = 8;
+const RESTORE_W = 56;
+const RESTORE_H = 40;
+
+type Frame = { x: number; y: number; w: number; h: number };
+type Bounds = { left: number; top: number; right: number; bottom: number };
+type ResizeAxis = "e" | "s" | "se";
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), Math.max(min, max));
+}
+
+function fitFrame(frame: Frame, bounds: Bounds): Frame {
+  const availableW = Math.max(1, bounds.right - bounds.left - INSET * 2);
+  const availableH = Math.max(1, bounds.bottom - bounds.top - INSET * 2);
+  const w = clamp(frame.w, Math.min(MIN_W, availableW), availableW);
+  const h = clamp(frame.h, Math.min(MIN_H, availableH), availableH);
+  return {
+    w,
+    h,
+    x: clamp(frame.x, bounds.left + INSET, bounds.right - w - INSET),
+    y: clamp(frame.y, bounds.top + INSET, bounds.bottom - h - INSET),
+  };
+}
 
 interface ChatLine {
   role: "user" | "assistant";
@@ -67,8 +93,7 @@ function pickEpisodeId(project: ProjectDetail): string | null {
 
 export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }: FloatingAIProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  const [size, setSize] = useState({ w: DEFAULT_W, h: DEFAULT_H });
+  const [frame, setFrame] = useState<Frame | null>(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [cinemaTarget, setCinemaTarget] = useState<CinemaAssistTarget>("performance");
@@ -79,22 +104,95 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     nodeIds: scopeNodeIds,
   });
   const panelRef = useRef<HTMLDivElement>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<{ element: HTMLTextAreaElement; start: number; end: number } | null>(null);
   const episodeIdRef = useRef<string | null>(null);
   const linesEndRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
     startY: number;
-    origX: number;
-    origY: number;
+    origin: Frame;
   } | null>(null);
   const resizeRef = useRef<{
     pointerId: number;
     startX: number;
     startY: number;
-    origW: number;
-    origH: number;
+    origin: Frame;
+    axis: ResizeAxis;
   } | null>(null);
+
+  const getBounds = useCallback((): Bounds => {
+    const parent = panelRef.current?.parentElement;
+    if (!parent) return { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+    const rect = parent.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const left = Math.max(0, (viewport?.offsetLeft ?? 0) - rect.left);
+    const top = Math.max(0, (viewport?.offsetTop ?? 0) - rect.top);
+    return {
+      left,
+      top,
+      right: Math.max(left + 1, Math.min(parent.clientWidth, (viewport?.offsetLeft ?? 0) + (viewport?.width ?? window.innerWidth) - rect.left)),
+      bottom: Math.max(top + 1, Math.min(parent.clientHeight, (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - rect.top)),
+    };
+  }, []);
+
+  const currentFrame = useCallback((): Frame => {
+    if (frame) return frame;
+    const bounds = getBounds();
+    return fitFrame({
+      x: bounds.right - DEFAULT_W - 16,
+      y: bounds.bottom - DEFAULT_H - 16,
+      w: DEFAULT_W,
+      h: DEFAULT_H,
+    }, bounds);
+  }, [frame, getBounds]);
+
+  useEffect(() => {
+    const parent = panelRef.current?.parentElement;
+    if (!parent) return;
+    const settle = () => setFrame((previous) => fitFrame(previous ?? {
+      x: parent.clientWidth - DEFAULT_W - 16,
+      y: parent.clientHeight - DEFAULT_H - 16,
+      w: DEFAULT_W,
+      h: DEFAULT_H,
+    }, getBounds()));
+    settle();
+    const observer = new ResizeObserver(settle);
+    observer.observe(parent);
+    window.addEventListener("resize", settle);
+    window.visualViewport?.addEventListener("resize", settle);
+    window.visualViewport?.addEventListener("scroll", settle);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", settle);
+      window.visualViewport?.removeEventListener("resize", settle);
+      window.visualViewport?.removeEventListener("scroll", settle);
+    };
+  }, [getBounds]);
+
+  useEffect(() => {
+    const remember = (event: FocusEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLTextAreaElement && target.matches(".sp-node-input")) {
+        editorRef.current = { element: target, start: target.selectionStart, end: target.selectionEnd };
+      }
+    };
+    const selection = (event: Event) => {
+      const target = event.target;
+      if (target instanceof HTMLTextAreaElement && target === editorRef.current?.element) {
+        editorRef.current = { element: target, start: target.selectionStart, end: target.selectionEnd };
+      }
+    };
+    document.addEventListener("focusin", remember);
+    document.addEventListener("select", selection, true);
+    document.addEventListener("keyup", selection, true);
+    return () => {
+      document.removeEventListener("focusin", remember);
+      document.removeEventListener("select", selection, true);
+      document.removeEventListener("keyup", selection, true);
+    };
+  }, []);
 
   useEffect(() => {
     setScope((prev) => ({ ...prev, nodeIds: scopeNodeIds }));
@@ -143,29 +241,40 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     return episodeId;
   }, [projectId]);
 
-  const resolveOrigin = useCallback(() => {
-    const el = panelRef.current;
-    const parent = el?.offsetParent as HTMLElement | null;
-    if (!el || !parent) {
-      return { x: 16, y: 16 };
+  const rememberEditor = () => {
+    const active = document.activeElement;
+    if (active instanceof HTMLTextAreaElement && active.matches(".sp-node-input")) {
+      editorRef.current = { element: active, start: active.selectionStart, end: active.selectionEnd };
     }
-    if (pos) return pos;
-    return {
-      x: Math.max(8, parent.clientWidth - size.w - 16),
-      y: Math.max(8, parent.clientHeight - size.h - 16),
-    };
-  }, [pos, size.h, size.w]);
+  };
+
+  const returnToEditor = () => {
+    const saved = editorRef.current;
+    if (!saved?.element.isConnected) return;
+    saved.element.focus();
+    saved.element.setSelectionRange(saved.start, saved.end);
+  };
+
+  const collapse = () => {
+    setCollapsed(true);
+    window.requestAnimationFrame(returnToEditor);
+  };
+
+  const restore = () => {
+    requestScreenplayScope();
+    setFrame((previous) => fitFrame(previous ?? currentFrame(), getBounds()));
+    setCollapsed(false);
+    window.requestAnimationFrame(() => promptRef.current?.focus());
+  };
 
   const onDragStart = (e: ReactPointerEvent) => {
-    if (mode !== "cinema") return;
-    if ((e.target as HTMLElement).closest("button")) return;
-    const origin = resolveOrigin();
+    rememberEditor();
+    requestScreenplayScope();
     dragRef.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
-      origX: origin.x,
-      origY: origin.y,
+      origin: currentFrame(),
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
@@ -174,15 +283,11 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   const onDragMove = (e: ReactPointerEvent) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== e.pointerId) return;
-    const parent = panelRef.current?.offsetParent as HTMLElement | null;
-    const nextX = drag.origX + (e.clientX - drag.startX);
-    const nextY = drag.origY + (e.clientY - drag.startY);
-    const maxX = Math.max(8, (parent?.clientWidth ?? 800) - (collapsed ? 88 : size.w) - 8);
-    const maxY = Math.max(8, (parent?.clientHeight ?? 600) - (collapsed ? 40 : size.h) - 8);
-    setPos({
-      x: Math.min(Math.max(8, nextX), maxX),
-      y: Math.min(Math.max(8, nextY), maxY),
-    });
+    setFrame(fitFrame({
+      ...drag.origin,
+      x: drag.origin.x + e.clientX - drag.startX,
+      y: drag.origin.y + e.clientY - drag.startY,
+    }, getBounds()));
   };
 
   const onDragEnd = (e: ReactPointerEvent) => {
@@ -191,15 +296,15 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     }
   };
 
-  const onResizeStart = (e: ReactPointerEvent) => {
-    if (mode !== "cinema") return;
-    setPos(resolveOrigin());
+  const onResizeStart = (e: ReactPointerEvent, axis: ResizeAxis) => {
+    rememberEditor();
+    requestScreenplayScope();
     resizeRef.current = {
       pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
-      origW: size.w,
-      origH: size.h,
+      origin: currentFrame(),
+      axis,
     };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
@@ -209,13 +314,14 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   const onResizeMove = (e: ReactPointerEvent) => {
     const resize = resizeRef.current;
     if (!resize || resize.pointerId !== e.pointerId) return;
-    const parent = panelRef.current?.offsetParent as HTMLElement | null;
-    const origin = resolveOrigin();
-    const maxW = Math.max(MIN_W, (parent?.clientWidth ?? 800) - origin.x - 8);
-    const maxH = Math.max(MIN_H, (parent?.clientHeight ?? 600) - origin.y - 8);
-    setSize({
-      w: Math.min(Math.max(MIN_W, resize.origW + (e.clientX - resize.startX)), maxW),
-      h: Math.min(Math.max(MIN_H, resize.origH + (e.clientY - resize.startY)), maxH),
+    const bounds = getBounds();
+    const { origin, axis } = resize;
+    const maxW = Math.max(1, bounds.right - origin.x - INSET);
+    const maxH = Math.max(1, bounds.bottom - origin.y - INSET);
+    setFrame({
+      ...origin,
+      w: axis.includes("e") ? clamp(origin.w + e.clientX - resize.startX, Math.min(MIN_W, maxW), maxW) : origin.w,
+      h: axis.includes("s") ? clamp(origin.h + e.clientY - resize.startY, Math.min(MIN_H, maxH), maxH) : origin.h,
     });
   };
 
@@ -223,6 +329,17 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     if (resizeRef.current?.pointerId === e.pointerId) {
       resizeRef.current = null;
     }
+  };
+
+  const onHandleKeyDown = (event: ReactKeyboardEvent) => {
+    const delta = event.key === "ArrowLeft" ? [-16, 0] : event.key === "ArrowRight" ? [16, 0]
+      : event.key === "ArrowUp" ? [0, -16] : event.key === "ArrowDown" ? [0, 16] : null;
+    if (!delta) return;
+    event.preventDefault();
+    setFrame((previous) => {
+      const origin = previous ?? currentFrame();
+      return fitFrame({ ...origin, x: origin.x + delta[0], y: origin.y + delta[1] }, getBounds());
+    });
   };
 
   const submit = async () => {
@@ -302,9 +419,15 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     }
   };
 
-  const positionStyle: CSSProperties = mode === "cinema" && pos
-    ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto" }
-    : { right: mode === "cinema" ? 16 : 12, bottom: mode === "cinema" ? 16 : 12 };
+  const positionStyle: CSSProperties = frame
+    ? { left: frame.x, top: frame.y }
+    : { right: 16, bottom: 16 };
+  const restoreStyle: CSSProperties = frame
+    ? {
+        left: clamp(frame.x, getBounds().left + INSET, getBounds().right - RESTORE_W - INSET),
+        top: clamp(frame.y, getBounds().top + INSET, getBounds().bottom - RESTORE_H - INSET),
+      }
+    : { right: 16, bottom: 16 };
 
   const scopeLabel =
     mode === "cinema"
@@ -318,10 +441,11 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       <button
         type="button"
         aria-label="展开 AI 浮层"
-        onClick={() => setCollapsed(false)}
+        onPointerDownCapture={() => { rememberEditor(); requestScreenplayScope(); }}
+        onClick={restore}
         className="absolute z-20 h-10 px-3.5 rounded-lg text-sm font-medium"
         style={{
-          ...positionStyle,
+          ...restoreStyle,
           display: collapsed ? "block" : "none",
           background: "#ffffff",
           color: "#c2410c",
@@ -333,33 +457,50 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       </button>
     <div
       ref={panelRef}
+      onPointerDownCapture={() => { rememberEditor(); requestScreenplayScope(); }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          collapse();
+        }
+      }}
       className="absolute z-20 flex flex-col overflow-hidden rounded-xl"
       style={{
         ...positionStyle,
         display: collapsed ? "none" : "flex",
-        width: mode === "cinema" ? size.w : "min(360px, calc(100% - 24px))",
-        height: mode === "cinema" ? size.h : "min(400px, calc(100% - 24px))",
+        width: frame?.w ?? "min(360px, calc(100% - 24px))",
+        height: frame?.h ?? "min(400px, calc(100% - 24px))",
         background: "#ffffff",
         border: "1px solid #e7e5e4",
         boxShadow: "0 12px 40px rgba(28, 25, 23, 0.10)",
       }}
     >
       <div
-        onPointerDown={onDragStart}
-        onPointerMove={onDragMove}
-        onPointerUp={onDragEnd}
-        onPointerCancel={onDragEnd}
-        className={`flex items-center justify-between px-3 h-10 shrink-0 border-b select-none ${mode === "cinema" ? "cursor-grab active:cursor-grabbing" : ""}`}
+        className="flex items-center justify-between h-10 shrink-0 border-b select-none"
         style={{ borderColor: "#e7e5e4", background: "#fafaf9" }}
       >
-        <span className="text-xs font-semibold" style={{ color: "#1c1917" }}>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="拖动 AI 浮层"
+          aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+          onPointerCancel={onDragEnd}
+          onKeyDown={onHandleKeyDown}
+          className="flex-1 h-full flex items-center px-3 cursor-grab active:cursor-grabbing touch-none focus-visible:outline-2 focus-visible:outline-orange-700"
+          style={{ color: "#1c1917" }}
+        >
+          <span className="text-xs font-semibold">
           AI 助手
-        </span>
+          </span>
+        </div>
         <button
           type="button"
           aria-label="收起"
-          onClick={() => setCollapsed(true)}
-          className="w-7 h-7 rounded-md flex items-center justify-center"
+          onClick={collapse}
+          className="w-9 h-9 mr-1 rounded-md flex items-center justify-center"
           style={{ color: "#78716c" }}
         >
           <Minus size={14} strokeWidth={1.5} />
@@ -394,6 +535,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           <div ref={linesEndRef} />
         </div>
         <textarea
+          ref={promptRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -456,22 +598,21 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         </div>
       </div>
 
-      {mode === "cinema" && <div
-        onPointerDown={onResizeStart}
-        onPointerMove={onResizeMove}
-        onPointerUp={onResizeEnd}
-        onPointerCancel={onResizeEnd}
-        aria-label="调整大小"
-        className="absolute right-0 bottom-0 w-4 h-4 cursor-se-resize"
-      >
-        <span
-          className="absolute right-1.5 bottom-1.5 w-2 h-2"
-          style={{
-            borderRight: "1.5px solid #a8a29e",
-            borderBottom: "1.5px solid #a8a29e",
-          }}
-        />
-      </div>}
+      {(["e", "s", "se"] as const).map((axis) => (
+        <div
+          key={axis}
+          role="separator"
+          aria-label={axis === "e" ? "调整 AI 宽度" : axis === "s" ? "调整 AI 高度" : "调整 AI 大小"}
+          aria-orientation={axis === "e" ? "vertical" : "horizontal"}
+          onPointerDown={(event) => onResizeStart(event, axis)}
+          onPointerMove={onResizeMove}
+          onPointerUp={onResizeEnd}
+          onPointerCancel={onResizeEnd}
+          className={`absolute touch-none ${axis === "e" ? "right-0 top-10 bottom-4 w-2 cursor-ew-resize" : axis === "s" ? "left-0 right-4 bottom-0 h-2 cursor-ns-resize" : "right-0 bottom-0 w-4 h-4 cursor-se-resize"}`}
+        >
+          {axis === "se" && <span className="absolute right-1.5 bottom-1.5 w-2 h-2" style={{ borderRight: "1.5px solid #a8a29e", borderBottom: "1.5px solid #a8a29e" }} />}
+        </div>
+      ))}
     </div>
     </>
   );

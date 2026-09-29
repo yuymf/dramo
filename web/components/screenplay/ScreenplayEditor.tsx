@@ -17,7 +17,7 @@ import {
   placeholderFor,
   typeAfterEnter,
 } from "./nodeMeta";
-import { dispatchScreenplayScope } from "./scope";
+import { dispatchScreenplayScope, SCREENPLAY_SCOPE_REQUEST_EVENT } from "./scope";
 import "./screenplay.css";
 
 export interface ScreenplayEditorProps {
@@ -81,7 +81,10 @@ export function ScreenplayEditor({
   }, []);
 
   useEffect(() => {
+    const republish = () => dispatchScreenplayScope(selectedIdsRef.current, "selection");
+    window.addEventListener(SCREENPLAY_SCOPE_REQUEST_EVENT, republish);
     return () => {
+      window.removeEventListener(SCREENPLAY_SCOPE_REQUEST_EVENT, republish);
       dispatchScreenplayScope([]);
     };
   }, []);
