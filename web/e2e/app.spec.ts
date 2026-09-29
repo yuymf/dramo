@@ -448,7 +448,7 @@ test.describe('剧本工作区', () => {
     await expect(page.getByRole('heading', { name: '分镜', exact: true })).toBeVisible();
   });
 
-  test('选区 AI 无模型时只写回范围内节点，导出 TXT 含场次', async ({ page }) => {
+  test('选区 AI 无模型时中文失败且不写稿，导出 TXT 含场次', async ({ page }) => {
     test.setTimeout(90_000);
     await signUp(page);
     await createScriptProject(page, `E2E 修订导出 ${Date.now()}`);
@@ -460,9 +460,13 @@ test.describe('剧本工作区', () => {
 
     await page.getByLabel('AI 指令').fill('把这句改短一点');
     await page.getByRole('button', { name: '发送' }).click();
-    await expect(page.getByText(/已按选区写回|请先在剧本里选中/)).toBeVisible({
+    // Bounded revise: no LLM → Chinese failure; preview never writes; no Accept.
+    await expect(
+      page.getByText(/未配置默认文本模型|请先在设置中配置 LLM|请先在剧本里选中|修订失败/)
+    ).toBeVisible({
       timeout: 20_000,
     });
+    await expect(page.getByTestId('ai-revise-accept')).toHaveCount(0);
     await expect(dialogue).toHaveValue('末班车要到了。');
 
     await page.getByRole('button', { name: '导出 TXT PDF DOCX' }).click();
