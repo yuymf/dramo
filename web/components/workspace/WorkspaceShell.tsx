@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getProject } from "@/lib/api/projects";
 import type { ProjectType } from "@/lib/types/screenplay";
@@ -41,9 +41,26 @@ export function WorkspaceShell({
   const pathname = usePathname();
   const router = useRouter();
   const [projectType, setProjectType] = useState<ProjectType>("script");
+  // ≤1024 (PLAN 1024×768): default collapsed so the canvas is not crushed.
+  // Only applied on first mount / initial matchMedia; user toggle wins afterwards.
   const [panelOpen, setPanelOpen] = useState(true);
+  const panelUserToggled = useRef(false);
   const [exportTarget, setExportTarget] = useState<HTMLDivElement | null>(null);
   const scriptWorkspace = projectType === "script" && !pathname?.includes("/spoken");
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const applyInitial = () => {
+      if (panelUserToggled.current) return;
+      setPanelOpen(!mq.matches);
+    };
+    applyInitial();
+  }, []);
+
+  const togglePanel = () => {
+    panelUserToggled.current = true;
+    setPanelOpen((open) => !open);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -79,7 +96,7 @@ export function WorkspaceShell({
           projectId={projectId}
           projectType={projectType}
           panelOpen={panelOpen}
-          onTogglePanel={() => setPanelOpen((open) => !open)}
+          onTogglePanel={togglePanel}
         />
         <ProjectPanel projectId={projectId} visible={panelOpen} exportTargetRef={setExportTarget} />
         <div className="relative flex-1 min-w-0 overflow-hidden">

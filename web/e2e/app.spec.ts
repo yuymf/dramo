@@ -802,6 +802,110 @@ test.describe('剧本工作区', () => {
     await expect(other).toHaveURL(/\/projects\/[^/]+\/screenplay/, { timeout: 15_000 });
     await context.close();
   });
+
+  test('窄视口默认收起项目面板且无横向滚动', async ({ page }) => {
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await signUp(page);
+    await createScriptProject(page, `E2E 窄面板 ${Date.now()}`);
+
+    await expect(page.getByRole('heading', { name: '剧本', exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole('complementary', { name: '项目面板' })).toBeHidden();
+    await expect(page.getByRole('button', { name: '展开项目面板' })).toBeVisible();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true);
+
+    await page.screenshot({
+      path: '/workspace/dramo-pr5-laper-gap/1024-panel-collapsed.png',
+      fullPage: false,
+    });
+
+    await page.getByRole('button', { name: '展开项目面板' }).click();
+    await expect(page.getByRole('complementary', { name: '项目面板' })).toBeVisible();
+    await page.getByRole('button', { name: '收起项目面板' }).click();
+    await expect(page.getByRole('complementary', { name: '项目面板' })).toBeHidden();
+  });
+
+  test('宽视口默认展开项目面板', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signUp(page);
+    await createScriptProject(page, `E2E 宽面板 ${Date.now()}`);
+
+    await expect(page.getByRole('heading', { name: '剧本', exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole('complementary', { name: '项目面板' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '收起项目面板' })).toBeVisible();
+
+    await page.screenshot({
+      path: '/workspace/dramo-pr5-laper-gap/1440-panel-open.png',
+      fullPage: false,
+    });
+  });
+
+  test('深链进入大纲/Beats 且刷新保留路由与内容', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signUp(page);
+    await createScriptProject(page, `E2E 深链 ${Date.now()}`);
+    const projectId = page.url().match(/\/projects\/([^/]+)/)![1];
+    const outlineMarker = `深链大纲 ${Date.now()}：林晚必须在末班车前离开。`;
+    const beatAction = `深链动作 ${Date.now()}：末班车进站`;
+
+    await page.goto(`/projects/${projectId}/outline`);
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/outline`));
+    await expect(page.getByRole('heading', { name: '大纲', exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    const outline = page.getByLabel('大纲正文');
+    await expect(outline).toBeVisible({ timeout: 15_000 });
+    const outlinePut = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'PUT' &&
+        res.url().includes('/outline') &&
+        res.ok(),
+      { timeout: 20_000 }
+    );
+    await outline.fill(outlineMarker);
+    await outline.blur();
+    await outlinePut;
+    await expect(page.getByText('已保存', { exact: true })).toBeVisible({ timeout: 10_000 });
+
+    await page.reload();
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/outline`));
+    await expect(page.getByLabel('大纲正文')).toHaveValue(outlineMarker, { timeout: 15_000 });
+    await page.screenshot({
+      path: '/workspace/dramo-pr5-laper-gap/outline-after-reload.png',
+      fullPage: false,
+    });
+
+    await page.goto(`/projects/${projectId}/beats`);
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/beats`));
+    await expect(page.getByRole('heading', { name: 'Beats', exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.getByRole('button', { name: '添加 Beat' }).click();
+    await page.getByLabel('动作 1', { exact: true }).fill(beatAction);
+    await page.getByLabel('意图 1', { exact: true }).fill('林晚想要离开');
+    await page.getByLabel('结果 1', { exact: true }).fill('她留在月台');
+    const beatsPut = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'PUT' &&
+        res.url().includes('/beats') &&
+        res.ok(),
+      { timeout: 20_000 }
+    );
+    await page.getByRole('button', { name: '保存 Beats' }).click();
+    await beatsPut;
+    await expect(page.getByLabel('动作 1', { exact: true })).toHaveValue(beatAction);
+
+    await page.reload();
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/beats`));
+    await expect(page.getByLabel('动作 1', { exact: true })).toHaveValue(beatAction, {
+      timeout: 15_000,
+    });
+  });
 });
 
 async function createCinemaProject(page: Page, name: string) {
