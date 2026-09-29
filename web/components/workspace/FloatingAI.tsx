@@ -441,15 +441,16 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       <button
         type="button"
         aria-label="展开 AI 浮层"
+        title="展开 AI 浮层"
         onPointerDownCapture={() => { rememberEditor(); requestScreenplayScope(); }}
         onClick={restore}
         className="absolute z-20 h-10 px-3.5 rounded-lg text-sm font-medium"
         style={{
           ...restoreStyle,
           display: collapsed ? "block" : "none",
-          background: "#ffffff",
-          color: "#c2410c",
-          border: "1px solid #e7e5e4",
+          background: "var(--ws-surface, #ffffff)",
+          color: "var(--ws-action-text, #c2410c)",
+          border: "1px solid var(--ws-border, #e7e5e4)",
           boxShadow: "0 4px 16px rgba(28, 25, 23, 0.08)",
         }}
       >
@@ -470,27 +471,28 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         display: collapsed ? "none" : "flex",
         width: frame?.w ?? "min(360px, calc(100% - 24px))",
         height: frame?.h ?? "min(400px, calc(100% - 24px))",
-        background: "#ffffff",
-        border: "1px solid #e7e5e4",
-        boxShadow: "0 12px 40px rgba(28, 25, 23, 0.10)",
+        background: "var(--ws-surface, #ffffff)",
+        border: "1px solid var(--ws-border, #e7e5e4)",
+        boxShadow: "var(--ws-shadow, 0 12px 40px rgba(28, 25, 23, 0.10))",
       }}
     >
       <div
         className="flex items-center justify-between h-10 shrink-0 border-b select-none"
-        style={{ borderColor: "#e7e5e4", background: "#fafaf9" }}
+        style={{ borderColor: "var(--ws-border, #e7e5e4)", background: "var(--ws-canvas, #fafaf9)" }}
       >
         <div
           role="button"
           tabIndex={0}
           aria-label="拖动 AI 浮层"
           aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+          title="拖动 AI 浮层；方向键移动"
           onPointerDown={onDragStart}
           onPointerMove={onDragMove}
           onPointerUp={onDragEnd}
           onPointerCancel={onDragEnd}
           onKeyDown={onHandleKeyDown}
           className="flex-1 h-full flex items-center px-3 cursor-grab active:cursor-grabbing touch-none focus-visible:outline-2 focus-visible:outline-orange-700"
-          style={{ color: "#1c1917" }}
+          style={{ color: "var(--ws-text, #1c1917)" }}
         >
           <span className="text-xs font-semibold">
           AI 助手
@@ -499,9 +501,10 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         <button
           type="button"
           aria-label="收起"
+          title="收起 AI 浮层"
           onClick={collapse}
           className="w-9 h-9 mr-1 rounded-md flex items-center justify-center"
-          style={{ color: "#78716c" }}
+          style={{ color: "var(--ws-secondary, #78716c)" }}
         >
           <Minus size={14} strokeWidth={1.5} />
         </button>
@@ -510,7 +513,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       <div className="flex-1 flex flex-col p-3 min-h-0">
         <div className="flex-1 min-h-0 overflow-y-auto mb-2 space-y-1.5 pr-0.5">
           {lines.length === 0 && (
-            <p className="text-[11px] leading-5" style={{ color: "#a8a29e" }}>
+            <p className="text-[11px] leading-5" style={{ color: "var(--ws-muted, #a8a29e)" }}>
               {mode === "cinema"
                 ? "只改当前 Reel 的场景、表演或文字镜头，不会动剧本项目。"
                 : "选中对白或动作，写下指令后发送。只会改选区内的节点，不会生成整本。"}
@@ -519,15 +522,15 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           {lines.map((line, index) => (
             <p
               key={`${line.role}-${index}`}
-              className="text-[11px] leading-5 whitespace-pre-wrap"
-              style={{ color: line.role === "user" ? "#1c1917" : "#57534e" }}
+              className="ws-chat-line text-[11px] leading-5 whitespace-pre-wrap"
+              style={{ color: line.role === "user" ? "var(--ws-text, #1c1917)" : "var(--ws-secondary, #57534e)" }}
             >
               {line.role === "user" ? "你：" : "AI："}
               {line.text}
             </p>
           ))}
           {sending && (
-            <p className="text-[11px] inline-flex items-center gap-1" style={{ color: "#c2410c" }}>
+            <p className="text-[11px] inline-flex items-center gap-1" style={{ color: "var(--ws-action-text, #c2410c)" }}>
               <Loader2 size={11} className="animate-spin" />
               正在按选区修订…
             </p>
@@ -549,9 +552,9 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           disabled={sending}
           className="h-24 w-full shrink-0 resize-none rounded-lg px-3 py-2 text-sm focus:outline-none disabled:opacity-60"
           style={{
-            background: "#fafaf9",
-            color: "#1c1917",
-            border: "1px solid #e7e5e4",
+            background: "var(--ws-canvas, #fafaf9)",
+            color: "var(--ws-text, #1c1917)",
+            border: "1px solid var(--ws-border, #e7e5e4)",
           }}
         />
         {mode === "cinema" && (
@@ -579,7 +582,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           </div>
         )}
         <div className="mt-3 flex items-center justify-between gap-2">
-          <p className="text-[10px] truncate" style={{ color: "#a8a29e" }}>
+          <p className="text-[10px] truncate" style={{ color: "var(--ws-muted, #a8a29e)" }}>
             {scopeLabel}
           </p>
           <button
@@ -588,8 +591,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
             disabled={!text.trim() || sending}
             className="h-8 px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 disabled:opacity-30"
             style={{
-              background: text.trim() && !sending ? "#c2410c" : "#e7e5e4",
-              color: text.trim() && !sending ? "#ffffff" : "#78716c",
+              background: text.trim() && !sending ? "var(--ws-accent, #c2410c)" : "var(--ws-border, #e7e5e4)",
+              color: text.trim() && !sending ? "#ffffff" : "var(--ws-secondary, #78716c)",
             }}
           >
             {sending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} strokeWidth={2} />}
@@ -610,7 +613,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           onPointerCancel={onResizeEnd}
           className={`absolute touch-none ${axis === "e" ? "right-0 top-10 bottom-4 w-2 cursor-ew-resize" : axis === "s" ? "left-0 right-4 bottom-0 h-2 cursor-ns-resize" : "right-0 bottom-0 w-4 h-4 cursor-se-resize"}`}
         >
-          {axis === "se" && <span className="absolute right-1.5 bottom-1.5 w-2 h-2" style={{ borderRight: "1.5px solid #a8a29e", borderBottom: "1.5px solid #a8a29e" }} />}
+          {axis === "se" && <span className="absolute right-1.5 bottom-1.5 w-2 h-2" style={{ borderRight: "1.5px solid var(--ws-muted, #a8a29e)", borderBottom: "1.5px solid var(--ws-muted, #a8a29e)" }} />}
         </div>
       ))}
     </div>

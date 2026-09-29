@@ -1,5 +1,8 @@
 "use client";
 
+import { useContext, useState } from "react";
+import { createPortal } from "react-dom";
+import { WorkspaceExportTarget } from "@/components/workspace/WorkspaceExportTarget";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +30,8 @@ export function ExportSlot({
   doc?: ScreenplayDoc | null;
   disabled?: boolean;
 }) {
+  const target = useContext(WorkspaceExportTarget);
+  const [menuContainer, setMenuContainer] = useState<HTMLDivElement | null>(null);
   const { busy, error, exportKind } = useScriptExport(doc);
   const params = useParams<{ id: string }>();
   const unavailable = disabled || !doc || busy;
@@ -43,8 +48,8 @@ export function ExportSlot({
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="sp-export-slot">
+  const entry = (
+    <div ref={setMenuContainer} className="sp-export-slot">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -59,7 +64,7 @@ export function ExportSlot({
             {busy ? "导出中…" : "导出"}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" portalContainer={target ?? menuContainer}>
           {SCRIPT_EXPORT_KINDS.map((kind) => (
             <DropdownMenuItem
               key={kind}
@@ -78,4 +83,5 @@ export function ExportSlot({
       </DropdownMenu>
     </div>
   );
+  return target ? createPortal(entry, target) : entry;
 }

@@ -90,8 +90,8 @@ export default function ColdStartPage() {
                     type="button"
                     className="px-3 py-1.5 rounded-full text-xs"
                     style={{
-                      background: gate === item.id ? "rgba(194,65,12,0.12)" : "#f5f5f4",
-                      color: gate === item.id ? "#c2410c" : "#78716c",
+                      background: gate === item.id ? "var(--at-accent-light)" : "var(--at-surface-sunken)",
+                      color: gate === item.id ? "var(--ws-action-text, #c2410c)" : "var(--at-text-secondary)",
                       fontWeight: gate === item.id ? 600 : 400,
                     }}
                     onClick={() => setDoc((prev) => ({ ...prev, gate: item.id }))}
