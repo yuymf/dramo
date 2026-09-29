@@ -18,6 +18,7 @@ import {
   type DerivedEntityKind,
   type ImageGenerationKind,
 } from "@/lib/api/entities";
+import { dispatchEntityScope, entityRevisedEvent, entityScopeRequestEvent } from "./scope";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_MAX_MS = 90_000;
@@ -56,6 +57,7 @@ export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
   const [entities, setEntities] = useState<DerivedEntity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -75,6 +77,22 @@ export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
     setLoading(true);
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const onRequest = () => dispatchEntityScope(kind, selectedId);
+    const onRevised = () => void load();
+    window.addEventListener(entityScopeRequestEvent(kind), onRequest);
+    window.addEventListener(entityRevisedEvent(kind), onRevised);
+    return () => {
+      window.removeEventListener(entityScopeRequestEvent(kind), onRequest);
+      window.removeEventListener(entityRevisedEvent(kind), onRevised);
+    };
+  }, [kind, selectedId, load]);
+
+  useEffect(() => {
+    dispatchEntityScope(kind, selectedId);
+    return () => dispatchEntityScope(kind, null);
+  }, [kind, selectedId]);
 
   useEffect(() => {
     const onVisible = () => {
@@ -132,6 +150,8 @@ export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
                   onPatched={handlePatched}
                   onImagesMayChange={() => void load()}
                   showToast={showToast}
+                  selected={selectedId === entity.id}
+                  onSelect={() => setSelectedId(entity.id)}
                 />
               </li>
             ))}
@@ -168,6 +188,8 @@ interface EntityCardProps {
   onPatched: (entity: DerivedEntity) => void;
   onImagesMayChange: () => void;
   showToast: (message: string, type?: "success" | "error" | "info") => void;
+  selected: boolean;
+  onSelect: () => void;
 }
 
 function EntityCard({
@@ -179,6 +201,8 @@ function EntityCard({
   onPatched,
   onImagesMayChange,
   showToast,
+  selected,
+  onSelect,
 }: EntityCardProps) {
   const [draft, setDraft] = useState(entity.description ?? "");
   const [dirty, setDirty] = useState(false);
@@ -271,7 +295,10 @@ function EntityCard({
   const urls = imageUrls(entity.images);
 
   return (
-    <article className="rounded-xl border border-[var(--at-border)] bg-[var(--at-surface)] p-5">
+    <article
+      data-testid={`entity-${entity.id}`}
+      className={`rounded-xl border bg-[var(--at-surface)] p-5 ${selected ? "border-[var(--at-accent)]" : "border-[var(--at-border)]"}`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-base font-semibold truncate">{entity.name}</h2>
@@ -279,22 +306,29 @@ function EntityCard({
             {entity.id}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="accent"
-          size="sm"
-          disabled={generating}
-          onClick={() => void handleGenerate()}
-        >
-          {generating ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              {jobStatusLabel(jobStatus)}
-            </>
-          ) : (
-            generateLabel
-          )}
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button type="button" variant="outline" size="sm" onClick={onSelect}
+            aria-pressed={selected}
+            aria-label={`选择${kind === "character" ? "角色" : "地点"} ${entity.name}`}>
+            {selected ? "已选择" : "选择"}
+          </Button>
+          <Button
+            type="button"
+            variant="accent"
+            size="sm"
+            disabled={generating}
+            onClick={() => void handleGenerate()}
+          >
+            {generating ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {jobStatusLabel(jobStatus)}
+              </>
+            ) : (
+              generateLabel
+            )}
+          </Button>
+        </div>
       </div>
 
       <label className="block mt-4">
