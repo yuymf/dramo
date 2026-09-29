@@ -16,7 +16,7 @@ function ProjectLayoutContent({ children }: ProjectLayoutClientProps) {
     return <div className="h-dvh" style={{ background: "#fafaf9" }}>{children}</div>;
   }
 
-  return <WorkspaceShell projectId={projectId}>{children}</WorkspaceShell>;
+  return <WorkspaceShell key={projectId} projectId={projectId}>{children}</WorkspaceShell>;
 }
 
 export function ProjectLayoutClient({ children }: ProjectLayoutClientProps) {

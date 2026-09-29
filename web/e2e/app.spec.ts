@@ -165,6 +165,32 @@ test.describe('剧本工作区', () => {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
+  test('工作区切页和收起 AI 后保留草稿，浏览器返回跟随路由', async ({ page }) => {
+    await signUp(page);
+    await createScriptProject(page, `E2E 工作区 ${Date.now()}`);
+
+    await page.getByLabel('AI 指令').fill('待发送的选区指令');
+    await page.getByRole('button', { name: '收起', exact: true }).click();
+    await expect(page.getByRole('button', { name: '展开 AI 浮层' })).toBeVisible();
+
+    await page.getByRole('link', { name: '大纲' }).click();
+    await expect(page.getByRole('link', { name: '大纲' })).toHaveAttribute('aria-current', 'page');
+    await page.getByRole('link', { name: 'Beats' }).click();
+    await expect(page.getByRole('link', { name: 'Beats' })).toHaveAttribute('aria-current', 'page');
+
+    await page.goBack();
+    await expect(page.getByRole('link', { name: '大纲' })).toHaveAttribute('aria-current', 'page');
+    await page.goBack();
+    await expect(page.getByRole('link', { name: '剧本' })).toHaveAttribute('aria-current', 'page');
+    await page.getByRole('button', { name: '展开 AI 浮层' }).click();
+    await expect(page.getByLabel('AI 指令')).toHaveValue('待发送的选区指令');
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.getByRole('button', { name: '收起项目面板' }).click();
+    await expect(page.getByRole('complementary', { name: '项目面板' })).toBeHidden();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1024);
+  });
+
   test('写下两场后角色和地点从剧本推导出来', async ({ page }) => {
     await signUp(page);
     await createScriptProject(page, `E2E 推导 ${Date.now()}`);

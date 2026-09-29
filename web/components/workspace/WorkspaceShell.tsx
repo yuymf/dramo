@@ -38,6 +38,7 @@ export function WorkspaceShell({
   const pathname = usePathname();
   const router = useRouter();
   const [projectType, setProjectType] = useState<ProjectType>("script");
+  const [panelOpen, setPanelOpen] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,8 +69,13 @@ export function WorkspaceShell({
       className="h-dvh w-full flex overflow-hidden"
       style={{ background: "#fafaf9" }}
     >
-      <WorkspaceRail projectId={projectId} projectType={projectType} />
-      <ProjectPanel projectId={projectId} />
+      <WorkspaceRail
+        projectId={projectId}
+        projectType={projectType}
+        panelOpen={panelOpen}
+        onTogglePanel={() => setPanelOpen((open) => !open)}
+      />
+      <ProjectPanel projectId={projectId} visible={panelOpen} />
       <div className="relative flex-1 min-w-0 overflow-hidden">
         <div className="h-full overflow-auto">{children}</div>
         <FloatingAI

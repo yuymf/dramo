@@ -31,9 +31,10 @@ const TYPE_LABEL: Record<ProjectType, string> = {
 
 interface ProjectPanelProps {
   projectId: string;
+  visible: boolean;
 }
 
-export function ProjectPanel({ projectId }: ProjectPanelProps) {
+export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { showToast } = useToast();
@@ -42,13 +43,20 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
   const [editing, setEditing] = useState(false);
   const [format, setFormat] = useState<ScreenplayFormat>("hollywood");
   const [type, setType] = useState<ProjectType>("script");
-  const [episodeName, setEpisodeName] = useState("第 1 集");
+  const [episodeName, setEpisodeName] = useState<string | null>(null);
   const [cinemaSettings, setCinemaSettings] = useState<CinemaSettings>(DEFAULT_CINEMA_SETTINGS);
   const [loading, setLoading] = useState(true);
 
   const onScreenplay =
     !!pathname && (pathname.includes("/screenplay") || pathname.includes("/cover"));
   const onCover = !!pathname && pathname.includes("/cover");
+  const currentDocument = pathname?.includes("/outline")
+    ? "当前大纲"
+    : pathname?.includes("/beats")
+      ? "当前 Beats"
+      : onScreenplay
+        ? onCover ? "当前封面" : "当前稿"
+        : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -71,7 +79,7 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
         const first = [...(project.episodes ?? [])].sort(
           (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
         )[0];
-        setEpisodeName(first?.name || "第 1 集");
+        setEpisodeName(first?.name ?? null);
       } catch (err) {
         console.error("Failed to load project panel:", err);
         if (!cancelled) {
@@ -123,7 +131,8 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
 
   return (
     <aside
-      className="h-full w-[232px] shrink-0 flex flex-col border-r"
+      className={cn("h-full w-[232px] shrink-0 flex-col border-r", visible ? "flex" : "hidden")}
+      aria-label="项目面板"
       style={{
         background: "#ffffff",
         borderColor: "#e7e5e4",
@@ -252,9 +261,9 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
         </div>
         )}
 
-        <div className="mt-5 px-2">
+        {episodeName && <div className="mt-5 px-2">
           <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
-            集
+            {currentDocument ?? "当前集"}
           </p>
           <div
             className="rounded-lg px-2.5 py-2 text-sm"
@@ -265,7 +274,7 @@ export function ProjectPanel({ projectId }: ProjectPanelProps) {
           >
             {episodeName}
           </div>
-        </div>
+        </div>}
 
         {onScreenplay && (
           <div className="mt-5 px-2">
