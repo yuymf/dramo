@@ -24,6 +24,7 @@ import { startWorkflowRun } from '../../lib/agentos-client.js';
 import { AppException, ErrorCode } from '../../lib/errors.js';
 import {
   applyNodePatch,
+  expandSceneNodeIds,
   parseRevisePayload,
   placeholderRevise,
   reviseWithLlm,
@@ -247,5 +248,157 @@ describe('reviseWithLlm', () => {
       code: ErrorCode.INVALID_INPUT,
       message: 'AI 修订结果超出选区范围',
     });
+  });
+});
+
+const twoSceneNodes = [
+  { id: 's1', type: 'scene_heading' as const, text: '内景 咖啡馆 - 日' },
+  { id: 'a1', type: 'action' as const, text: '小明推门。' },
+  { id: 'c1', type: 'character' as const, text: '小明' },
+  { id: 'd1', type: 'dialogue' as const, text: '一杯美式。' },
+  { id: 's2', type: 'scene_heading' as const, text: '外景 街道 - 夜' },
+  { id: 'a2', type: 'action' as const, text: '雨更大了。' },
+  { id: 'c2', type: 'character' as const, text: '店员' },
+  { id: 'd2', type: 'dialogue' as const, text: '再见。' },
+];
+
+describe('expandSceneNodeIds', () => {
+  it('expands from an in-scene seed to the full scene span', () => {
+    expect(expandSceneNodeIds(twoSceneNodes, ['d1'])).toEqual(['s1', 'a1', 'c1', 'd1']);
+  });
+
+  it('when seed is a scene_heading, includes from that heading', () => {
+    expect(expandSceneNodeIds(twoSceneNodes, ['s2'])).toEqual(['s2', 'a2', 'c2', 'd2']);
+  });
+
+  it('does not include the next scene', () => {
+    const ids = expandSceneNodeIds(twoSceneNodes, ['a1']);
+    expect(ids).not.toContain('s2');
+    expect(ids).not.toContain('a2');
+  });
+
+  it('fails Chinese when seed cannot resolve', () => {
+    expect(() => expandSceneNodeIds(twoSceneNodes, ['missing'])).toThrow(AppException);
+    try {
+      expandSceneNodeIds(twoSceneNodes, ['missing']);
+    } catch (err) {
+      expect(err).toMatchObject({
+        code: ErrorCode.INVALID_INPUT,
+        message: expect.stringMatching(/无法定位当前场次|请先把光标放在某一场内/),
+      });
+    }
+  });
+
+  it('fails Chinese when seed is before any scene_heading', () => {
+    const orphan = [
+      { id: 'x', type: 'action' as const, text: '开场旁白' },
+      ...twoSceneNodes,
+    ];
+    expect(() => expandSceneNodeIds(orphan, ['x'])).toThrow(AppException);
+  });
+
+  it('fails Chinese on empty seed', () => {
+    expect(() => expandSceneNodeIds(twoSceneNodes, [])).toThrow(AppException);
+    try {
+      expandSceneNodeIds(twoSceneNodes, []);
+    } catch (err) {
+      expect((err as AppException).message).toMatch(/请先把光标放在某一场内/);
+    }
+  });
+});
+
+describe('scene-scoped applyNodePatch', () => {
+  it('accept only mutates scene A; scene B unchanged', () => {
+    const sceneAIds = expandSceneNodeIds(twoSceneNodes, ['d1']);
+    const replacements = [
+      { id: 's1', type: 'scene_heading' as const, text: '内景 咖啡馆 - 日' },
+      { id: 'a1', type: 'action' as const, text: '小明猛地推门。' },
+      { id: 'c1', type: 'character' as const, text: '小明' },
+      { id: 'd1', type: 'dialogue' as const, text: '一杯美式，快！' },
+    ];
+    const next = applyNodePatch(twoSceneNodes, replacements, sceneAIds);
+    expect(next.find((n) => n.id === 'a1')?.text).toBe('小明猛地推门。');
+    expect(next.find((n) => n.id === 'd1')?.text).toBe('一杯美式，快！');
+    // Scene B identical
+    expect(next.find((n) => n.id === 's2')).toEqual(twoSceneNodes.find((n) => n.id === 's2'));
+    expect(next.find((n) => n.id === 'a2')).toEqual(twoSceneNodes.find((n) => n.id === 'a2'));
+    expect(next.find((n) => n.id === 'c2')).toEqual(twoSceneNodes.find((n) => n.id === 'c2'));
+    expect(next.find((n) => n.id === 'd2')).toEqual(twoSceneNodes.find((n) => n.id === 'd2'));
+  });
+
+  it('rejects replacements that touch scene B when scope is scene A', () => {
+    const sceneAIds = expandSceneNodeIds(twoSceneNodes, ['a1']);
+    expect(() =>
+      applyNodePatch(
+        twoSceneNodes,
+        [
+          { id: 'a1', type: 'action', text: '改' },
+          { id: 'a2', type: 'action', text: '越界到 B' },
+        ],
+        sceneAIds
+      )
+    ).toThrow(AppException);
+  });
+});
+
+describe('reviseWithLlm scene scope', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mocked(mockGetLLMHeaders).mockReset();
+    mocked(mockGetLLMHeaders).mockResolvedValue({
+      'X-LLM-Api-Key': 'k',
+      'X-LLM-Base-Url': 'https://example.com/v1',
+      'X-LLM-Model-Id': 'deepseek-v4.1-flash',
+    });
+  });
+
+  it('no-LLM Chinese fail for scene path — never placeholder success', async () => {
+    mocked(mockGetLLMHeaders).mockRejectedValue(
+      new AppException(ErrorCode.LLM_NOT_CONFIGURED, 'No default TEXT_LLM configuration found')
+    );
+    const sceneIds = expandSceneNodeIds(twoSceneNodes, ['d1']);
+    await expect(
+      reviseWithLlm({
+        nodes: twoSceneNodes,
+        nodeIds: sceneIds,
+        instruction: '把本场对白改急一点',
+        scopeType: 'scene',
+        userId: 'u1',
+      })
+    ).rejects.toMatchObject({
+      code: ErrorCode.LLM_NOT_CONFIGURED,
+      message: '未配置默认文本模型，请先在设置中配置 LLM',
+    });
+    expect(mockedStart).not.toHaveBeenCalled();
+  });
+
+  it('calls AgentOS with expanded scene nodes only', async () => {
+    const sceneIds = expandSceneNodeIds(twoSceneNodes, ['d1']);
+    const replacements = sceneIds.map((id) => {
+      const n = twoSceneNodes.find((x) => x.id === id)!;
+      return { ...n, text: n.id === 'd1' ? '改急' : n.text };
+    });
+    mockedStart.mockResolvedValue({
+      ok: true,
+      json: async () => ({ content: JSON.stringify({ nodes: replacements }) }),
+    } as Response);
+
+    const result = await reviseWithLlm({
+      nodes: twoSceneNodes,
+      nodeIds: sceneIds,
+      instruction: '改急',
+      scopeType: 'scene',
+      userId: 'u1',
+    });
+
+    expect(mockedStart).toHaveBeenCalledWith(
+      'reviseworkflow',
+      expect.objectContaining({
+        instruction: '改急',
+        nodes: twoSceneNodes.slice(0, 4),
+      }),
+      expect.any(Object)
+    );
+    expect(result.find((n) => n.id === 'd1')?.text).toBe('改急');
   });
 });

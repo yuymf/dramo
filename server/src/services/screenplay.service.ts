@@ -207,6 +207,55 @@ export function formatProposalText(replacements: ScreenplayNode[]): string {
     .join('\n');
 }
 
+
+/**
+ * Expand seed nodeIds to the contiguous scene span:
+ * from the scene_heading that contains the seed (or the seed itself if it is a heading)
+ * through nodes until the next scene_heading (exclusive).
+ * Throws Chinese AppException if seed cannot resolve to a scene.
+ */
+export function expandSceneNodeIds(nodes: ScreenplayNode[], seedIds: string[]): string[] {
+  if (!seedIds.length) {
+    throw new AppException(ErrorCode.INVALID_INPUT, '请先把光标放在某一场内');
+  }
+  const idToIndex = new Map<string, number>();
+  for (let i = 0; i < nodes.length; i += 1) {
+    idToIndex.set(nodes[i].id, i);
+  }
+
+  let seedIndex = -1;
+  for (const id of seedIds) {
+    const idx = idToIndex.get(id);
+    if (idx !== undefined) {
+      seedIndex = idx;
+      break;
+    }
+  }
+  if (seedIndex === -1) {
+    throw new AppException(ErrorCode.INVALID_INPUT, '无法定位当前场次，请先把光标放在某一场内');
+  }
+
+  // Walk backward to the containing scene_heading (or stay if seed is a heading).
+  let start = seedIndex;
+  while (start > 0 && nodes[start].type !== 'scene_heading') {
+    start -= 1;
+  }
+  if (nodes[start].type !== 'scene_heading') {
+    throw new AppException(ErrorCode.INVALID_INPUT, '无法定位当前场次，请先把光标放在某一场内');
+  }
+
+  let end = start + 1;
+  while (end < nodes.length && nodes[end].type !== 'scene_heading') {
+    end += 1;
+  }
+
+  const expanded = nodes.slice(start, end).map((n) => n.id);
+  if (expanded.length === 0) {
+    throw new AppException(ErrorCode.INVALID_INPUT, '当前场次没有可修订的节点');
+  }
+  return expanded;
+}
+
 function sliceScope(nodes: ScreenplayNode[], nodeIds: string[]): ScreenplayNode[] {
   const scopeSet = new Set(nodeIds);
   let rangeStart = -1;
@@ -608,8 +657,9 @@ export class ScreenplayService {
     }
 
     const instruction = this.parseInstruction(body.instruction);
-    const scope = this.parseScope(body.scope);
+    const parsedScope = this.parseScope(body.scope);
     const current = normalizeNodes(loaded.screenplay.nodes);
+    const scope = this.resolveScopeNodeIds(current, parsedScope);
 
     const replacements = await reviseWithLlm({
       nodes: current,
@@ -646,13 +696,14 @@ export class ScreenplayService {
       throw new AppException(ErrorCode.NOT_FOUND, '剧本不存在');
     }
 
-    const scope = this.parseScope(body.scope);
+    const parsedScope = this.parseScope(body.scope);
     const replacements = parseNodesInput(body.replacements);
     if (replacements.length === 0) {
       throw new AppException(ErrorCode.INVALID_INPUT, 'replacements 不能为空');
     }
 
     const current = normalizeNodes(loaded.screenplay.nodes);
+    const scope = this.resolveScopeNodeIds(current, parsedScope);
     const nodes = applyNodePatch(current, replacements, scope.nodeIds);
     const cover = normalizeCover(loaded.screenplay.cover);
     const screenplay = await this.persistWithVersion({
@@ -783,6 +834,15 @@ export class ScreenplayService {
       throw new AppException(ErrorCode.INVALID_INPUT, 'nodeIds 不能为空');
     }
     return { type: raw.type, nodeIds };
+  }
+
+  /** When scope.type is scene, expand seed ids to the full scene span. */
+  private resolveScopeNodeIds(
+    nodes: ScreenplayNode[],
+    scope: { type: 'selection' | 'scene'; nodeIds: string[] }
+  ): { type: 'selection' | 'scene'; nodeIds: string[] } {
+    if (scope.type !== 'scene') return scope;
+    return { type: 'scene', nodeIds: expandSceneNodeIds(nodes, scope.nodeIds) };
   }
 
   private async persistWithVersion(input: {
