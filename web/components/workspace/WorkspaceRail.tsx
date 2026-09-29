@@ -106,6 +106,7 @@ export function WorkspaceRail({ projectId, projectType = "script", panelOpen, on
   const primary = cinema ? CINEMA_PRIMARY : SCRIPT_PRIMARY;
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreActive =
     current === "spoken" ||
     current === "worldview" ||
@@ -115,13 +116,17 @@ export function WorkspaceRail({ projectId, projectType = "script", panelOpen, on
 
   useEffect(() => {
     if (!moreOpen) return;
+    moreRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const onPointer = (e: PointerEvent) => {
       if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
         setMoreOpen(false);
       }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMoreOpen(false);
+      if (e.key === "Escape") {
+        setMoreOpen(false);
+        moreButtonRef.current?.focus();
+      }
     };
     document.addEventListener("pointerdown", onPointer);
     document.addEventListener("keydown", onKey);
@@ -136,8 +141,8 @@ export function WorkspaceRail({ projectId, projectType = "script", panelOpen, on
       aria-label="工作区维度"
       className="relative z-20 h-full w-14 shrink-0 flex flex-col border-r overflow-visible"
       style={{
-        background: "#fafaf9",
-        borderColor: "#e7e5e4",
+        background: "var(--ws-canvas, #fafaf9)",
+        borderColor: "var(--ws-border, #e7e5e4)",
       }}
     >
       <div className="flex-1 flex flex-col items-center gap-1 pt-3">
@@ -155,8 +160,8 @@ export function WorkspaceRail({ projectId, projectType = "script", panelOpen, on
                 active ? "font-semibold" : "font-medium"
               )}
               style={{
-                color: active ? "#c2410c" : "#78716c",
-                background: active ? "rgba(194, 65, 12, 0.08)" : "transparent",
+                color: active ? "var(--ws-action-text, #c2410c)" : "var(--ws-secondary, #78716c)",
+                background: active ? "var(--ws-selected, rgba(194, 65, 12, 0.08))" : "transparent",
               }}
             >
               <Icon size={16} strokeWidth={active ? 2 : 1.5} />
@@ -172,16 +177,25 @@ export function WorkspaceRail({ projectId, projectType = "script", panelOpen, on
           {moreOpen && (
             <div
               role="menu"
+              aria-label="更多"
+              onKeyDown={(event) => {
+                const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+                const index = items.indexOf(document.activeElement as HTMLElement);
+                const next = event.key === "ArrowDown" ? (index + 1) % items.length
+                  : event.key === "ArrowUp" ? (index - 1 + items.length) % items.length
+                  : event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : null;
+                if (next !== null) { event.preventDefault(); items[next]?.focus(); }
+              }}
               className="absolute left-[calc(100%+8px)] bottom-2 z-30 w-36 rounded-lg border py-1"
               style={{
-                background: "#ffffff",
-                borderColor: "#e7e5e4",
+                background: "var(--ws-surface, #ffffff)",
+                borderColor: "var(--ws-border, #e7e5e4)",
                 boxShadow: "0 8px 24px rgba(28, 25, 23, 0.08)",
               }}
             >
               <p
                 className="px-3 pt-1.5 pb-1 text-[10px] tracking-wide"
-                style={{ color: "#a8a29e" }}
+                style={{ color: "var(--ws-muted, #a8a29e)" }}
               >
                 更多
               </p>
@@ -203,7 +217,7 @@ export function WorkspaceRail({ projectId, projectType = "script", panelOpen, on
                     onClick={() => setMoreOpen(false)}
                     className="flex items-center gap-2 px-3 py-2 text-xs"
                     style={{
-                      color: active ? "#c2410c" : "#44403c",
+                      color: active ? "var(--ws-action-text, #c2410c)" : "var(--ws-secondary, #44403c)",
                       fontWeight: active ? 600 : 400,
                     }}
                   >
@@ -218,7 +232,7 @@ export function WorkspaceRail({ projectId, projectType = "script", panelOpen, on
                 onClick={() => setMoreOpen(false)}
                 className="flex items-center gap-2 px-3 py-2 text-xs"
                 style={{
-                  color: current === "spoken" ? "#c2410c" : "#44403c",
+                  color: current === "spoken" ? "var(--ws-action-text, #c2410c)" : "var(--ws-secondary, #44403c)",
                   fontWeight: current === "spoken" ? 600 : 400,
                 }}
               >
@@ -229,15 +243,16 @@ export function WorkspaceRail({ projectId, projectType = "script", panelOpen, on
           )}
           <button
             type="button"
+            ref={moreButtonRef}
             aria-expanded={moreOpen}
             aria-haspopup="menu"
             title="更多"
             onClick={() => setMoreOpen((v) => !v)}
             className="w-12 flex flex-col items-center gap-1 rounded-lg py-2 text-[10px] leading-none font-medium"
             style={{
-              color: moreActive || moreOpen ? "#c2410c" : "#78716c",
+              color: moreActive || moreOpen ? "var(--ws-action-text, #c2410c)" : "var(--ws-secondary, #78716c)",
               background:
-                moreActive || moreOpen ? "rgba(194, 65, 12, 0.08)" : "transparent",
+                moreActive || moreOpen ? "var(--ws-selected, rgba(194, 65, 12, 0.08))" : "transparent",
             }}
           >
             <MoreHorizontal size={16} strokeWidth={1.5} />
@@ -251,7 +266,8 @@ export function WorkspaceRail({ projectId, projectType = "script", panelOpen, on
           aria-label={panelOpen ? "收起项目面板" : "展开项目面板"}
           aria-expanded={panelOpen}
           title={panelOpen ? "收起项目面板" : "展开项目面板"}
-          className="w-12 h-10 flex items-center justify-center rounded-lg text-stone-500 focus-visible:outline-2 focus-visible:outline-orange-700"
+          className="w-12 h-10 flex items-center justify-center rounded-lg focus-visible:outline-2 focus-visible:outline-orange-700"
+          style={{ color: "var(--ws-secondary, #78716c)" }}
         >
           {panelOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
         </button>

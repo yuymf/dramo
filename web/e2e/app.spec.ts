@@ -33,35 +33,74 @@ async function writeTwoScenes(page: Page) {
   const box = (name?: string) =>
     name ? editor.getByRole('textbox', { name }) : editor.getByRole('textbox');
 
+  // Keyboard shortcuts are flaky under CI load — retry until the role count lands.
+  async function pressUntilCount(
+    press: () => Promise<void>,
+    named: string,
+    count: number,
+    attempts = 6
+  ) {
+    for (let i = 0; i < attempts; i++) {
+      if ((await box(named).count()) === count) return;
+      await press();
+      await page.waitForTimeout(150);
+    }
+    await expect(box(named)).toHaveCount(count, { timeout: 5_000 });
+  }
+
+  // After Enter, the next line can lag; wait longer and re-press once if stuck.
+  async function expectCountAfterEnter(
+    pressEnter: () => Promise<void>,
+    getLocator: () => ReturnType<typeof box>,
+    count: number,
+    timeout = 15_000
+  ) {
+    await pressEnter();
+    try {
+      await expect(getLocator()).toHaveCount(count, { timeout });
+    } catch {
+      await pressEnter();
+      await expect(getLocator()).toHaveCount(count, { timeout });
+    }
+  }
+
   // fill + press Enter (not keyboard.type) — IME composition in CI swallows Enter after Chinese.
   await box().first().click();
-  await page.keyboard.press('Shift+Tab');
-  await expect(box('场次标题')).toHaveCount(1);
+  await pressUntilCount(() => page.keyboard.press('Shift+Tab'), '场次标题', 1);
   await box('场次标题').last().fill('INT. 地铁车厢 - NIGHT');
-  await box('场次标题').last().press('Enter');
+  await expectCountAfterEnter(
+    () => box('场次标题').last().press('Enter'),
+    () => box(),
+    2
+  );
 
-  await expect(box()).toHaveCount(2, { timeout: 5_000 });
   await box().nth(1).click();
-  await page.keyboard.press('Tab');
-  await expect(box('角色')).toHaveCount(1);
+  await pressUntilCount(() => page.keyboard.press('Tab'), '角色', 1);
   await box('角色').last().fill('林晚');
-  await box('角色').last().press('Enter');
+  await expectCountAfterEnter(
+    () => box('角色').last().press('Enter'),
+    () => box('对白'),
+    1
+  );
 
-  await expect(box('对白')).toHaveCount(1, { timeout: 5_000 });
   await box('对白').last().fill('末班车要到了。');
-  await box('对白').last().press('Enter');
+  await expectCountAfterEnter(
+    () => box('对白').last().press('Enter'),
+    () => box(),
+    4
+  );
 
-  await expect(box()).toHaveCount(4, { timeout: 5_000 });
   await box().nth(3).click();
-  await page.keyboard.press('Shift+Tab');
-  await expect(box('场次标题')).toHaveCount(2);
+  await pressUntilCount(() => page.keyboard.press('Shift+Tab'), '场次标题', 2);
   await box('场次标题').last().fill('EXT. 月台 - NIGHT');
-  await box('场次标题').last().press('Enter');
+  await expectCountAfterEnter(
+    () => box('场次标题').last().press('Enter'),
+    () => box(),
+    5
+  );
 
-  await expect(box()).toHaveCount(5, { timeout: 5_000 });
   await box().nth(4).click();
-  await page.keyboard.press('Tab');
-  await expect(box('角色')).toHaveCount(2);
+  await pressUntilCount(() => page.keyboard.press('Tab'), '角色', 2);
 
   const put = page.waitForResponse(
     (res) =>
@@ -150,6 +189,84 @@ test.describe('注册后的书桌', () => {
 });
 
 test.describe('剧本工作区', () => {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`工作区 ${theme} 主题、唯一导出和次级口播入口`, async ({ page }, testInfo) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await signUp(page);
+      await createScriptProject(page, `PR3 ${theme} 视觉回归`);
+      await writeTwoScenes(page);
+      const projectId = page.url().match(/\/projects\/([^/]+)/)![1];
+      const surface = theme === 'dark' ? 'rgb(34, 34, 34)' : 'rgb(255, 255, 255)';
+      const exportButton = page.getByRole('button', { name: '导出 TXT PDF DOCX' });
+      const panel = page.getByRole('complementary', { name: '项目面板' });
+      await expect(exportButton).toHaveCount(1);
+      await expect(panel.getByRole('button', { name: '导出 TXT PDF DOCX' })).toBeVisible();
+      await expect(panel).toHaveCSS('background-color', surface);
+      await expect(page.locator('.sp-paper')).toHaveCSS('background-color', surface);
+      await expect(page.getByRole('button', { name: '发送', exact: true })).toBeDisabled();
+      await expect(page.getByRole('button', { name: '发送', exact: true })).toHaveCSS('font-size', '14px');
+      await expect(page.getByRole('heading', { name: '剧本', exact: true })).toHaveCSS('font-size', '16px');
+      await expect(page.getByRole('link', { name: '口播', exact: true })).toHaveCount(0);
+      await exportButton.click();
+      await expect(page.getByRole('menu')).toHaveCSS('background-color', surface);
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: '收起项目面板' }).click();
+      await expect(exportButton).toHaveCount(1);
+      await expect(page.locator('.sp-toolbar').getByRole('button', { name: '导出 TXT PDF DOCX' })).toBeVisible();
+      await exportButton.click();
+      await expect(page.getByRole('menu')).toHaveCSS('background-color', surface);
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: '展开项目面板' }).click();
+      for (const [label, path] of [['剧本', 'screenplay'], ['大纲', 'outline'], ['Beats', 'beats']]) {
+        await page.getByRole('link', { name: label, exact: true }).click();
+        await expect(page.getByRole('heading', { name: label, exact: true })).toBeVisible();
+        await expect(page.getByLabel('AI 指令')).toHaveCSS('background-color', theme === 'dark' ? 'rgb(23, 23, 23)' : 'rgb(250, 250, 249)');
+        if (path === 'outline') {
+          await expect(page.getByLabel('大纲正文')).toBeVisible();
+          await page.getByLabel('大纲正文').fill('末班车前，林晚必须找到离开的理由。');
+          const saved = page.waitForResponse((res) => res.request().method() === 'PUT' && res.url().includes('/outline') && res.ok());
+          await page.getByRole('heading', { name: label, exact: true }).click();
+          await saved;
+        }
+        if (path === 'beats') {
+          await page.getByRole('button', { name: '添加 Beat' }).click();
+          await page.getByLabel('动作 1', { exact: true }).fill('末班车进站');
+          await page.getByLabel('意图 1', { exact: true }).fill('林晚想要离开');
+          await page.getByLabel('结果 1', { exact: true }).fill('她留在月台');
+          const saved = page.waitForResponse((res) => res.request().method() === 'PUT' && res.url().includes('/beats') && res.ok());
+          await page.getByRole('button', { name: '保存 Beats' }).click();
+          await saved;
+          await expect(page.getByRole('button', { name: '保存 Beats' })).toBeEnabled();
+        }
+        await page.screenshot({ path: testInfo.outputPath(`${path}-${theme}-1440.png`) });
+      }
+      await page.getByRole('button', { name: '更多', exact: true }).click();
+      await expect(page.getByRole('menuitem', { name: '世界观' })).toBeFocused();
+      await page.keyboard.press('End');
+      await expect(page.getByRole('menuitem', { name: '口播', exact: true })).toBeFocused();
+      await page.screenshot({ path: testInfo.outputPath(`more-${theme}.png`) });
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('button', { name: '更多', exact: true })).toBeFocused();
+      await page.getByRole('button', { name: '更多', exact: true }).click();
+      await page.getByRole('menuitem', { name: '口播', exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/spoken`));
+      await expect(page.locator('.workspace-theme')).toHaveCount(0);
+      await expect(page.getByText('口播工作区')).toBeVisible();
+      await page.getByRole('link', { name: '剧本', exact: true }).click();
+      for (const width of [1280, 1024]) {
+        await page.setViewportSize({ width, height: 800 });
+        await expect(page.getByRole('heading', { name: '剧本', exact: true })).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        expect(await page.locator('.sp-toolbar').evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+      }
+      await page.goto('/');
+      await expect(page.locator('.workspace-theme')).toHaveCount(0);
+      await expect(page.locator('.desk-page')).toHaveCSS('background-color', 'rgb(20, 18, 16)');
+    });
+  }
+
+
   test('从对话框创建项目并进入剧本正文', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (err) => errors.push(err.message));

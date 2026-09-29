@@ -32,9 +32,10 @@ const TYPE_LABEL: Record<ProjectType, string> = {
 interface ProjectPanelProps {
   projectId: string;
   visible: boolean;
+  exportTargetRef: (element: HTMLDivElement | null) => void;
 }
 
-export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
+export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPanelProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { showToast } = useToast();
@@ -134,15 +135,15 @@ export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
       className={cn("h-full w-[232px] shrink-0 flex-col border-r", visible ? "flex" : "hidden")}
       aria-label="项目面板"
       style={{
-        background: "#ffffff",
-        borderColor: "#e7e5e4",
+        background: "var(--ws-surface, #ffffff)",
+        borderColor: "var(--ws-border, #e7e5e4)",
       }}
     >
-      <div className="px-3 py-3 border-b" style={{ borderColor: "#e7e5e4" }}>
+      <div className="px-3 py-3 border-b" style={{ borderColor: "var(--ws-border, #e7e5e4)" }}>
         <Link
           href="/projects"
           className="flex items-center gap-2 px-2 py-1.5 text-xs rounded-lg"
-          style={{ color: "#78716c" }}
+          style={{ color: "var(--ws-secondary, #78716c)" }}
         >
           <FolderOpen size={14} strokeWidth={1.5} />
           全部项目
@@ -150,7 +151,7 @@ export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="px-2 mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
+        <p className="px-2 mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
           {loading ? "项目" : TYPE_LABEL[type]}
         </p>
 
@@ -170,14 +171,14 @@ export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
             aria-label="项目名称"
             className="w-full px-2 py-1.5 text-sm font-semibold bg-transparent focus:outline-none"
             style={{
-              color: "#1c1917",
-              borderBottom: "1.5px solid #c2410c",
+              color: "var(--ws-text, #1c1917)",
+              borderBottom: "1.5px solid var(--ws-accent, #c2410c)",
             }}
           />
         ) : (
           <h1
             className="px-2 py-1.5 text-sm font-semibold rounded-lg cursor-text"
-            style={{ color: "#1c1917" }}
+            style={{ color: "var(--ws-text, #1c1917)" }}
             title="双击重命名"
             onDoubleClick={() => {
               setEditing(true);
@@ -223,12 +224,12 @@ export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
         </div>
         ) : (
         <div className="mt-5 px-2">
-          <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
+          <p className="mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
             格式
           </p>
           <div
             className="flex p-0.5 rounded-lg"
-            style={{ background: "#f5f5f4" }}
+            style={{ background: "var(--ws-hover, #f5f5f4)" }}
             role="group"
             aria-label="剧本格式"
           >
@@ -243,14 +244,15 @@ export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
                 <button
                   key={opt.id}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => void changeFormat(opt.id)}
                   className={cn(
                     "flex-1 rounded-md py-1.5 text-xs",
                     active ? "font-semibold" : "font-medium"
                   )}
                   style={{
-                    color: active ? "#c2410c" : "#78716c",
-                    background: active ? "#ffffff" : "transparent",
+                    color: active ? "var(--ws-action-text, #c2410c)" : "var(--ws-secondary, #78716c)",
+                    background: active ? "var(--ws-surface, #ffffff)" : "transparent",
                   }}
                 >
                   {opt.label}
@@ -262,14 +264,14 @@ export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
         )}
 
         {episodeName && <div className="mt-5 px-2">
-          <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
+          <p className="mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
             {currentDocument ?? "当前集"}
           </p>
           <div
             className="rounded-lg px-2.5 py-2 text-sm"
             style={{
-              color: "#1c1917",
-              background: "rgba(194, 65, 12, 0.06)",
+              color: "var(--ws-text, #1c1917)",
+              background: "var(--ws-selected, rgba(194, 65, 12, 0.06))",
             }}
           >
             {episodeName}
@@ -278,33 +280,35 @@ export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
 
         {onScreenplay && (
           <div className="mt-5 px-2">
-            <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
+            <p className="mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
               视图
             </p>
             <div
               className="flex p-0.5 rounded-lg"
-              style={{ background: "#f5f5f4" }}
+              style={{ background: "var(--ws-hover, #f5f5f4)" }}
               role="group"
               aria-label="剧本视图"
             >
               <button
                 type="button"
+                aria-pressed={!onCover}
                 onClick={() => router.push(`/projects/${projectId}/screenplay`)}
                 className={cn("flex-1 rounded-md py-1.5 text-xs", !onCover ? "font-semibold" : "font-medium")}
                 style={{
-                  color: !onCover ? "#c2410c" : "#78716c",
-                  background: !onCover ? "#ffffff" : "transparent",
+                  color: !onCover ? "var(--ws-action-text, #c2410c)" : "var(--ws-secondary, #78716c)",
+                  background: !onCover ? "var(--ws-surface, #ffffff)" : "transparent",
                 }}
               >
                 正文
               </button>
               <button
                 type="button"
+                aria-pressed={onCover}
                 onClick={() => router.push(`/projects/${projectId}/cover`)}
                 className={cn("flex-1 rounded-md py-1.5 text-xs", onCover ? "font-semibold" : "font-medium")}
                 style={{
-                  color: onCover ? "#c2410c" : "#78716c",
-                  background: onCover ? "#ffffff" : "transparent",
+                  color: onCover ? "var(--ws-action-text, #c2410c)" : "var(--ws-secondary, #78716c)",
+                  background: onCover ? "var(--ws-surface, #ffffff)" : "transparent",
                 }}
               >
                 封面
@@ -313,6 +317,12 @@ export function ProjectPanel({ projectId, visible }: ProjectPanelProps) {
           </div>
         )}
 
+        {type === "script" && onScreenplay && (
+        <section className="mt-6 px-2" aria-label="项目操作">
+          <h2 className="text-base font-semibold mb-2">项目操作</h2>
+          <div ref={exportTargetRef} />
+        </section>
+        )}
         <ShareAndVersions projectId={projectId} />
       </div>
     </aside>
@@ -341,7 +351,7 @@ function ShareAndVersions({ projectId }: { projectId: string }) {
   return (
     <div className="mt-6 px-2 space-y-4">
       <div>
-        <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
+        <p className="mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
           分享
         </p>
         <select
@@ -353,7 +363,7 @@ function ShareAndVersions({ projectId }: { projectId: string }) {
             void updateShare(projectId, next).catch(() => showToast("更新分享失败", "error"));
           }}
           className="w-full rounded-md px-2 py-1.5 text-xs"
-          style={{ background: "#f5f5f4" }}
+          style={{ background: "var(--ws-hover, #f5f5f4)" }}
         >
           <option value="invite">仅邀请</option>
           <option value="anyone_view">任何人可看</option>
@@ -363,7 +373,7 @@ function ShareAndVersions({ projectId }: { projectId: string }) {
           <button
             type="button"
             className="mt-2 text-[11px] underline"
-            style={{ color: "#c2410c" }}
+            style={{ color: "var(--ws-action-text, #c2410c)" }}
             onClick={() => {
               void navigator.clipboard.writeText(`${window.location.origin}${sharePath}`);
               showToast("分享链接已复制", "success");
@@ -374,8 +384,9 @@ function ShareAndVersions({ projectId }: { projectId: string }) {
         )}
         <button
           type="button"
+          disabled={published}
           className="mt-2 block text-[11px]"
-          style={{ color: "#78716c" }}
+          style={{ color: "var(--ws-secondary, #78716c)" }}
           onClick={() => {
             void (published ? Promise.resolve() : publishProject(projectId)).then(() => {
               setPublished(true);
@@ -387,7 +398,7 @@ function ShareAndVersions({ projectId }: { projectId: string }) {
         </button>
       </div>
       <div>
-        <p className="mb-2 text-[10px]" style={{ color: "#a8a29e" }}>
+        <p className="mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
           版本
         </p>
         <input
@@ -396,12 +407,12 @@ function ShareAndVersions({ projectId }: { projectId: string }) {
           onChange={(e) => setVersionName(e.target.value)}
           placeholder="命名快照"
           className="w-full rounded-md px-2 py-1.5 text-xs mb-2"
-          style={{ background: "#f5f5f4" }}
+          style={{ background: "var(--ws-hover, #f5f5f4)" }}
         />
         <button
           type="button"
           className="text-[11px] font-medium"
-          style={{ color: "#c2410c" }}
+          style={{ color: "var(--ws-action-text, #c2410c)" }}
           onClick={() => {
             void createVersion(projectId, versionName.trim() || undefined).then(async () => {
               setVersionName("");

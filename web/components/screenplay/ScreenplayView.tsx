@@ -184,7 +184,7 @@ export function ScreenplayView() {
           <ul className="space-y-1 mb-2">
             {comments.map((item) => (
               <li key={item.id} className="text-xs">
-                <span style={{ color: "#78716c" }}>{item.user.email}：</span>
+                <span style={{ color: "var(--at-text-secondary)" }}>{item.user.email}：</span>
                 {item.body}
               </li>
             ))}

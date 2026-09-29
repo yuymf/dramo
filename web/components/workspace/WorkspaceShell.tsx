@@ -7,6 +7,8 @@ import type { ProjectType } from "@/lib/types/screenplay";
 import { FloatingAI, type FloatingAISendPayload } from "./FloatingAI";
 import { ProjectPanel } from "./ProjectPanel";
 import { WorkspaceRail } from "./WorkspaceRail";
+import { WorkspaceExportTarget } from "./WorkspaceExportTarget";
+import "./workspace.css";
 
 export interface WorkspaceShellProps {
   projectId: string;
@@ -40,6 +42,8 @@ export function WorkspaceShell({
   const router = useRouter();
   const [projectType, setProjectType] = useState<ProjectType>("script");
   const [panelOpen, setPanelOpen] = useState(true);
+  const [exportTarget, setExportTarget] = useState<HTMLDivElement | null>(null);
+  const scriptWorkspace = projectType === "script" && !pathname?.includes("/spoken");
 
   useEffect(() => {
     let cancelled = false;
@@ -67,25 +71,27 @@ export function WorkspaceShell({
 
   return (
     <div
-      className="h-dvh w-full flex overflow-hidden"
-      style={{ background: "#fafaf9" }}
+      className={`h-dvh w-full flex overflow-hidden ${scriptWorkspace ? "workspace-theme" : ""}`}
+      style={{ background: "var(--ws-canvas, #fafaf9)" }}
     >
-      <WorkspaceRail
-        projectId={projectId}
-        projectType={projectType}
-        panelOpen={panelOpen}
-        onTogglePanel={() => setPanelOpen((open) => !open)}
-      />
-      <ProjectPanel projectId={projectId} visible={panelOpen} />
-      <div className="relative flex-1 min-w-0 overflow-hidden">
-        <div className="h-full overflow-auto">{children}</div>
-        <FloatingAI
+      <WorkspaceExportTarget.Provider value={scriptWorkspace && panelOpen ? exportTarget : null}>
+        <WorkspaceRail
           projectId={projectId}
-          scopeNodeIds={scopeNodeIds}
-          onSend={onSend}
-          mode={projectType === "cinema" ? "cinema" : "script"}
+          projectType={projectType}
+          panelOpen={panelOpen}
+          onTogglePanel={() => setPanelOpen((open) => !open)}
         />
-      </div>
+        <ProjectPanel projectId={projectId} visible={panelOpen} exportTargetRef={setExportTarget} />
+        <div className="relative flex-1 min-w-0 overflow-hidden">
+          <div className="h-full overflow-auto">{children}</div>
+          <FloatingAI
+            projectId={projectId}
+            scopeNodeIds={scopeNodeIds}
+            onSend={onSend}
+            mode={projectType === "cinema" ? "cinema" : "script"}
+          />
+        </div>
+      </WorkspaceExportTarget.Provider>
     </div>
   );
 }

@@ -76,7 +76,7 @@ export default function StoryboardPage() {
           <p className="text-xs text-[var(--at-text-tertiary)]">镜头挂在场次上，设计和出图分开。默认不超过 6 个。</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex p-0.5 rounded-lg" style={{ background: "#f5f5f4" }} role="group" aria-label="分镜视图">
+          <div className="flex p-0.5 rounded-lg" style={{ background: "var(--at-surface-sunken)" }} role="group" aria-label="分镜视图">
             {(
               [
                 ["panel", "面板"],
@@ -90,8 +90,8 @@ export default function StoryboardPage() {
                 onClick={() => setView(id)}
                 className="px-2.5 py-1 text-xs rounded-md"
                 style={{
-                  color: view === id ? "#c2410c" : "#78716c",
-                  background: view === id ? "#fff" : "transparent",
+                  color: view === id ? "var(--ws-action-text, #c2410c)" : "var(--at-text-secondary)",
+                  background: view === id ? "var(--at-surface)" : "transparent",
                   fontWeight: view === id ? 600 : 400,
                 }}
               >
@@ -160,7 +160,7 @@ export default function StoryboardPage() {
           >
             {shots.map((shot, index) => (
               <li key={shot.id ?? `new-${index}`} className="rounded-xl border border-[var(--at-border)] bg-[var(--at-surface)] p-4">
-                {shot.stale ? <p className="text-[11px] text-[#9a3412] mb-2">场次已改，镜头过期</p> : null}
+                {shot.stale ? <p className="text-[11px] text-[var(--at-error)] mb-2">场次已改，镜头过期</p> : null}
                 <ShotFields
                   shot={shot}
                   index={index}

@@ -129,8 +129,8 @@ export default function BeatsPage() {
                       <span
                         className="text-[11px] px-2 py-0.5 rounded-full"
                         style={{
-                          color: beat.covered ? "#166534" : "#9a3412",
-                          background: beat.covered ? "#dcfce7" : "#ffedd5",
+                          color: "var(--at-text-secondary)",
+                          background: "var(--at-surface-sunken)",
                         }}
                       >
                         {beat.covered ? "已兑现" : "未兑现"}
@@ -139,6 +139,7 @@ export default function BeatsPage() {
                     <button
                       type="button"
                       aria-label={`删除 Beat ${index + 1}`}
+                      title={`删除 Beat ${index + 1}`}
                       className="text-[var(--at-text-tertiary)] hover:text-[var(--at-error)]"
                       onClick={() => setBeats((prev) => prev.filter((_, i) => i !== index))}
                     >

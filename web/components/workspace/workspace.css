@@ -1,0 +1,120 @@
+/* Project Script scope only. Legacy spoken/Cinema and global pages keep their palette. */
+.workspace-theme {
+  color-scheme: light;
+  --ws-canvas: #fafaf9;
+  --ws-surface: #ffffff;
+  --ws-hover: #f5f5f4;
+  --ws-border: #d6d3d1;
+  --ws-text: #1c1917;
+  --ws-secondary: #57534e;
+  --ws-muted: #69635e;
+  --ws-accent: #c2410c;
+  --ws-action-text: #c2410c;
+  --ws-selected: #fff7ed;
+  --ws-shadow: 0 12px 40px rgb(28 25 23 / 12%);
+  --ws-error: #b91c1c;
+  --ws-caption: 12px;
+  --ws-body: 14px;
+  --ws-title: 16px;
+  --ws-page-title: 20px;
+  /* Existing canvas components consume Atelier tokens without global changes. */
+  --at-bg: var(--ws-canvas);
+  --at-surface: var(--ws-surface);
+  --at-surface-raised: var(--ws-surface);
+  --at-surface-sunken: var(--ws-hover);
+  --at-surface-hover: var(--ws-hover);
+  --at-surface-active: var(--ws-selected);
+  --at-border: var(--ws-border);
+  --at-border-light: var(--ws-border);
+  --at-border-focus: var(--ws-accent);
+  --at-text: var(--ws-text);
+  --at-text-secondary: var(--ws-secondary);
+  --at-text-tertiary: var(--ws-muted);
+  --at-text-inverse: var(--ws-surface);
+  --at-accent: var(--ws-accent);
+  --at-accent-hover: var(--ws-accent);
+  --at-accent-light: var(--ws-selected);
+  --at-error: var(--ws-error);
+  --at-shadow-lg: var(--ws-shadow);
+  color: var(--ws-text);
+  font-size: var(--ws-body);
+}
+
+@media (prefers-color-scheme: dark) {
+  .workspace-theme {
+    color-scheme: dark;
+    --ws-canvas: #171717;
+    --ws-surface: #222222;
+    --ws-hover: #303030;
+    --ws-border: #525252;
+    --ws-text: #fafaf9;
+    --ws-secondary: #d6d3d1;
+    --ws-muted: #b5b0aa;
+    --ws-selected: #361e14;
+    --ws-shadow: 0 12px 40px rgb(0 0 0 / 40%);
+    --ws-error: #fca5a5;
+    --ws-action-text: #fafaf9;
+  }
+}
+
+/* UI type roles; manuscript font, indentation and cover typography stay intact. */
+.workspace-theme :is(.text-\[10px\], .text-\[11px\], .sp-save-status, .sp-hint,
+  .sp-timeline-summary, .sp-timeline-item, .sp-gutter) { font-size: var(--ws-caption); }
+.workspace-theme :is(button, select, [role="menuitem"], nav a, aside[aria-label="项目面板"] a) {
+  font-size: var(--ws-body);
+}
+.workspace-theme :is(header h1, .sp-toolbar-title h1, aside[aria-label="项目面板"] h1) {
+  font-size: var(--ws-title);
+}
+.workspace-theme :is(.sp-empty, .sp-error, .sp-loading) { font-size: var(--ws-body); }
+.workspace-theme [aria-label="拖动 AI 浮层"] span { font-size: var(--ws-title); }
+.workspace-theme [aria-label="AI 指令"] { font-size: var(--ws-body); }
+.workspace-theme :is(button, select, [role="menuitem"], nav a, aside[aria-label="项目面板"] a) {
+  min-height: 36px;
+}
+.workspace-theme button:has(> svg:only-child) { min-width: 36px; }
+.workspace-theme svg.lucide { width: 16px; height: 16px; flex-shrink: 0; }
+.workspace-theme :is(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--ws-accent);
+  outline-offset: 2px;
+}
+.workspace-theme :is(nav a, nav button):hover { background: var(--ws-hover); }
+.workspace-theme :is(button, input, textarea, select):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.workspace-theme ::selection { background: var(--ws-accent); color: #ffffff; }
+.workspace-theme :is(input, textarea)::placeholder { color: var(--ws-muted); opacity: 1; }
+.workspace-theme .sp-paper { background: var(--ws-surface); box-shadow: none; }
+.workspace-theme .sp-error { color: var(--ws-error); }
+.workspace-theme .sp-toolbar { flex-wrap: wrap; }
+.workspace-theme .sp-toolbar-title { flex-wrap: wrap; }
+.workspace-theme .sp-toolbar-actions { margin-left: auto; }
+.workspace-theme header { flex-wrap: wrap; }
+.workspace-theme .sp-gutter:focus-visible { opacity: 1; }
+.workspace-theme .sp-gutter { min-height: 24px; }
+.workspace-theme .sp-node-input:focus-visible { outline-offset: 0; }
+.workspace-theme .sp-export-slot > button { width: 100%; }
+/* Selected navigation uses weight and a marker in addition to accent color. */
+.workspace-theme nav [aria-current="page"] { box-shadow: inset 3px 0 var(--ws-accent); }
+/* Strip decorative legacy treatments only if mounted inside this shell. */
+.workspace-theme :is(.rice-paper-bg, .ink-textarea-wrap) { background: var(--ws-surface); }
+.workspace-theme .rice-paper-bg::before { content: none; }
+.workspace-theme :is(.ink-reveal, .animate-float) { animation: none; }
+.workspace-theme button:active, .workspace-theme .ink-button:hover { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .workspace-theme *, .workspace-theme *::before, .workspace-theme *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.workspace-theme .ws-chat-line { font-size: var(--ws-body); }
+.workspace-theme nav > div:first-child { overflow-y: auto; min-height: 0; }
+.workspace-theme nav > div:last-child { flex-shrink: 0; }
+
+.workspace-theme aside[aria-label="项目面板"] input { font-size: var(--ws-body); }
+.workspace-theme aside[aria-label="项目面板"] input[aria-label="项目名称"] { font-size: var(--ws-title); }
+
+.workspace-theme [class~="text-[var(--at-accent)]"] { color: var(--ws-action-text); }
