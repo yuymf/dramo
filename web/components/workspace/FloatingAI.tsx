@@ -108,6 +108,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   const [cinemaReelId, setCinemaReelId] = useState<string | null>(null);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [pendingProposal, setPendingProposal] = useState<PendingProposal | null>(null);
+  /** User-chosen revise scope mode: 选区 vs 本场. Editor always publishes seed selection ids. */
+  const [scopeMode, setScopeMode] = useState<ScreenplayScopeType>("selection");
   const [scope, setScope] = useState<ScreenplayScopeDetail>({
     type: "selection",
     nodeIds: scopeNodeIds,
@@ -208,18 +210,26 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   }, [scopeNodeIds]);
 
   useEffect(() => {
+    setScope((prev) => ({ ...prev, type: scopeMode }));
+  }, [scopeMode]);
+
+  useEffect(() => {
     const onScope = (event: Event) => {
       const detail = (event as CustomEvent<ScreenplayScopeDetail>).detail;
       if (!detail) return;
-      const type: ScreenplayScopeType = detail.type === "scene" ? "scene" : "selection";
+      // Editor publishes focused/selected seed ids; FloatingAI owns 选区|本场 mode.
       const nodeIds = Array.isArray(detail.nodeIds)
         ? detail.nodeIds.filter((id) => typeof id === "string" && id.trim())
         : [];
-      setScope({ type, nodeIds });
+      setScope((prev) => ({
+        type: scopeMode,
+        // Keep last known seed if republish is empty (e.g. focus moved to AI panel).
+        nodeIds: nodeIds.length > 0 ? nodeIds : prev.nodeIds,
+      }));
     };
     window.addEventListener(SCREENPLAY_SCOPE_EVENT, onScope);
     return () => window.removeEventListener(SCREENPLAY_SCOPE_EVENT, onScope);
-  }, []);
+  }, [scopeMode]);
 
   useEffect(() => {
     const onReel = (event: Event) => {
@@ -388,7 +398,11 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     }
 
     if (scope.nodeIds.length === 0) {
-      setLines((prev) => [...prev, { role: "assistant", text: "请先在剧本里选中要改的句子" }]);
+      const hint =
+        scopeMode === "scene"
+          ? "请先把光标放在某一场内"
+          : "请先在剧本里选中要改的句子";
+      setLines((prev) => [...prev, { role: "assistant", text: hint }]);
       return;
     }
 
@@ -423,7 +437,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           method: "POST",
           body: {
             instruction: next,
-            scope: { type: scope.type, nodeIds: scope.nodeIds },
+            // Prefer server expand as source of truth: send seed ids + type=scene.
+            scope: { type: scopeMode, nodeIds: scope.nodeIds },
           },
           noCache: true,
           timeoutMs: 120_000,
@@ -440,8 +455,12 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       setPendingProposal({
         instruction: proposal.instruction ?? next,
         scope: {
-          type: proposal.scope?.type === "scene" ? "scene" : "selection",
-          nodeIds: Array.isArray(proposal.scope?.nodeIds)
+          type:
+            proposal.scope?.type === "scene" || scopeMode === "scene"
+              ? "scene"
+              : "selection",
+          // Prefer expanded ids from server when present.
+          nodeIds: Array.isArray(proposal.scope?.nodeIds) && proposal.scope.nodeIds.length > 0
             ? proposal.scope.nodeIds
             : scope.nodeIds,
         },
@@ -484,7 +503,10 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       setPendingProposal(null);
       setLines((prev) => [
         ...prev,
-        { role: "assistant", text: `已接受提案并写回选区（全文 ${count} 个节点）` },
+        {
+          role: "assistant",
+          text: `已接受提案并写回${pendingProposal.scope.type === "scene" ? "本场" : "选区"}（全文 ${count} 个节点）`,
+        },
       ]);
     } catch (err) {
       const message = err instanceof Error ? err.message : "接受修订失败";
@@ -514,8 +536,10 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     mode === "cinema"
       ? `Cinema · ${cinemaTarget === "scene" ? "场景" : cinemaTarget === "shots" ? "镜头" : "表演"}`
       : scope.nodeIds.length > 0
-        ? `${scope.type === "scene" ? "本场" : "选区"} ${scope.nodeIds.length} 个节点`
-        : "未选中节点";
+        ? `${scopeMode === "scene" ? "本场" : "选区"} ${scope.nodeIds.length} 个节点`
+        : scopeMode === "scene"
+          ? "本场 · 未定位"
+          : "未选中节点";
 
   return (
     <>
@@ -597,7 +621,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
             <p className="text-[11px] leading-5" style={{ color: "var(--ws-muted, #a8a29e)" }}>
               {mode === "cinema"
                 ? "只改当前 Reel 的场景、表演或文字镜头，不会动剧本项目。"
-                : "选中对白或动作，写下指令后发送。只会改选区内的节点，不会生成整本。"}
+                : "选中对白或动作，或切换「本场」后把光标放在某一场内，写下指令。预览不写稿，接受后才改对应范围。"}
             </p>
           )}
           {lines.map((line, index) => (
@@ -646,6 +670,47 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           )}
           <div ref={linesEndRef} />
         </div>
+        {mode === "script" && (
+          <div
+            className="mb-2 flex gap-1 shrink-0"
+            role="radiogroup"
+            aria-label="修订范围"
+            data-testid="ai-scope-mode"
+          >
+            {(
+              [
+                { id: "selection" as const, label: "选区", aria: "按选区修订" },
+                { id: "scene" as const, label: "本场", aria: "按本场修订" },
+              ] as const
+            ).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={scopeMode === item.id}
+                aria-label={item.aria}
+                data-testid={`ai-scope-${item.id}`}
+                onClick={() => {
+                  setScopeMode(item.id);
+                  setScope((prev) => ({ ...prev, type: item.id }));
+                  requestScreenplayScope();
+                }}
+                className="px-2.5 py-1 rounded-md text-[11px] font-medium"
+                style={{
+                  color: scopeMode === item.id ? "#c2410c" : "#78716c",
+                  background:
+                    scopeMode === item.id ? "rgba(194, 65, 12, 0.08)" : "#f5f5f4",
+                  border:
+                    scopeMode === item.id
+                      ? "1px solid rgba(194, 65, 12, 0.35)"
+                      : "1px solid transparent",
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
         <textarea
           ref={promptRef}
           value={text}
@@ -656,7 +721,11 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
               void submit();
             }
           }}
-          placeholder="写一条指令… 选区会随消息送出"
+          placeholder={
+            scopeMode === "scene"
+              ? "写一条指令… 将修订当前场所在节点"
+              : "写一条指令… 选区会随消息送出"
+          }
           aria-label="AI 指令"
           disabled={sending}
           className="h-24 w-full shrink-0 resize-none rounded-lg px-3 py-2 text-sm focus:outline-none disabled:opacity-60"

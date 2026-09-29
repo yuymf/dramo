@@ -330,7 +330,7 @@ test.describe('剧本工作区', () => {
     await expect(page.getByText('选区 1 个节点')).toBeVisible();
     const before = await panel.boundingBox();
     expect(before).not.toBeNull();
-    const message = panel.getByText('选中对白或动作，写下指令后发送。只会改选区内的节点，不会生成整本。');
+    const message = panel.getByText(/选中对白或动作|切换「本场」|预览不写稿/);
     const messageBox = await message.boundingBox();
     expect(messageBox).not.toBeNull();
     await page.mouse.move(messageBox!.x + 20, messageBox!.y + 8);
@@ -478,6 +478,39 @@ test.describe('剧本工作区', () => {
     await page.getByRole('menuitem', { name: 'TXT' }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.txt$/i);
+  });
+
+  test('本场 AI 无模型时中文失败且草稿不变', async ({ page }) => {
+    test.setTimeout(90_000);
+    await signUp(page);
+    await createScriptProject(page, `E2E 本场修订 ${Date.now()}`);
+    await writeTwoScenes(page);
+
+    const dialogue = page.getByRole('list', { name: '剧本正文' }).getByRole('textbox', { name: '对白' });
+    await expect(dialogue.first()).toHaveValue('末班车要到了。');
+    await dialogue.first().click();
+
+    // Toggle to 本场 scope mode
+    await expect(page.getByTestId('ai-scope-mode')).toBeVisible();
+    await page.getByTestId('ai-scope-scene').click();
+    await expect(page.getByTestId('ai-scope-scene')).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByText(/本场 \d+ 个节点|本场 ·/)).toBeVisible();
+
+    await page.getByLabel('AI 指令').fill('把本场对白改急一点');
+    await page.getByRole('button', { name: '发送' }).click();
+    // Scene-scoped revise: no LLM → Chinese failure; preview never writes; no Accept.
+    await expect(
+      page.getByText(/未配置默认文本模型|请先在设置中配置 LLM|请先把光标放在某一场内|修订失败/)
+    ).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByTestId('ai-revise-accept')).toHaveCount(0);
+    await expect(dialogue.first()).toHaveValue('末班车要到了。');
+    // Scene B dialogue also unchanged
+    const dialogues = page.getByRole('list', { name: '剧本正文' }).getByRole('textbox', { name: '对白' });
+    if ((await dialogues.count()) > 1) {
+      await expect(dialogues.nth(1)).toHaveValue(/.+/);
+    }
   });
 
   test('无 SD worker 时生成肖像给出中文失败原因', async ({ page }) => {
