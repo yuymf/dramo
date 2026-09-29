@@ -687,6 +687,54 @@ test.describe('剧本工作区', () => {
     await expect(page.getByLabel('大纲正文')).toHaveValue(marker, { timeout: 15_000 });
   });
 
+  // Phase2 Beats slice acceptance: write → save → reload → still there.
+  // 【事实】Beats UI/API already on main; this gates the user-visible persistence path.
+  test('Beats 可写读且刷新后仍在', async ({ page }) => {
+    await signUp(page);
+    await createScriptProject(page, `E2E Beats切片 ${Date.now()}`);
+    const stamp = Date.now();
+    const action = `动作标记 ${stamp}：末班车进站`;
+    const intent = `意图标记 ${stamp}：林晚想要离开`;
+    const outcome = `结果标记 ${stamp}：她留在月台`;
+
+    await page.getByRole('link', { name: 'Beats' }).click();
+    await expect(page).toHaveURL(/\/beats/);
+    await expect(page.getByRole('heading', { name: 'Beats', exact: true })).toBeVisible();
+    await expect(page.getByText('还没有 Beat')).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole('button', { name: '添加 Beat' }).click();
+    await page.getByLabel('动作 1', { exact: true }).fill(action);
+    await page.getByLabel('意图 1', { exact: true }).fill(intent);
+    await page.getByLabel('结果 1', { exact: true }).fill(outcome);
+
+    const put = page.waitForResponse(
+      (res) =>
+        res.request().method() === 'PUT' &&
+        res.url().includes('/beats') &&
+        res.ok(),
+      { timeout: 20_000 }
+    );
+    await page.getByRole('button', { name: '保存 Beats' }).click();
+    await put;
+    await expect(page.getByRole('button', { name: '保存 Beats' })).toBeEnabled({ timeout: 10_000 });
+    await expect(page.getByLabel('动作 1', { exact: true })).toHaveValue(action);
+    await expect(page.getByLabel('意图 1', { exact: true })).toHaveValue(intent);
+    await expect(page.getByLabel('结果 1', { exact: true })).toHaveValue(outcome);
+
+    await page.reload();
+    await expect(page.getByLabel('动作 1', { exact: true })).toHaveValue(action, { timeout: 15_000 });
+    await expect(page.getByLabel('意图 1', { exact: true })).toHaveValue(intent);
+    await expect(page.getByLabel('结果 1', { exact: true })).toHaveValue(outcome);
+
+    // Navigate away and back — still persisted.
+    await page.getByRole('link', { name: '剧本' }).click();
+    await expect(page).toHaveURL(/\/screenplay/);
+    await page.getByRole('link', { name: 'Beats' }).click();
+    await expect(page.getByLabel('动作 1', { exact: true })).toHaveValue(action, { timeout: 15_000 });
+    await expect(page.getByLabel('意图 1', { exact: true })).toHaveValue(intent);
+    await expect(page.getByLabel('结果 1', { exact: true })).toHaveValue(outcome);
+  });
+
   test('编辑后刷新剧本仍在', async ({ page }) => {
     await signUp(page);
     await createScriptProject(page, `E2E 编辑 ${Date.now()}`);
