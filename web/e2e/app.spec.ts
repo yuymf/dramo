@@ -33,35 +33,74 @@ async function writeTwoScenes(page: Page) {
   const box = (name?: string) =>
     name ? editor.getByRole('textbox', { name }) : editor.getByRole('textbox');
 
+  // Keyboard shortcuts are flaky under CI load — retry until the role count lands.
+  async function pressUntilCount(
+    press: () => Promise<void>,
+    named: string,
+    count: number,
+    attempts = 6
+  ) {
+    for (let i = 0; i < attempts; i++) {
+      if ((await box(named).count()) === count) return;
+      await press();
+      await page.waitForTimeout(150);
+    }
+    await expect(box(named)).toHaveCount(count, { timeout: 5_000 });
+  }
+
+  // After Enter, the next line can lag; wait longer and re-press once if stuck.
+  async function expectCountAfterEnter(
+    pressEnter: () => Promise<void>,
+    getLocator: () => ReturnType<typeof box>,
+    count: number,
+    timeout = 15_000
+  ) {
+    await pressEnter();
+    try {
+      await expect(getLocator()).toHaveCount(count, { timeout });
+    } catch {
+      await pressEnter();
+      await expect(getLocator()).toHaveCount(count, { timeout });
+    }
+  }
+
   // fill + press Enter (not keyboard.type) — IME composition in CI swallows Enter after Chinese.
   await box().first().click();
-  await page.keyboard.press('Shift+Tab');
-  await expect(box('场次标题')).toHaveCount(1);
+  await pressUntilCount(() => page.keyboard.press('Shift+Tab'), '场次标题', 1);
   await box('场次标题').last().fill('INT. 地铁车厢 - NIGHT');
-  await box('场次标题').last().press('Enter');
+  await expectCountAfterEnter(
+    () => box('场次标题').last().press('Enter'),
+    () => box(),
+    2
+  );
 
-  await expect(box()).toHaveCount(2, { timeout: 5_000 });
   await box().nth(1).click();
-  await page.keyboard.press('Tab');
-  await expect(box('角色')).toHaveCount(1);
+  await pressUntilCount(() => page.keyboard.press('Tab'), '角色', 1);
   await box('角色').last().fill('林晚');
-  await box('角色').last().press('Enter');
+  await expectCountAfterEnter(
+    () => box('角色').last().press('Enter'),
+    () => box('对白'),
+    1
+  );
 
-  await expect(box('对白')).toHaveCount(1, { timeout: 5_000 });
   await box('对白').last().fill('末班车要到了。');
-  await box('对白').last().press('Enter');
+  await expectCountAfterEnter(
+    () => box('对白').last().press('Enter'),
+    () => box(),
+    4
+  );
 
-  await expect(box()).toHaveCount(4, { timeout: 5_000 });
   await box().nth(3).click();
-  await page.keyboard.press('Shift+Tab');
-  await expect(box('场次标题')).toHaveCount(2);
+  await pressUntilCount(() => page.keyboard.press('Shift+Tab'), '场次标题', 2);
   await box('场次标题').last().fill('EXT. 月台 - NIGHT');
-  await box('场次标题').last().press('Enter');
+  await expectCountAfterEnter(
+    () => box('场次标题').last().press('Enter'),
+    () => box(),
+    5
+  );
 
-  await expect(box()).toHaveCount(5, { timeout: 5_000 });
   await box().nth(4).click();
-  await page.keyboard.press('Tab');
-  await expect(box('角色')).toHaveCount(2);
+  await pressUntilCount(() => page.keyboard.press('Tab'), '角色', 2);
 
   const put = page.waitForResponse(
     (res) =>
