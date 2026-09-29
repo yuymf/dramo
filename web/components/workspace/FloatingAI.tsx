@@ -157,6 +157,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   }, [pos, size.h, size.w]);
 
   const onDragStart = (e: ReactPointerEvent) => {
+    if (mode !== "cinema") return;
     if ((e.target as HTMLElement).closest("button")) return;
     const origin = resolveOrigin();
     dragRef.current = {
@@ -191,6 +192,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
   };
 
   const onResizeStart = (e: ReactPointerEvent) => {
+    if (mode !== "cinema") return;
     setPos(resolveOrigin());
     resizeRef.current = {
       pointerId: e.pointerId,
@@ -300,9 +302,9 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
     }
   };
 
-  const positionStyle: CSSProperties = pos
+  const positionStyle: CSSProperties = mode === "cinema" && pos
     ? { left: pos.x, top: pos.y, right: "auto", bottom: "auto" }
-    : { right: 16, bottom: 16 };
+    : { right: mode === "cinema" ? 16 : 12, bottom: mode === "cinema" ? 16 : 12 };
 
   const scopeLabel =
     mode === "cinema"
@@ -311,8 +313,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         ? `${scope.type === "scene" ? "本场" : "选区"} ${scope.nodeIds.length} 个节点`
         : "未选中节点";
 
-  if (collapsed) {
-    return (
+  return (
+    <>
       <button
         type="button"
         aria-label="展开 AI 浮层"
@@ -320,6 +322,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         className="absolute z-20 h-10 px-3.5 rounded-lg text-sm font-medium"
         style={{
           ...positionStyle,
+          display: collapsed ? "block" : "none",
           background: "#ffffff",
           color: "#c2410c",
           border: "1px solid #e7e5e4",
@@ -328,17 +331,14 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       >
         AI
       </button>
-    );
-  }
-
-  return (
     <div
       ref={panelRef}
       className="absolute z-20 flex flex-col overflow-hidden rounded-xl"
       style={{
         ...positionStyle,
-        width: size.w,
-        height: size.h,
+        display: collapsed ? "none" : "flex",
+        width: mode === "cinema" ? size.w : "min(360px, calc(100% - 24px))",
+        height: mode === "cinema" ? size.h : "min(400px, calc(100% - 24px))",
         background: "#ffffff",
         border: "1px solid #e7e5e4",
         boxShadow: "0 12px 40px rgba(28, 25, 23, 0.10)",
@@ -349,7 +349,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         onPointerMove={onDragMove}
         onPointerUp={onDragEnd}
         onPointerCancel={onDragEnd}
-        className="flex items-center justify-between px-3 h-10 shrink-0 cursor-grab active:cursor-grabbing border-b select-none"
+        className={`flex items-center justify-between px-3 h-10 shrink-0 border-b select-none ${mode === "cinema" ? "cursor-grab active:cursor-grabbing" : ""}`}
         style={{ borderColor: "#e7e5e4", background: "#fafaf9" }}
       >
         <span className="text-xs font-semibold" style={{ color: "#1c1917" }}>
@@ -456,7 +456,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
         </div>
       </div>
 
-      <div
+      {mode === "cinema" && <div
         onPointerDown={onResizeStart}
         onPointerMove={onResizeMove}
         onPointerUp={onResizeEnd}
@@ -471,7 +471,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
             borderBottom: "1.5px solid #a8a29e",
           }}
         />
-      </div>
+      </div>}
     </div>
+    </>
   );
 }

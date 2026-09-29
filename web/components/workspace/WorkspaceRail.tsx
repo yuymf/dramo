@@ -17,6 +17,8 @@ import {
   Mic2,
   MoreHorizontal,
   Package,
+  PanelLeftClose,
+  PanelLeftOpen,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -93,9 +95,11 @@ function activeDim(pathname: string | null): DimId | null {
 interface WorkspaceRailProps {
   projectId: string;
   projectType?: ProjectType;
+  panelOpen: boolean;
+  onTogglePanel: () => void;
 }
 
-export function WorkspaceRail({ projectId, projectType = "script" }: WorkspaceRailProps) {
+export function WorkspaceRail({ projectId, projectType = "script", panelOpen, onTogglePanel }: WorkspaceRailProps) {
   const pathname = usePathname();
   const current = activeDim(pathname);
   const cinema = projectType === "cinema";
@@ -162,8 +166,9 @@ export function WorkspaceRail({ projectId, projectType = "script" }: WorkspaceRa
         })}
       </div>
 
-      {!cinema && (
-        <div ref={moreRef} className="relative flex flex-col items-center pb-3">
+      <div className="flex flex-col items-center pb-3">
+        {!cinema && (
+          <div ref={moreRef} className="relative flex flex-col items-center">
           {moreOpen && (
             <div
               role="menu"
@@ -238,8 +243,19 @@ export function WorkspaceRail({ projectId, projectType = "script" }: WorkspaceRa
             <MoreHorizontal size={16} strokeWidth={1.5} />
             <span>更多</span>
           </button>
-        </div>
-      )}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onTogglePanel}
+          aria-label={panelOpen ? "收起项目面板" : "展开项目面板"}
+          aria-expanded={panelOpen}
+          title={panelOpen ? "收起项目面板" : "展开项目面板"}
+          className="w-12 h-10 flex items-center justify-center rounded-lg text-stone-500 focus-visible:outline-2 focus-visible:outline-orange-700"
+        >
+          {panelOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+        </button>
+      </div>
     </nav>
   );
 }
