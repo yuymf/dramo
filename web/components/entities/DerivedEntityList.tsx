@@ -123,33 +123,33 @@ export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
 
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
-      <header className="flex items-center justify-between gap-3 shrink-0 px-5 py-3 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
+      <header className="flex flex-wrap items-center justify-between gap-3 shrink-0 px-4 py-2 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
         <div className="flex items-baseline gap-2.5 min-w-0">
-          <h1 className="m-0 text-base font-semibold tracking-wide">{copy.title}</h1>
-          <span className="text-xs text-[var(--at-text-tertiary)]">{copy.hint}</span>
+          <h1 className="m-0 text-[length:var(--ws-title)] font-semibold tracking-wide">{copy.title}</h1>
+          <span className="text-[length:var(--ws-caption)] text-[var(--at-text-tertiary)]">{copy.hint}</span>
         </div>
-        <span className="text-xs font-medium text-[var(--at-accent)] bg-[var(--at-accent-light)] px-2 py-0.5 rounded-full shrink-0">
+        <span className="text-[length:var(--ws-caption)] font-medium text-[var(--at-accent)] bg-[var(--at-accent-light)] px-2 py-0.5 rounded-sm shrink-0">
           {entities.length}
         </span>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-auto px-5 py-6">
+      <div className="flex-1 min-h-0 overflow-auto px-4 py-3">
         {loading ? (
-          <div className="flex items-center justify-center h-48 gap-2 text-sm text-[var(--at-text-secondary)]">
+          <div className="flex items-center justify-center h-32 gap-2 text-[length:var(--ws-body)] text-[var(--at-text-secondary)]">
             <Loader2 className="w-4 h-4 animate-spin" />
             加载中…
           </div>
         ) : error ? (
-          <div className="max-w-xl mx-auto text-center py-16">
-            <p className="text-sm text-[var(--at-error)]">{error}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => void load()}>
+          <div className="max-w-xl mx-auto text-center py-10">
+            <p className="text-[length:var(--ws-body)] text-[var(--at-error)]">{error}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => void load()}>
               重试
             </Button>
           </div>
         ) : entities.length === 0 ? (
           <EmptyState projectId={projectId} />
         ) : (
-          <ul className="max-w-3xl mx-auto space-y-4">
+          <ul className="max-w-3xl mx-auto space-y-2">
             {entities.map((entity) => (
               <li key={entity.id}>
                 <EntityCard
@@ -178,8 +178,8 @@ export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
 
 function EmptyState({ projectId }: { projectId: string }) {
   return (
-    <div className="max-w-md mx-auto text-center py-20">
-      <p className="text-sm text-[var(--at-text-secondary)] leading-relaxed">
+    <div className="max-w-md mx-auto text-center py-10">
+      <p className="text-[length:var(--ws-body)] text-[var(--at-text-secondary)] leading-relaxed">
         去
         <Link
           href={`/projects/${projectId}/screenplay`}
@@ -311,12 +311,12 @@ function EntityCard({
   return (
     <article
       data-testid={`entity-${entity.id}`}
-      className={`rounded-xl border bg-[var(--at-surface)] p-5 ${selected ? "border-[var(--at-accent)]" : "border-[var(--at-border)]"}`}
+      className={`rounded-md border bg-[var(--at-surface)] px-3 py-2.5 ${selected ? "border-[var(--at-accent)]" : "border-[var(--at-border)]"}`}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold truncate">{entity.name}</h2>
-          <p className="mt-1 text-[11px] text-[var(--at-text-tertiary)] font-mono truncate" title={entity.id}>
+          <h2 className="text-[length:var(--ws-title)] font-semibold truncate">{entity.name}</h2>
+          <p className="mt-0.5 text-[length:var(--ws-caption)] text-[var(--at-text-tertiary)] font-mono truncate" title={entity.id}>
             {entity.id}
           </p>
         </div>
@@ -345,8 +345,8 @@ function EntityCard({
         </div>
       </div>
 
-      <label className="block mt-4">
-        <span className="text-xs text-[var(--at-text-secondary)]">描述</span>
+      <label className="block mt-3">
+        <span className="text-[length:var(--ws-caption)] text-[var(--at-text-secondary)]">描述</span>
         <textarea
           value={draft}
           rows={3}
@@ -356,9 +356,9 @@ function EntityCard({
           }}
           onBlur={() => void persist()}
           placeholder="补充外貌、气质或场景细节，会写入出图提示"
-          className="mt-1.5 w-full resize-y rounded-lg border border-[var(--at-border)] bg-transparent px-3 py-2 text-sm text-[var(--at-text)] placeholder:text-[var(--at-text-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
+          className="mt-1 block w-full resize-y rounded-md border border-[var(--at-border)] bg-transparent px-3 py-1.5 text-[length:var(--ws-body)] text-[var(--at-text)] placeholder:text-[var(--at-text-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
         />
-        <span className="mt-1 block text-[11px] text-[var(--at-text-tertiary)]">
+        <span className="mt-1 block text-[length:var(--ws-caption)] text-[var(--at-text-tertiary)]">
           {saving ? "保存中…" : dirty ? "离开输入框后保存" : "失焦自动保存"}
         </span>
       </label>
@@ -396,10 +396,10 @@ function EntityCard({
         </>
       )}
 
-      <div className="mt-4">
-        <p className="text-xs text-[var(--at-text-secondary)] mb-2">图片</p>
+      <div className="mt-3">
+        <p className="text-[length:var(--ws-caption)] text-[var(--at-text-secondary)] mb-1.5">图片</p>
         {urls.length === 0 ? (
-          <div className="flex items-center gap-2 h-24 rounded-lg border border-dashed border-[var(--at-border)] px-3 text-xs text-[var(--at-text-tertiary)]">
+          <div className="flex items-center gap-2 h-20 rounded-md border border-dashed border-[var(--at-border)] px-3 text-[length:var(--ws-caption)] text-[var(--at-text-tertiary)]">
             <ImageIcon className="w-4 h-4 shrink-0" />
             还没有图
           </div>
@@ -411,7 +411,7 @@ function EntityCard({
                 <img
                   src={url}
                   alt={entity.name}
-                  className="h-24 w-24 object-cover rounded-lg border border-[var(--at-border)] bg-[var(--at-surface-sunken)]"
+                  className="h-20 w-20 object-cover rounded-md border border-[var(--at-border)] bg-[var(--at-surface-sunken)]"
                 />
               </li>
             ))}
@@ -441,8 +441,8 @@ function NoteField({
   }, [value, dirty]);
 
   return (
-    <label className="block mt-3">
-      <span className="text-xs text-[var(--at-text-secondary)]">{label}</span>
+    <label className="block mt-2.5">
+      <span className="text-[length:var(--ws-caption)] text-[var(--at-text-secondary)]">{label}</span>
       <input
         aria-label={label}
         value={draft}
@@ -462,7 +462,7 @@ function NoteField({
             showToast(err instanceof Error ? err.message : `保存${label}失败`, "error");
           }
         }}
-        className="mt-1.5 w-full rounded-lg border border-[var(--at-border)] bg-transparent px-3 py-2 text-sm text-[var(--at-text)] placeholder:text-[var(--at-text-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
+        className="mt-1 block w-full min-h-9 rounded-md border border-[var(--at-border)] bg-transparent px-3 py-1.5 text-[length:var(--ws-body)] text-[var(--at-text)] placeholder:text-[var(--at-text-tertiary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
       />
     </label>
   );

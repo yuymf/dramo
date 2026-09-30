@@ -34,34 +34,34 @@ export default function PropsPage() {
 
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
-      <header className="flex items-center justify-between gap-3 shrink-0 px-5 py-3 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
+      <header className="flex flex-wrap items-center justify-between gap-3 shrink-0 px-4 py-2 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
         <div className="flex items-baseline gap-2.5 min-w-0">
-          <h1 className="m-0 text-base font-semibold tracking-wide">道具</h1>
-          <span className="text-xs text-[var(--at-text-tertiary)]">正文里的 #道具名 会推导到这里</span>
+          <h1 className="m-0 text-[length:var(--ws-title)] font-semibold tracking-wide">道具</h1>
+          <span className="text-[length:var(--ws-caption)] text-[var(--at-text-tertiary)]">正文里的 #道具名 会推导到这里</span>
         </div>
-        <span className="text-xs font-medium text-[var(--at-accent)] bg-[var(--at-accent-light)] px-2 py-0.5 rounded-full">
+        <span className="text-[length:var(--ws-caption)] font-medium text-[var(--at-accent)] bg-[var(--at-accent-light)] px-2 py-0.5 rounded-sm">
           {props.length}
         </span>
       </header>
-      <div className="flex-1 min-h-0 overflow-auto px-5 py-6">
+      <div className="flex-1 min-h-0 overflow-auto px-4 py-3">
         {loading ? (
-          <div className="flex items-center justify-center h-48 gap-2 text-sm text-[var(--at-text-secondary)]">
+          <div className="flex items-center justify-center h-32 gap-2 text-[length:var(--ws-body)] text-[var(--at-text-secondary)]">
             <Loader2 className="w-4 h-4 animate-spin" />
             加载中…
           </div>
         ) : error ? (
-          <div className="max-w-xl mx-auto text-center py-16">
-            <p className="text-sm text-[var(--at-error)]">{error}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => void load()}>
+          <div className="max-w-xl mx-auto text-center py-10">
+            <p className="text-[length:var(--ws-body)] text-[var(--at-error)]">{error}</p>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => void load()}>
               重试
             </Button>
           </div>
         ) : props.length === 0 ? (
-          <p className="max-w-md mx-auto text-center text-sm text-[var(--at-text-secondary)] py-20">
+          <p className="max-w-md mx-auto text-center text-[length:var(--ws-body)] text-[var(--at-text-secondary)] py-10">
             去剧本页或 Reel 表演写下 #道具名 后回到这里
           </p>
         ) : (
-          <ul className="max-w-3xl mx-auto space-y-4">
+          <ul className="max-w-3xl mx-auto space-y-2">
             {props.map((item) => (
               <li key={item.id}>
                 <PropCard
@@ -108,8 +108,8 @@ function PropCard({
   };
 
   return (
-    <article className="rounded-xl border border-[var(--at-border)] bg-[var(--at-surface)] p-5">
-      <h2 className="text-base font-semibold truncate">{item.name}</h2>
+    <article className="rounded-md border border-[var(--at-border)] bg-[var(--at-surface)] px-3 py-2.5">
+      <h2 className="text-[length:var(--ws-title)] font-semibold truncate">{item.name}</h2>
       {(
         [
           ["description", "描述", description, setDescription],
@@ -117,14 +117,14 @@ function PropCard({
           ["continuity", "连贯要求", continuity, setContinuity],
         ] as const
       ).map(([field, label, value, setter]) => (
-        <label key={field} className="block mt-3">
-          <span className="text-xs text-[var(--at-text-secondary)]">{label}</span>
+        <label key={field} className="block mt-2.5">
+          <span className="text-[length:var(--ws-caption)] text-[var(--at-text-secondary)]">{label}</span>
           <input
             aria-label={`${item.name}${label}`}
             value={value}
             onChange={(e) => setter(e.target.value)}
             onBlur={() => void persist(field, value)}
-            className="mt-1 w-full rounded-lg border border-[var(--at-border)] bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
+            className="mt-1 block w-full min-h-9 rounded-md border border-[var(--at-border)] bg-transparent px-3 py-1.5 text-[length:var(--ws-body)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
           />
         </label>
       ))}
