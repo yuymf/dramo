@@ -393,7 +393,7 @@ test.describe('剧本工作区', () => {
 
     await page.getByRole('link', { name: '角色' }).click();
     await expect(page).toHaveURL(/\/characters/);
-    await expect(page.getByRole('heading', { name: '角色', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '角色', exact: true, level: 1 })).toBeVisible();
     // Derive runs in the PUT handler; list fetch can race — retry once via reload.
     await expect(async () => {
       if (!(await page.getByRole('heading', { name: '林晚' }).isVisible().catch(() => false))) {
@@ -405,7 +405,7 @@ test.describe('剧本工作区', () => {
 
     await page.getByRole('link', { name: '地点' }).click();
     await expect(page).toHaveURL(/\/locations/);
-    await expect(page.getByRole('heading', { name: '地点', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '地点', exact: true, level: 1 })).toBeVisible();
     await expect(async () => {
       if (!(await page.getByRole('heading', { name: '地铁车厢' }).isVisible().catch(() => false))) {
         await page.reload();
