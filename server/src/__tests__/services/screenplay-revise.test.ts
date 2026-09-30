@@ -24,6 +24,7 @@ import { startWorkflowRun } from '../../lib/agentos-client.js';
 import { AppException, ErrorCode } from '../../lib/errors.js';
 import {
   applyNodePatch,
+  assertExactContiguousSelection,
   expandSceneNodeIds,
   parseRevisePayload,
   placeholderRevise,
@@ -400,5 +401,95 @@ describe('reviseWithLlm scene scope', () => {
       expect.any(Object)
     );
     expect(result.find((n) => n.id === 'd1')?.text).toBe('改急');
+  });
+});
+
+describe('assertExactContiguousSelection', () => {
+  it('accepts a single node', () => {
+    expect(() => assertExactContiguousSelection(sampleNodes, ['b'])).not.toThrow();
+  });
+
+  it('accepts contiguous multi-node selection', () => {
+    expect(() => assertExactContiguousSelection(sampleNodes, ['b', 'c'])).not.toThrow();
+  });
+
+  it('rejects holey selection — no silent fill', () => {
+    expect(() => assertExactContiguousSelection(sampleNodes, ['a', 'c'])).toThrow(AppException);
+    try {
+      assertExactContiguousSelection(sampleNodes, ['a', 'c']);
+    } catch (err) {
+      expect(err).toMatchObject({
+        code: ErrorCode.INVALID_INPUT,
+        message: expect.stringMatching(/连续|隔空/),
+      });
+    }
+  });
+
+  it('rejects missing node ids', () => {
+    expect(() => assertExactContiguousSelection(sampleNodes, ['b', 'missing'])).toThrow(AppException);
+    try {
+      assertExactContiguousSelection(sampleNodes, ['b', 'missing']);
+    } catch (err) {
+      expect(err).toMatchObject({
+        code: ErrorCode.INVALID_INPUT,
+        message: expect.stringMatching(/不存在/),
+      });
+    }
+  });
+
+  it('rejects empty selection', () => {
+    expect(() => assertExactContiguousSelection(sampleNodes, [])).toThrow(AppException);
+  });
+});
+
+describe('selection scope — no silent expand', () => {
+  it('slice via placeholderRevise only returns exact contiguous selection', () => {
+    const result = placeholderRevise(sampleNodes, ['b', 'c'], '');
+    expect(result.map((n) => n.id)).toEqual(['b', 'c']);
+    expect(result.map((n) => n.id)).not.toContain('a');
+    expect(result.map((n) => n.id)).not.toContain('d');
+  });
+
+  it('holey selection rejected by applyNodePatch — no silent expand to fill hole', () => {
+    expect(() =>
+      applyNodePatch(
+        sampleNodes,
+        [
+          { id: 'a', type: 'action', text: '改a' },
+          { id: 'b', type: 'dialogue', text: '填洞' },
+          { id: 'c', type: 'action', text: '改c' },
+        ],
+        ['a', 'c']
+      )
+    ).toThrow(AppException);
+  });
+
+  it('selection accept only patches selection — does not touch scene B / out-of-span', () => {
+    const next = applyNodePatch(
+      twoSceneNodes,
+      [{ id: 'd1', type: 'dialogue', text: '改短' }],
+      ['d1']
+    );
+    expect(next.find((n) => n.id === 'd1')?.text).toBe('改短');
+    // Scene A other nodes unchanged
+    expect(next.find((n) => n.id === 'a1')).toEqual(twoSceneNodes.find((n) => n.id === 'a1'));
+    expect(next.find((n) => n.id === 'c1')).toEqual(twoSceneNodes.find((n) => n.id === 'c1'));
+    // Scene B identical
+    expect(next.find((n) => n.id === 's2')).toEqual(twoSceneNodes.find((n) => n.id === 's2'));
+    expect(next.find((n) => n.id === 'a2')).toEqual(twoSceneNodes.find((n) => n.id === 'a2'));
+    expect(next.find((n) => n.id === 'd2')).toEqual(twoSceneNodes.find((n) => n.id === 'd2'));
+  });
+
+  it('out-of-range replacements still rejected on selection path', () => {
+    expect(() =>
+      applyNodePatch(
+        twoSceneNodes,
+        [
+          { id: 'd1', type: 'dialogue', text: '改' },
+          { id: 'd2', type: 'dialogue', text: '越界到 B' },
+        ],
+        ['d1']
+      )
+    ).toThrow(AppException);
   });
 });

@@ -71,6 +71,45 @@ interface LoadedEpisode {
   } | null;
 }
 
+/**
+ * Selection scope must be an exact contiguous span: every requested id exists,
+ * and every node between min..max index is included (no silent hole-fill expand).
+ */
+export function assertExactContiguousSelection(
+  nodes: ScreenplayNode[],
+  nodeIds: string[]
+): void {
+  if (nodeIds.length === 0) {
+    throw new AppException(ErrorCode.INVALID_INPUT, '请先在剧本里选中要改的句子');
+  }
+  const idToIndex = new Map<string, number>();
+  for (let i = 0; i < nodes.length; i += 1) {
+    idToIndex.set(nodes[i].id, i);
+  }
+  const indices: number[] = [];
+  const seen = new Set<string>();
+  for (const id of nodeIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const idx = idToIndex.get(id);
+    if (idx === undefined) {
+      throw new AppException(ErrorCode.INVALID_INPUT, '选区包含不存在的节点，请重新选择');
+    }
+    indices.push(idx);
+  }
+  indices.sort((a, b) => a - b);
+  const min = indices[0];
+  const max = indices[indices.length - 1];
+  if (indices.length !== max - min + 1) {
+    throw new AppException(ErrorCode.INVALID_INPUT, '选区必须是连续节点，不能隔空选择');
+  }
+  for (let i = min; i <= max; i += 1) {
+    if (!indices.includes(i)) {
+      throw new AppException(ErrorCode.INVALID_INPUT, '选区必须是连续节点，不能隔空选择');
+    }
+  }
+}
+
 export function applyNodePatch(
   nodes: ScreenplayNode[],
   replacements: ScreenplayNode[],
@@ -84,6 +123,9 @@ export function applyNodePatch(
   if (scopeIds.length === 0) {
     throw new AppException(ErrorCode.INVALID_INPUT, '无法确定修订范围');
   }
+
+  // Exact contiguous scope — never silent hole-fill expand.
+  assertExactContiguousSelection(nodes, scopeIds);
 
   const scopeSet = new Set(scopeIds);
   let rangeStart = -1;
@@ -257,6 +299,7 @@ export function expandSceneNodeIds(nodes: ScreenplayNode[], seedIds: string[]): 
 }
 
 function sliceScope(nodes: ScreenplayNode[], nodeIds: string[]): ScreenplayNode[] {
+  assertExactContiguousSelection(nodes, nodeIds);
   const scopeSet = new Set(nodeIds);
   let rangeStart = -1;
   let rangeEnd = -1;
@@ -836,12 +879,19 @@ export class ScreenplayService {
     return { type: raw.type, nodeIds };
   }
 
-  /** When scope.type is scene, expand seed ids to the full scene span. */
+  /**
+   * selection: exact contiguous nodeIds only — never expandSceneNodeIds / never fill holes.
+   * scene: expand seed ids to the full scene span.
+   */
   private resolveScopeNodeIds(
     nodes: ScreenplayNode[],
     scope: { type: 'selection' | 'scene'; nodeIds: string[] }
   ): { type: 'selection' | 'scene'; nodeIds: string[] } {
-    if (scope.type !== 'scene') return scope;
+    if (scope.type === 'selection') {
+      assertExactContiguousSelection(nodes, scope.nodeIds);
+      // Echo request ids unchanged — proves no silent expand.
+      return { type: 'selection', nodeIds: [...scope.nodeIds] };
+    }
     return { type: 'scene', nodeIds: expandSceneNodeIds(nodes, scope.nodeIds) };
   }
 
