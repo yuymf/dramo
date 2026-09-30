@@ -60,6 +60,10 @@
 /* UI type roles; manuscript font, indentation and cover typography stay intact. */
 .workspace-theme :is(.text-\[10px\], .text-\[11px\], .sp-save-status, .sp-hint,
   .sp-timeline-summary, .sp-timeline-item, .sp-gutter) { font-size: var(--ws-caption); }
+.workspace-theme :is(.sp-toolbar-meta, .sp-hint, .sp-save-status,
+  aside[aria-label="项目面板"] p, aside[aria-label="项目面板"] li) {
+  font-size: var(--ws-caption);
+}
 .workspace-theme :is(button, select, [role="menuitem"], nav a, aside[aria-label="项目面板"] a) {
   font-size: var(--ws-body);
 }

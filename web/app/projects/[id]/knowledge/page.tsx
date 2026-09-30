@@ -68,7 +68,7 @@ export default function KnowledgePage() {
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
       <header className="flex items-center justify-between gap-3 shrink-0 px-5 py-3 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
         <div className="flex items-baseline gap-2.5 min-w-0">
-          <h1 className="m-0 text-[15px] font-semibold tracking-wide">知识库</h1>
+          <h1 className="m-0 text-base font-semibold tracking-wide">知识库</h1>
           <span className="text-xs text-[var(--at-text-tertiary)]">AI 先看目录再按需读，不整库注入</span>
         </div>
       </header>

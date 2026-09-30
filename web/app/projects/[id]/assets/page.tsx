@@ -36,7 +36,7 @@ export default function AssetsPage() {
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
       <header className="px-5 py-3 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
-        <h1 className="m-0 text-[15px] font-semibold tracking-wide">资产</h1>
+        <h1 className="m-0 text-base font-semibold tracking-wide">资产</h1>
         <p className="text-xs text-[var(--at-text-tertiary)]">任务和可回写的输出分开，刷新不会自动再派单</p>
       </header>
       <div className="flex-1 min-h-0 overflow-auto px-5 py-6">

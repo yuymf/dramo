@@ -72,7 +72,7 @@ export default function ColdStartPage() {
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
       <header className="shrink-0 px-5 py-3 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
-        <h1 className="m-0 text-[15px] font-semibold tracking-wide">冷启动</h1>
+        <h1 className="m-0 text-base font-semibold tracking-wide">冷启动</h1>
         <p className="mt-1 text-xs text-[var(--at-text-tertiary)]">五关可停可回退，不跳进生成完整台本</p>
       </header>
       <div className="flex-1 min-h-0 overflow-auto px-5 py-6">
