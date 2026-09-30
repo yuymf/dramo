@@ -71,7 +71,9 @@
   font-size: var(--ws-title);
 }
 .workspace-theme :is(.sp-empty, .sp-error, .sp-loading) { font-size: var(--ws-body); }
-.workspace-theme [aria-label="拖动 AI 浮层"] span { font-size: var(--ws-title); }
+.workspace-theme .sp-timeline h2 { font-size: var(--ws-title); }
+.workspace-theme [aria-label="拖动 AI 浮层"] span:first-of-type { font-size: var(--ws-title); }
+.workspace-theme [aria-label="拖动 AI 浮层"] span:last-of-type { font-size: var(--ws-caption); }
 .workspace-theme [aria-label="AI 指令"] { font-size: var(--ws-body); }
 .workspace-theme :is(button, select, [role="menuitem"], nav a, aside[aria-label="项目面板"] a) {
   min-height: 36px;
@@ -91,16 +93,18 @@
 .workspace-theme :is(input, textarea)::placeholder { color: var(--ws-muted); opacity: 1; }
 .workspace-theme .sp-paper { background: var(--ws-surface); box-shadow: none; }
 .workspace-theme .sp-error { color: var(--ws-error); }
-.workspace-theme .sp-toolbar { flex-wrap: wrap; }
+.workspace-theme .sp-toolbar { flex-wrap: wrap; padding: 8px 16px; }
 .workspace-theme .sp-toolbar-title { flex-wrap: wrap; }
-.workspace-theme .sp-toolbar-actions { margin-left: auto; }
+.workspace-theme .sp-toolbar-actions { margin-left: auto; gap: 8px; }
 .workspace-theme header { flex-wrap: wrap; }
 .workspace-theme .sp-gutter:focus-visible { opacity: 1; }
 .workspace-theme .sp-gutter { min-height: 24px; }
 .workspace-theme .sp-node-input:focus-visible { outline-offset: 0; }
 .workspace-theme .sp-export-slot > button { width: 100%; }
 /* Selected navigation uses weight and a marker in addition to accent color. */
-.workspace-theme nav [aria-current="page"] { box-shadow: inset 3px 0 var(--ws-accent); }
+.workspace-theme nav :is([aria-current="page"], [data-active="true"]) { box-shadow: inset 3px 0 var(--ws-accent); }
+.workspace-theme aside[aria-label="项目面板"] [aria-current="true"] { box-shadow: inset 3px 0 var(--ws-accent); font-weight: 600; }
+.workspace-theme aside[aria-label="项目面板"] h2 { font-size: var(--ws-title); }
 /* Strip decorative legacy treatments only if mounted inside this shell. */
 .workspace-theme :is(.rice-paper-bg, .ink-textarea-wrap) { background: var(--ws-surface); }
 .workspace-theme .rice-paper-bg::before { content: none; }

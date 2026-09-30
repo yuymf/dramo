@@ -203,18 +203,18 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
         borderColor: "var(--ws-border, #e7e5e4)",
       }}
     >
-      <div className="px-3 py-3 border-b" style={{ borderColor: "var(--ws-border, #e7e5e4)" }}>
+      <div className="px-3 py-2 border-b" style={{ borderColor: "var(--ws-border, #e7e5e4)" }}>
         <Link
           href="/projects"
           className="flex items-center gap-2 px-2 py-1.5 text-xs rounded-lg"
           style={{ color: "var(--ws-secondary, #78716c)" }}
         >
-          <FolderOpen size={14} strokeWidth={1.5} />
+          <FolderOpen size={16} strokeWidth={1.5} />
           全部项目
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div className="flex-1 overflow-y-auto px-3 py-3">
         <p className="px-2 mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
           {loading ? "项目" : TYPE_LABEL[type]}
         </p>
@@ -287,7 +287,7 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
           </p>
         </div>
         ) : (
-        <div className="mt-5 px-2">
+        <div className="mt-4 px-2">
           <p className="mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
             格式
           </p>
@@ -327,7 +327,7 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
         </div>
         )}
 
-        {episodeName && <div className="mt-5 px-2">
+        {episodeName && <div className="mt-4 px-2">
           <p className="mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
             {currentDocument ?? "当前集"}
           </p>
@@ -343,7 +343,7 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
         </div>}
 
         <section
-          className={cn("mt-6 px-2", !entitiesLoading && !entitiesError &&
+          className={cn("mt-4 px-2", !entitiesLoading && !entitiesError &&
             entities.character.length === 0 && entities.location.length === 0 && "hidden")}
           aria-label="项目实体"
         >
@@ -351,7 +351,7 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
             entitiesLoading || entitiesError || entities[kind].length > 0
           ).map((kind) => (
             <div key={kind} className="mb-4">
-              <h2 className="mb-2 text-[11px] font-semibold" style={{ color: "var(--ws-secondary, #78716c)" }}>
+              <h2 className="mb-2 text-base font-semibold" style={{ color: "var(--ws-secondary, #78716c)" }}>
                 {kind === "character" ? "角色" : "地点"}
               </h2>
               {entitiesLoading ? (
@@ -369,7 +369,7 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
                           aria-label={`浏览${kind === "character" ? "角色" : "地点"} ${entity.name}`}
                           aria-current={selected ? "true" : undefined}
                           onClick={() => router.push(`/projects/${projectId}/${kind === "character" ? "characters" : "locations"}?entity=${encodeURIComponent(entity.id)}`)}
-                          className="w-full truncate rounded-lg px-2 py-1.5 text-left text-xs"
+                          className="w-full truncate rounded-md px-2 py-1.5 text-left text-sm"
                           style={{
                             color: selected ? "var(--ws-action-text, #c2410c)" : "var(--ws-text, #1c1917)",
                             background: selected ? "var(--ws-selected, rgba(194, 65, 12, 0.06))" : "transparent",
@@ -387,7 +387,7 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
         </section>
 
         {onScreenplay && (
-          <div className="mt-5 px-2">
+          <div className="mt-4 px-2">
             <p className="mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
               视图
             </p>
@@ -426,7 +426,7 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
         )}
 
         {type === "script" && onScreenplay && (
-        <section className="mt-6 px-2" aria-label="项目操作">
+        <section className="mt-4 px-2 border-t pt-4" style={{ borderColor: "var(--ws-border)" }} aria-label="项目操作">
           <h2 className="text-base font-semibold mb-2">项目操作</h2>
           <div ref={exportTargetRef} />
         </section>
@@ -457,7 +457,7 @@ function ShareAndVersions({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   return (
-    <div className="mt-6 px-2 space-y-4">
+    <div className="mt-4 px-2 pt-4 space-y-4 border-t" style={{ borderColor: "var(--ws-border)" }}>
       <div>
         <p className="mb-2 text-[10px]" style={{ color: "var(--ws-muted, #a8a29e)" }}>
           分享

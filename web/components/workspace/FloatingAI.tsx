@@ -10,7 +10,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { usePathname } from "next/navigation";
-import { Loader2, Minus, Send } from "lucide-react";
+import { Grip, Loader2, Minus, Send } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { assistReel } from "@/lib/api/cinema";
 import { firstEpisodeId } from "@/lib/api/planning";
@@ -929,7 +929,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           background: "var(--ws-surface, #ffffff)",
           color: "var(--ws-action-text, #c2410c)",
           border: "1px solid var(--ws-border, #e7e5e4)",
-          boxShadow: "0 4px 16px rgba(28, 25, 23, 0.08)",
+          boxShadow: "var(--ws-shadow)",
         }}
       >
         AI
@@ -955,8 +955,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       }}
     >
       <div
-        className="flex items-center justify-between h-10 shrink-0 border-b select-none"
-        style={{ borderColor: "var(--ws-border, #e7e5e4)", background: "var(--ws-canvas, #fafaf9)" }}
+        className="flex items-center justify-between h-11 shrink-0 border-b select-none"
+        style={{ borderColor: "var(--ws-border, #e7e5e4)", background: "var(--ws-surface, #ffffff)" }}
       >
         <div
           role="button"
@@ -969,12 +969,12 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           onPointerUp={onDragEnd}
           onPointerCancel={onDragEnd}
           onKeyDown={onHandleKeyDown}
-          className="flex-1 h-full flex items-center px-3 cursor-grab active:cursor-grabbing touch-none focus-visible:outline-2 focus-visible:outline-orange-700"
+          className="flex-1 h-full flex items-center gap-2 px-3 cursor-grab active:cursor-grabbing touch-none focus-visible:outline-2 focus-visible:outline-orange-700"
           style={{ color: "var(--ws-text, #1c1917)" }}
         >
-          <span className="text-xs font-semibold">
-          AI 助手
-          </span>
+          <Grip size={16} strokeWidth={1.5} aria-hidden="true" style={{ color: "var(--ws-secondary)" }} />
+          <span className="text-base font-semibold">AI 助手</span>
+          <span className="text-xs font-normal" style={{ color: "var(--ws-muted)" }}>拖动</span>
         </div>
         <button
           type="button"
@@ -984,7 +984,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           className="w-9 h-9 mr-1 rounded-md flex items-center justify-center"
           style={{ color: "var(--ws-secondary, #78716c)" }}
         >
-          <Minus size={14} strokeWidth={1.5} />
+          <Minus size={16} strokeWidth={1.5} />
         </button>
       </div>
 
