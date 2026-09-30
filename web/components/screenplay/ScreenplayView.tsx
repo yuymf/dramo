@@ -117,9 +117,8 @@ export function ScreenplayView() {
     <div className={`sp-workspace sp-format-${format}`}>
       <header className="sp-toolbar">
         <div className="sp-toolbar-title">
-          <h1>剧本</h1>
+          <h1 title="Enter 新行 · Tab 切换类型 · Backspace 删空行">剧本</h1>
           <span className="sp-toolbar-meta">{formatLabel(format)}</span>
-          <span className="sp-hint">Enter 新行 · Tab 切换类型 · Backspace 删空行</span>
         </div>
         <div className="sp-toolbar-actions">
           <span className="sp-save-status">{saveStatusLabel(status)}</span>

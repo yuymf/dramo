@@ -176,7 +176,7 @@ export default function BeatsPage() {
 
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
-      <header className="flex items-center justify-between gap-3 shrink-0 px-5 py-3 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
+      <header className="flex items-center justify-between gap-3 shrink-0 px-4 py-2 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
         <div className="flex items-baseline gap-2.5 min-w-0">
           <h1 className="m-0 text-base font-semibold tracking-wide">Beats</h1>
           <span className="text-xs text-[var(--at-text-tertiary)]">动作 / 意图 / 结果，对照正文看是否兑现</span>
@@ -197,7 +197,7 @@ export default function BeatsPage() {
           </Button>
         </div>
       </header>
-      <div className="flex-1 min-h-0 overflow-auto px-5 py-6">
+      <div className="flex-1 min-h-0 overflow-auto px-4 py-4">
         {loading ? (
           <div className="flex items-center justify-center h-48 gap-2 text-sm text-[var(--at-text-secondary)]">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -208,9 +208,9 @@ export default function BeatsPage() {
             还没有 Beat。先写下本集要发生的戏剧变化。
           </p>
         ) : (
-          <ol className="max-w-3xl mx-auto space-y-4">
+          <ol className="max-w-3xl mx-auto space-y-3">
             {beats.map((beat, index) => (
-              <li key={beat.id ?? `new-${index}`} className="rounded-xl border border-[var(--at-border)] bg-[var(--at-surface)] p-5">
+              <li key={beat.id ?? `new-${index}`} className="rounded-lg border border-[var(--at-border)] bg-[var(--at-surface)] p-4">
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <p className="text-xs font-medium text-[var(--at-text-secondary)]">Beat {index + 1}</p>
                   <div className="flex items-center gap-2">
