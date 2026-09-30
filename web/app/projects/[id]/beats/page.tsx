@@ -176,10 +176,10 @@ export default function BeatsPage() {
 
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
-      <header className="flex items-center justify-between gap-3 shrink-0 px-4 py-2 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
+      <header className="flex flex-wrap items-center justify-between gap-3 shrink-0 px-4 py-2 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
         <div className="flex items-baseline gap-2.5 min-w-0">
-          <h1 className="m-0 text-base font-semibold tracking-wide">Beats</h1>
-          <span className="text-xs text-[var(--at-text-tertiary)]">动作 / 意图 / 结果，对照正文看是否兑现</span>
+          <h1 className="m-0 text-[length:var(--ws-title)] font-semibold tracking-wide">Beats</h1>
+          <span className="text-[length:var(--ws-caption)] text-[var(--at-text-tertiary)]">动作 / 意图 / 结果，对照正文看是否兑现</span>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -197,26 +197,26 @@ export default function BeatsPage() {
           </Button>
         </div>
       </header>
-      <div className="flex-1 min-h-0 overflow-auto px-4 py-4">
+      <div className="flex-1 min-h-0 overflow-auto px-4 py-3">
         {loading ? (
-          <div className="flex items-center justify-center h-48 gap-2 text-sm text-[var(--at-text-secondary)]">
+          <div className="flex items-center justify-center h-32 gap-2 text-[length:var(--ws-body)] text-[var(--at-text-secondary)]">
             <Loader2 className="w-4 h-4 animate-spin" />
             加载中…
           </div>
         ) : beats.length === 0 ? (
-          <p className="max-w-md mx-auto text-center text-sm text-[var(--at-text-secondary)] py-20">
+          <p className="max-w-3xl mx-auto py-10 text-center text-[length:var(--ws-body)] text-[var(--at-text-secondary)]">
             还没有 Beat。先写下本集要发生的戏剧变化。
           </p>
         ) : (
-          <ol className="max-w-3xl mx-auto space-y-3">
+          <ol className="max-w-4xl mx-auto space-y-2">
             {beats.map((beat, index) => (
-              <li key={beat.id ?? `new-${index}`} className="rounded-lg border border-[var(--at-border)] bg-[var(--at-surface)] p-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <p className="text-xs font-medium text-[var(--at-text-secondary)]">Beat {index + 1}</p>
+              <li key={beat.id ?? `new-${index}`} className="rounded-md border border-[var(--at-border)] bg-[var(--at-surface)] px-3 py-2.5">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <p className="text-[length:var(--ws-body)] font-medium text-[var(--at-text)]">Beat {index + 1}</p>
                   <div className="flex items-center gap-2">
                     {beat.id ? (
                       <span
-                        className="text-[11px] px-2 py-0.5 rounded-full"
+                        className="text-[length:var(--ws-caption)] px-2 py-0.5 rounded-sm"
                         style={{
                           color: "var(--at-text-secondary)",
                           background: "var(--at-surface-sunken)",
@@ -229,36 +229,38 @@ export default function BeatsPage() {
                       type="button"
                       aria-label={`删除 Beat ${index + 1}`}
                       title={`删除 Beat ${index + 1}`}
-                      className="text-[var(--at-text-tertiary)] hover:text-[var(--at-error)]"
+                      className="inline-flex items-center justify-center h-9 w-9 rounded-md text-[var(--at-text-tertiary)] hover:text-[var(--at-error)] hover:bg-[var(--at-surface-hover)]"
                       onClick={() => setBeats((prev) => prev.filter((_, i) => i !== index))}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
-                {(
-                  [
-                    ["action", "动作", "发生了什么"],
-                    ["intent", "意图", "人物想要什么"],
-                    ["outcome", "结果", "局面变成什么"],
-                  ] as const
-                ).map(([field, label, placeholder]) => (
-                  <label key={field} className="block mt-2">
-                    <span className="text-xs text-[var(--at-text-secondary)]">{label}</span>
-                    <input
-                      aria-label={`${label} ${index + 1}`}
-                      value={beat[field] ?? ""}
-                      placeholder={placeholder}
-                      onFocus={() => focusBeat(beat.id)}
-                      onChange={(e) =>
-                        setBeats((prev) =>
-                          prev.map((row, i) => (i === index ? { ...row, [field]: e.target.value } : row))
-                        )
-                      }
-                      className="mt-1 w-full rounded-lg border border-[var(--at-border)] bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
-                    />
-                  </label>
-                ))}
+                <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
+                  {(
+                    [
+                      ["action", "动作", "发生了什么"],
+                      ["intent", "意图", "人物想要什么"],
+                      ["outcome", "结果", "局面变成什么"],
+                    ] as const
+                  ).map(([field, label, placeholder]) => (
+                    <label key={field} className="block min-w-0">
+                      <span className="text-[length:var(--ws-caption)] text-[var(--at-text-secondary)]">{label}</span>
+                      <input
+                        aria-label={`${label} ${index + 1}`}
+                        value={beat[field] ?? ""}
+                        placeholder={placeholder}
+                        onFocus={() => focusBeat(beat.id)}
+                        onChange={(e) =>
+                          setBeats((prev) =>
+                            prev.map((row, i) => (i === index ? { ...row, [field]: e.target.value } : row))
+                          )
+                        }
+                        className="mt-1 block w-full min-h-9 rounded-md border border-[var(--at-border)] bg-transparent px-3 py-1.5 text-[length:var(--ws-body)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
+                      />
+                    </label>
+                  ))}
+                </div>
               </li>
             ))}
           </ol>

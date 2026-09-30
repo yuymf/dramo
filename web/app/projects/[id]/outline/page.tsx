@@ -133,18 +133,18 @@ export default function OutlinePage() {
 
   return (
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
-      <header className="flex items-center justify-between gap-3 shrink-0 px-4 py-2 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
+      <header className="flex flex-wrap items-center justify-between gap-3 shrink-0 px-4 py-2 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
         <div className="flex items-baseline gap-2.5 min-w-0">
-          <h1 className="m-0 text-base font-semibold tracking-wide">大纲</h1>
-          <span className="text-xs text-[var(--at-text-tertiary)]">按集保存的 Markdown</span>
+          <h1 className="m-0 text-[length:var(--ws-title)] font-semibold tracking-wide">大纲</h1>
+          <span className="text-[length:var(--ws-caption)] text-[var(--at-text-tertiary)]">按集保存的 Markdown</span>
         </div>
-        <span className="text-[11px] text-[var(--at-text-tertiary)]">
+        <span className="text-[length:var(--ws-caption)] text-[var(--at-text-tertiary)]">
           {saving ? "保存中…" : dirty ? "离开输入框后保存" : "已保存"}
         </span>
       </header>
-      <div className="flex-1 min-h-0 px-4 py-4">
+      <div className="flex-1 min-h-0 px-4 py-3">
         {loading ? (
-          <div className="flex items-center justify-center h-48 gap-2 text-sm text-[var(--at-text-secondary)]">
+          <div className="flex items-center justify-center h-32 gap-2 text-[length:var(--ws-body)] text-[var(--at-text-secondary)]">
             <Loader2 className="w-4 h-4 animate-spin" />
             加载中…
           </div>
@@ -163,7 +163,7 @@ export default function OutlinePage() {
             onKeyUp={publishScope}
             onSelect={publishScope}
             placeholder="写下本集前提、因果和结局承诺…"
-            className="w-full h-full min-h-[320px] resize-none rounded-xl border border-[var(--at-border)] bg-[var(--at-surface)] px-4 py-3 text-sm leading-7 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
+            className="block w-full h-full min-h-[320px] resize-none rounded-md border border-[var(--at-border)] bg-[var(--at-surface)] px-4 py-3 text-[length:var(--ws-body)] leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--at-accent)]"
           />
         )}
       </div>
