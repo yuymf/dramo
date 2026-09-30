@@ -393,7 +393,7 @@ test.describe('剧本工作区', () => {
 
     await page.getByRole('link', { name: '角色' }).click();
     await expect(page).toHaveURL(/\/characters/);
-    await expect(page.getByRole('heading', { name: '角色', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '角色', exact: true, level: 1 })).toBeVisible();
     // Derive runs in the PUT handler; list fetch can race — retry once via reload.
     await expect(async () => {
       if (!(await page.getByRole('heading', { name: '林晚' }).isVisible().catch(() => false))) {
@@ -405,7 +405,7 @@ test.describe('剧本工作区', () => {
 
     await page.getByRole('link', { name: '地点' }).click();
     await expect(page).toHaveURL(/\/locations/);
-    await expect(page.getByRole('heading', { name: '地点', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '地点', exact: true, level: 1 })).toBeVisible();
     await expect(async () => {
       if (!(await page.getByRole('heading', { name: '地铁车厢' }).isVisible().catch(() => false))) {
         await page.reload();
@@ -1008,6 +1008,93 @@ test.describe('剧本工作区', () => {
 });
 
 test.describe('角色和地点 AI 定向修订', () => {
+  test('项目面板浏览驱动角色与地点预览，拒绝零写且接受隔离', async ({ page }) => {
+    test.setTimeout(150_000);
+    const shot = async (name: string) => {
+      if (process.env.PR11_EVIDENCE_DIR) {
+        await page.screenshot({ path: `${process.env.PR11_EVIDENCE_DIR}/${name}`, fullPage: true });
+      }
+    };
+    await signUp(page);
+    await createScriptProject(page, `E2E 面板实体 ${Date.now()}`);
+    await writeTwoScenes(page);
+    const projectId = page.url().match(/\/projects\/([^/]+)/)![1];
+    const read = async (kind: 'characters' | 'locations') => page.evaluate(async ({ id, kind }) =>
+      (await (await fetch(`/api/projects/${id}/${kind}`)).json()).data as Array<{
+        id: string; name: string; description: string | null; castingNotes?: string | null;
+      }>, { id: projectId, kind });
+    const characters = await read('characters');
+    const locations = await read('locations');
+    const character = characters.find((row) => row.name === '林晚')!;
+    const sibling = characters.find((row) => row.name === '值班员')!;
+    const location = locations.find((row) => row.name === '地铁车厢')!;
+    const otherLocation = locations.find((row) => row.name === '月台')!;
+    const accepts: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().includes('/revise/accept')) accepts.push(request.url());
+    });
+
+    const panel = page.getByRole('complementary', { name: '项目面板' });
+    await expect(panel.getByRole('button', { name: '浏览角色 林晚' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: '浏览地点 地铁车厢' })).toBeVisible();
+    await panel.getByRole('button', { name: '浏览角色 林晚' }).click();
+    await expect(page).toHaveURL(new RegExp(`/characters\\?entity=${character.id}`));
+    await expect(page.getByRole('button', { name: '选择角色 林晚' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText('当前角色', { exact: true })).toBeVisible();
+    await shot('01-character-panel-selected.png');
+
+    await page.route(`**/entities/character/${character.id}/revise/preview`, async (route) => {
+      await route.fulfill({ json: { scope: { type: 'character', id: character.id },
+        diff: [{ field: 'castingNotes', before: character.castingNotes, after: '适合沉稳的演员' }],
+        proposalText: '【选角备注】适合沉稳的演员' } });
+    });
+    await page.getByLabel('AI 指令').fill('补充选角备注');
+    await page.getByRole('button', { name: '发送' }).click();
+    await expect(page.getByText(/修订提案（尚未写入）/)).toBeVisible();
+    expect(await read('characters')).toEqual(characters);
+    expect(accepts).toHaveLength(0);
+    await shot('02-character-preview.png');
+    await page.getByTestId('ai-revise-reject').click();
+    expect(await read('characters')).toEqual(characters);
+    expect(accepts).toHaveLength(0);
+    await shot('03-character-rejected.png');
+
+    await page.getByLabel('AI 指令').fill('补充选角备注');
+    await page.getByRole('button', { name: '发送' }).click();
+    await page.getByTestId('ai-revise-accept').click();
+    await expect(page.getByTestId(`entity-${character.id}`).getByLabel('选角备注')).toHaveValue('适合沉稳的演员');
+    const afterCharacters = await read('characters');
+    expect(afterCharacters.find((row) => row.id === character.id)?.castingNotes).toBe('适合沉稳的演员');
+    expect(afterCharacters.find((row) => row.id === character.id)?.description).toBe(character.description);
+    expect(afterCharacters.find((row) => row.id === sibling.id)).toEqual(sibling);
+    expect(accepts).toHaveLength(1);
+    await shot('04-character-accepted.png');
+
+    await panel.getByRole('button', { name: '浏览地点 地铁车厢' }).click();
+    await expect(page).toHaveURL(new RegExp(`/locations\\?entity=${location.id}`));
+    await expect(page.getByRole('button', { name: '选择地点 地铁车厢' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText('当前地点', { exact: true })).toBeVisible();
+    await shot('05-location-panel-selected.png');
+    await page.route(`**/entities/location/${location.id}/revise/preview`, async (route) => {
+      await route.fulfill({ json: { scope: { type: 'location', id: location.id },
+        diff: [{ field: 'description', before: location.description, after: '昏黄灯光下的末班车厢' }],
+        proposalText: '【描述】昏黄灯光下的末班车厢' } });
+    });
+    await page.getByLabel('AI 指令').fill('补充地点描述');
+    await page.getByRole('button', { name: '发送' }).click();
+    await expect(page.getByText(/修订提案（尚未写入）.*【描述】昏黄灯光下的末班车厢/s)).toBeVisible();
+    expect(await read('locations')).toEqual(locations);
+    await shot('06-location-preview.png');
+    await page.getByTestId('ai-revise-accept').click();
+    await expect(page.getByTestId(`entity-${location.id}`).getByRole('textbox', { name: '描述' })).toHaveValue('昏黄灯光下的末班车厢');
+    const afterLocations = await read('locations');
+    expect(afterLocations.find((row) => row.id === location.id)?.description).toBe('昏黄灯光下的末班车厢');
+    expect(afterLocations.find((row) => row.id === otherLocation.id)).toEqual(otherLocation);
+    expect(await read('characters')).toEqual(afterCharacters);
+    expect(accepts).toHaveLength(2);
+    await shot('07-location-accepted.png');
+  });
+
   test('角色选角备注预览显示标签，拒绝不写、接受只写备注', async ({ page }) => {
     test.setTimeout(120_000);
     await signUp(page);

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api/client";
+import { derivedEntitiesChangedEvent } from "@/components/entities/scope";
 import {
   EMPTY_COVER,
   type Cover,
@@ -117,6 +118,7 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
       );
       setStatus("saved");
       setError(null);
+      window.dispatchEvent(new CustomEvent(derivedEntitiesChangedEvent, { detail: { projectId: current.projectId } }));
     } catch (err) {
       dirtyRef.current = true;
       setStatus("error");
@@ -222,6 +224,7 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
       if (doc.format) setFormat(doc.format);
       setStatus("saved");
       setError(null);
+      window.dispatchEvent(new CustomEvent(derivedEntitiesChangedEvent, { detail: { projectId: current.projectId } }));
     };
 
     window.addEventListener(SCREENPLAY_FLUSH_EVENT, onFlush);

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { FolderOpen } from "lucide-react";
+import { listDerivedEntities, type DerivedEntity, type DerivedEntityKind } from "@/lib/api/entities";
+import { derivedEntitiesChangedEvent, entityRevisedEvent, entityScopeEvent } from "@/components/entities/scope";
 import { getProject, updateProject } from "@/lib/api/projects";
 import {
   createVersion,
@@ -47,6 +49,10 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
   const [episodeName, setEpisodeName] = useState<string | null>(null);
   const [cinemaSettings, setCinemaSettings] = useState<CinemaSettings>(DEFAULT_CINEMA_SETTINGS);
   const [loading, setLoading] = useState(true);
+  const [entities, setEntities] = useState<Record<DerivedEntityKind, DerivedEntity[]>>({ character: [], location: [] });
+  const [entitiesLoading, setEntitiesLoading] = useState(true);
+  const [entitiesError, setEntitiesError] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState<{ kind: DerivedEntityKind; id: string } | null>(null);
 
   const onScreenplay =
     !!pathname && (pathname.includes("/screenplay") || pathname.includes("/cover"));
@@ -96,6 +102,64 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
       cancelled = true;
     };
   }, [projectId]);
+
+  useEffect(() => {
+    let active = true;
+    const loadEntities = async () => {
+      try {
+        const [characters, locations] = await Promise.all([
+          listDerivedEntities("character", projectId),
+          listDerivedEntities("location", projectId),
+        ]);
+        if (!active) return;
+        setEntities({ character: characters, location: locations });
+        setEntitiesError(false);
+      } catch {
+        if (active) setEntitiesError(true);
+      } finally {
+        if (active) setEntitiesLoading(false);
+      }
+    };
+    setEntities({ character: [], location: [] });
+    setEntitiesLoading(true);
+    void loadEntities();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void loadEntities();
+    };
+    const onDerived = (event: Event) => {
+      if ((event as CustomEvent<{ projectId?: string }>).detail?.projectId === projectId) void loadEntities();
+    };
+    window.addEventListener("focus", onVisible);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener(derivedEntitiesChangedEvent, onDerived);
+    window.addEventListener(entityRevisedEvent("character"), loadEntities);
+    window.addEventListener(entityRevisedEvent("location"), loadEntities);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", onVisible);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener(derivedEntitiesChangedEvent, onDerived);
+      window.removeEventListener(entityRevisedEvent("character"), loadEntities);
+      window.removeEventListener(entityRevisedEvent("location"), loadEntities);
+    };
+  }, [projectId]);
+
+  useEffect(() => {
+    const onScope = (kind: DerivedEntityKind) => (event: Event) => {
+      const id = (event as CustomEvent<{ id?: unknown }>).detail?.id;
+      setSelectedEntity((current) => typeof id === "string" && id
+        ? { kind, id }
+        : current?.kind === kind ? null : current);
+    };
+    const onCharacter = onScope("character");
+    const onLocation = onScope("location");
+    window.addEventListener(entityScopeEvent("character"), onCharacter);
+    window.addEventListener(entityScopeEvent("location"), onLocation);
+    return () => {
+      window.removeEventListener(entityScopeEvent("character"), onCharacter);
+      window.removeEventListener(entityScopeEvent("location"), onLocation);
+    };
+  }, []);
 
   const commitName = async () => {
     setEditing(false);
@@ -277,6 +341,46 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
             {episodeName}
           </div>
         </div>}
+
+        <section className="mt-6 px-2" aria-label="项目实体">
+          {(["character", "location"] as const).map((kind) => (
+            <div key={kind} className="mb-4">
+              <h2 className="mb-2 text-[11px] font-semibold" style={{ color: "var(--ws-secondary, #78716c)" }}>
+                {kind === "character" ? "角色" : "地点"}
+              </h2>
+              {entitiesLoading ? (
+                <p className="text-xs" style={{ color: "var(--ws-muted, #a8a29e)" }}>加载中…</p>
+              ) : entitiesError ? (
+                <p className="text-xs" style={{ color: "var(--ws-muted, #a8a29e)" }}>列表加载失败</p>
+              ) : entities[kind].length === 0 ? (
+                <p className="text-xs" style={{ color: "var(--ws-muted, #a8a29e)" }}>暂无{kind === "character" ? "角色" : "地点"}</p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {entities[kind].map((entity) => {
+                    const selected = selectedEntity?.kind === kind && selectedEntity.id === entity.id;
+                    return (
+                      <li key={entity.id}>
+                        <button
+                          type="button"
+                          aria-label={`浏览${kind === "character" ? "角色" : "地点"} ${entity.name}`}
+                          aria-current={selected ? "true" : undefined}
+                          onClick={() => router.push(`/projects/${projectId}/${kind === "character" ? "characters" : "locations"}?entity=${encodeURIComponent(entity.id)}`)}
+                          className="w-full truncate rounded-lg px-2 py-1.5 text-left text-xs"
+                          style={{
+                            color: selected ? "var(--ws-action-text, #c2410c)" : "var(--ws-text, #1c1917)",
+                            background: selected ? "var(--ws-selected, rgba(194, 65, 12, 0.06))" : "transparent",
+                          }}
+                        >
+                          {entity.name}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          ))}
+        </section>
 
         {onScreenplay && (
           <div className="mt-5 px-2">

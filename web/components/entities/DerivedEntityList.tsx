@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/Toast";
@@ -52,6 +53,9 @@ export interface DerivedEntityListProps {
 }
 
 export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedId = searchParams.get("entity");
   const copy = COPY[kind];
   const { showToast } = useToast();
   const [entities, setEntities] = useState<DerivedEntity[]>([]);
@@ -65,6 +69,7 @@ export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
     try {
       const rows = await listDerivedEntities(kind, projectId);
       setEntities(rows);
+      setSelectedId((current) => current && rows.some((row) => row.id === current) ? current : null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "加载失败";
       setError(message);
@@ -77,6 +82,12 @@ export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
     setLoading(true);
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!loading && !error && requestedId) {
+      setSelectedId(entities.some((row) => row.id === requestedId) ? requestedId : null);
+    }
+  }, [requestedId, entities, loading, error]);
 
   useEffect(() => {
     const onRequest = () => dispatchEntityScope(kind, selectedId);
@@ -151,7 +162,10 @@ export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
                   onImagesMayChange={() => void load()}
                   showToast={showToast}
                   selected={selectedId === entity.id}
-                  onSelect={() => setSelectedId(entity.id)}
+                  onSelect={() => {
+                    setSelectedId(entity.id);
+                    router.replace(`?entity=${encodeURIComponent(entity.id)}`, { scroll: false });
+                  }}
                 />
               </li>
             ))}

@@ -1,5 +1,7 @@
 import type { DerivedEntityKind } from "@/lib/api/entities";
 
+export const derivedEntitiesChangedEvent = "dramo-derived-entities-changed";
+
 export function entityScopeEvent(kind: DerivedEntityKind) {
   return kind === "character" ? "dramo-character-scope" : "dramo-location-scope";
 }
