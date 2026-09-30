@@ -683,9 +683,15 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
       return;
     }
 
-    if (scope.nodeIds.length === 0) {
+    // Freeze scope at submit — Accept/Reject must not re-expand after float drag/focus steal.
+    const frozenScope: { type: ScreenplayScopeType; nodeIds: string[] } = {
+      type: scopeMode,
+      nodeIds: [...scope.nodeIds],
+    };
+
+    if (frozenScope.nodeIds.length === 0) {
       const hint =
-        scopeMode === "scene"
+        frozenScope.type === "scene"
           ? "请先把光标放在某一场内"
           : "请先在剧本里选中要改的句子";
       setLines((prev) => [...prev, { role: "assistant", text: hint }]);
@@ -721,7 +727,8 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           body: {
             instruction: next,
             // Prefer server expand as source of truth: send seed ids + type=scene.
-            scope: { type: scopeMode, nodeIds: scope.nodeIds },
+            // selection: exact frozen nodeIds — no silent expand.
+            scope: { type: frozenScope.type, nodeIds: frozenScope.nodeIds },
           },
           noCache: true,
           timeoutMs: 120_000,
@@ -734,25 +741,31 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
           : "（提案为空）";
       const assistantLine = `修订提案（尚未写入）：\n${proposalText}`;
 
+      // Snapshot only — never re-read live scopeMode/nodeIds on Accept.
+      const snappedType: ScreenplayScopeType =
+        frozenScope.type === "scene" || proposal.scope?.type === "scene"
+          ? "scene"
+          : "selection";
+      const snappedNodeIds =
+        snappedType === "scene" &&
+        Array.isArray(proposal.scope?.nodeIds) &&
+        proposal.scope.nodeIds.length > 0
+          ? proposal.scope.nodeIds
+          : frozenScope.nodeIds;
+
       setLines((prev) => [...prev, { role: "assistant", text: assistantLine }]);
       setPendingProposal({
         kind: "script",
         instruction: proposal.instruction ?? next,
         scope: {
-          type:
-            proposal.scope?.type === "scene" || scopeMode === "scene"
-              ? "scene"
-              : "selection",
-          // Prefer expanded ids from server when present.
-          nodeIds: Array.isArray(proposal.scope?.nodeIds) && proposal.scope.nodeIds.length > 0
-            ? proposal.scope.nodeIds
-            : scope.nodeIds,
+          type: snappedType,
+          nodeIds: snappedNodeIds,
         },
         replacements: Array.isArray(proposal.replacements) ? proposal.replacements : [],
         proposalText,
         lineIndex: -1,
       });
-      onSend?.({ projectId, text: next, scopeNodeIds: scope.nodeIds });
+      onSend?.({ projectId, text: next, scopeNodeIds: frozenScope.nodeIds });
     } catch (err) {
       const message = err instanceof Error ? err.message : "修订失败";
       setPendingProposal(null);
