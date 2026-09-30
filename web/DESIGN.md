@@ -32,7 +32,7 @@ The project layout mounts `components/workspace/WorkspaceShell.tsx` once per pro
 
 Dark-theme accent text uses neutral light text for readability; the same orange remains on selected markers, focus and primary button backgrounds. Error text has a separate semantic token. Disabled controls retain labels and lower opacity; coverage states retain explicit 已兑现 / 未兑现 labels on neutral surfaces.
 
-UI scale: 12px for hints/counts/save state, 14px for navigation/actions/body, 16px for panel/dimension titles, 20px reserved for page-level titles. Icons are 16px with 36–40px minimum action targets. Manuscript and cover font sizes/indentation remain governed by `screenplay.css`; the node-type gutter remains a compact manuscript affordance. Keyboard focus is explicit, including AI input and menu items. No paper texture, gradients, cat ears, decorative float or hover lift. Reduced-motion preference suppresses animation in the scoped workspace.
+UI scale: 12px for hints/counts/save state, 14px for navigation/actions/body, 16px for panel/dimension titles. Icons are 16px with 36–40px minimum action targets. Manuscript and cover font sizes/indentation remain governed by `screenplay.css`; the node-type gutter remains a compact manuscript affordance. Keyboard focus is explicit, including AI input and menu items. No paper texture, gradients, cat ears, decorative float or hover lift. Reduced-motion preference suppresses animation in the scoped workspace.
 
 There is **no existing theme preference setting or account preference API**. Workspace themes currently follow `prefers-color-scheme`; this is an OS/browser preference, not account synchronization. Native version restore confirmation follows the browser's native dialog styling. Global toast presentation remains shared with legacy pages.
 
@@ -46,7 +46,7 @@ There is **no existing theme preference setting or account preference API**. Wor
 | Generation / branch / teleprompter / SRT in Script toolbar | Not mounted; no capability/API removed |
 | 口播 | Still reachable via 更多 and `/projects/:id/spoken`; that route was already a placeholder in the base revision |
 | Beat chips / fake Episode CRUD / entity or permission buttons | Not added; existing page-count timeline and actual Beats page retained |
-| Paper / decorative effects | Neutral manuscript surface and shell-scoped suppression; landing unchanged |
+| Paper / decorative effects | Neutral manuscript surface; landing unchanged |
 | Publishing an already published project | Existing status remains visible and is disabled |
 
 Visual baseline: same project at 1440×900, Script / Outline / Beats in light and dark, plus 更多 open. Check toolbar overflow at 1280×800 and 1024×800; at 1024×768 the project panel should start collapsed (Laper live-gap). PR2 keeps its 1024×768 drag/resize checks. Playwright writes evidence under ignored `web/test-results/`; screenshots and logs are never committed. The layout retains Dramo's document editor and page-count sidebar; it does not claim semantic-editor parity or new Laper behavior. A live Laper side-by-side comparison is not part of automated verification.

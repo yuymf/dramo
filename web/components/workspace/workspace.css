@@ -16,11 +16,9 @@
   --ws-caption: 12px;
   --ws-body: 14px;
   --ws-title: 16px;
-  --ws-page-title: 20px;
   /* Existing canvas components consume Atelier tokens without global changes. */
   --at-bg: var(--ws-canvas);
   --at-surface: var(--ws-surface);
-  --at-surface-raised: var(--ws-surface);
   --at-surface-sunken: var(--ws-hover);
   --at-surface-hover: var(--ws-hover);
   --at-surface-active: var(--ws-selected);
@@ -105,11 +103,7 @@
 .workspace-theme nav :is([aria-current="page"], [data-active="true"]) { box-shadow: inset 3px 0 var(--ws-accent); }
 .workspace-theme aside[aria-label="项目面板"] [aria-current="true"] { box-shadow: inset 3px 0 var(--ws-accent); font-weight: 600; }
 .workspace-theme aside[aria-label="项目面板"] h2 { font-size: var(--ws-title); }
-/* Strip decorative legacy treatments only if mounted inside this shell. */
-.workspace-theme :is(.rice-paper-bg, .ink-textarea-wrap) { background: var(--ws-surface); }
-.workspace-theme .rice-paper-bg::before { content: none; }
-.workspace-theme :is(.ink-reveal, .animate-float) { animation: none; }
-.workspace-theme button:active, .workspace-theme .ink-button:hover { transform: none; }
+.workspace-theme button:active { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .workspace-theme *, .workspace-theme *::before, .workspace-theme *::after {
     animation: none !important;
