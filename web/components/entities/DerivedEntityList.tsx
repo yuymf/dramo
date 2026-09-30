@@ -125,7 +125,7 @@ export function DerivedEntityList({ projectId, kind }: DerivedEntityListProps) {
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
       <header className="flex items-center justify-between gap-3 shrink-0 px-5 py-3 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
         <div className="flex items-baseline gap-2.5 min-w-0">
-          <h1 className="m-0 text-[15px] font-semibold tracking-wide">{copy.title}</h1>
+          <h1 className="m-0 text-base font-semibold tracking-wide">{copy.title}</h1>
           <span className="text-xs text-[var(--at-text-tertiary)]">{copy.hint}</span>
         </div>
         <span className="text-xs font-medium text-[var(--at-accent)] bg-[var(--at-accent-light)] px-2 py-0.5 rounded-full shrink-0">

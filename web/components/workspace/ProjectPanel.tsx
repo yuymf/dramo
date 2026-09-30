@@ -342,8 +342,14 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
           </div>
         </div>}
 
-        <section className="mt-6 px-2" aria-label="项目实体">
-          {(["character", "location"] as const).map((kind) => (
+        <section
+          className={cn("mt-6 px-2", !entitiesLoading && !entitiesError &&
+            entities.character.length === 0 && entities.location.length === 0 && "hidden")}
+          aria-label="项目实体"
+        >
+          {(["character", "location"] as const).filter((kind) =>
+            entitiesLoading || entitiesError || entities[kind].length > 0
+          ).map((kind) => (
             <div key={kind} className="mb-4">
               <h2 className="mb-2 text-[11px] font-semibold" style={{ color: "var(--ws-secondary, #78716c)" }}>
                 {kind === "character" ? "角色" : "地点"}
@@ -352,8 +358,6 @@ export function ProjectPanel({ projectId, visible, exportTargetRef }: ProjectPan
                 <p className="text-xs" style={{ color: "var(--ws-muted, #a8a29e)" }}>加载中…</p>
               ) : entitiesError ? (
                 <p className="text-xs" style={{ color: "var(--ws-muted, #a8a29e)" }}>列表加载失败</p>
-              ) : entities[kind].length === 0 ? (
-                <p className="text-xs" style={{ color: "var(--ws-muted, #a8a29e)" }}>暂无{kind === "character" ? "角色" : "地点"}</p>
               ) : (
                 <ul className="space-y-0.5">
                   {entities[kind].map((entity) => {

@@ -72,7 +72,7 @@ export default function StoryboardPage() {
     <div className="h-full flex flex-col bg-[var(--at-bg)] text-[var(--at-text)]">
       <header className="flex items-center justify-between gap-3 shrink-0 px-5 py-3 border-b border-[var(--at-border)] bg-[var(--at-surface)]">
         <div>
-          <h1 className="m-0 text-[15px] font-semibold tracking-wide">分镜</h1>
+          <h1 className="m-0 text-base font-semibold tracking-wide">分镜</h1>
           <p className="text-xs text-[var(--at-text-tertiary)]">镜头挂在场次上，设计和出图分开。默认不超过 6 个。</p>
         </div>
         <div className="flex items-center gap-2">

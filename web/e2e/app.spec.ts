@@ -1082,7 +1082,7 @@ test.describe('角色和地点 AI 定向修订', () => {
     });
     await page.getByLabel('AI 指令').fill('补充地点描述');
     await page.getByRole('button', { name: '发送' }).click();
-    await expect(page.getByText(/修订提案（尚未写入）.*【描述】昏黄灯光下的末班车厢/s)).toBeVisible();
+    await expect(page.getByText(/修订提案（尚未写入）[\s\S]*【描述】昏黄灯光下的末班车厢/)).toBeVisible();
     expect(await read('locations')).toEqual(locations);
     await shot('06-location-preview.png');
     await page.getByTestId('ai-revise-accept').click();
