@@ -15,12 +15,21 @@ import { cors } from 'hono/cors';
 
 const mocked = (fn: unknown) => fn as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
+const FRONTEND_URL = 'http://localhost:12323';
+const ALLOWED = new Set([FRONTEND_URL]);
+
+function allowedCorsOrigin(origin: string): string {
+  if (origin && ALLOWED.has(origin)) return origin;
+  if (!origin) return FRONTEND_URL;
+  return '';
+}
+
 function makeApp() {
   const app = new Hono<AuthEnv>();
   app.use(
     '*',
     cors({
-      origin: (origin) => origin || 'http://localhost:12323',
+      origin: allowedCorsOrigin,
       credentials: true,
     })
   );
@@ -76,12 +85,20 @@ describe('session middleware', () => {
     expect(res.status).toBe(401);
   });
 
-  it('CORS reflects Origin and allows credentials (not *)', async () => {
+  it('CORS allowlists frontend Origin and allows credentials (not *)', async () => {
     const res = await app.request('/api/v1/health', {
-      headers: { Origin: 'http://localhost:12323' },
+      headers: { Origin: FRONTEND_URL },
     });
-    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:12323');
+    expect(res.headers.get('access-control-allow-origin')).toBe(FRONTEND_URL);
     expect(res.headers.get('access-control-allow-origin')).not.toBe('*');
     expect(res.headers.get('access-control-allow-credentials')).toBe('true');
+  });
+
+  it('CORS does not echo a foreign Origin', async () => {
+    const res = await app.request('/api/v1/health', {
+      headers: { Origin: 'https://evil.example' },
+    });
+    expect(res.headers.get('access-control-allow-origin')).not.toBe('https://evil.example');
+    expect(res.headers.get('access-control-allow-origin')).not.toBe('*');
   });
 });

@@ -21,7 +21,13 @@ jest.mock('../../lib/db', () => ({
   },
 }));
 
+jest.mock('../../services/access.service', () => ({
+  resolveAccess: jest.fn(),
+}));
+
 import { prisma } from '../../lib/db.js';
+import { resolveAccess } from '../../services/access.service.js';
+import { AppException, ErrorCode } from '../../lib/errors.js';
 import { TaskRunnerService } from '../../services/task-runner.service.js';
 import { TaskStoreService } from '../../services/task-store.service.js';
 import { NO_SD_WORKER_MESSAGE, type SdPoolService } from '../../services/sd-pool.service.js';
@@ -63,6 +69,12 @@ describe('TaskRunnerService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (resolveAccess as jest.MockedFunction<typeof resolveAccess>).mockResolvedValue({
+      projectId: 'proj-1',
+      userId: 'user-1',
+      role: 'OWNER',
+      via: 'member',
+    } as never);
 
     mockStore = {
       listTasks: jest.fn(),
@@ -117,6 +129,26 @@ describe('TaskRunnerService', () => {
           progress: 0,
         }),
       });
+      expect(resolveAccess).toHaveBeenCalledWith('proj-1', 'user-1', { write: true });
+    });
+
+    it('rejects non-members before insert (FORBIDDEN)', async () => {
+      (resolveAccess as jest.MockedFunction<typeof resolveAccess>).mockRejectedValue(
+        new AppException(ErrorCode.FORBIDDEN, '不是该项目成员')
+      );
+
+      await expect(
+        service.createTask({
+          userId: 'outsider',
+          projectId: 'proj-1',
+          kind: 'portrait',
+          entityId: 'char-1',
+          prompt: 'a portrait',
+        })
+      ).rejects.toMatchObject({ code: ErrorCode.FORBIDDEN });
+
+      expect(mockPrisma.generationTask.create).not.toHaveBeenCalled();
+      expect(mockPrisma.character.findFirst).not.toHaveBeenCalled();
     });
 
     it('fails with a Chinese no-worker message when the pool is empty', async () => {

@@ -178,9 +178,13 @@ export class PreproductionService {
     if (!episode) {
       throw new AppException(ErrorCode.INTERNAL_ERROR, '导入后没有集');
     }
+    const baseUpdatedAt = episode.screenplay
+      ? new Date(episode.screenplay.updatedAt).toISOString()
+      : undefined;
     await this.screenplay.putScreenplay(project.id, episode.id, userId, {
       title: projectName,
       nodes: parsed.nodes,
+      baseUpdatedAt,
     });
     return { id: project.id, name: project.name, episodeId: episode.id };
   }

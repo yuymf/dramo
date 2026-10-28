@@ -89,6 +89,7 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
   const [status, setStatus] = useState<SaveStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState("");
 
   const hydratedRef = useRef(false);
   const dirtyRef = useRef(false);
@@ -97,14 +98,18 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
 
   payloadRef.current = { title, cover, nodes, episodeId, projectId };
 
-  const putNow = useCallback(async () => {
+  const putNow = useCallback(async (): Promise<{ updatedAt?: string }> => {
     const current = payloadRef.current;
-    if (!current.projectId || !current.episodeId || !hydratedRef.current) return;
-    if (!dirtyRef.current) return;
+    if (!current.projectId || !current.episodeId || !hydratedRef.current) {
+      return { updatedAt: current.updatedAt || undefined };
+    }
+    if (!dirtyRef.current) {
+      return { updatedAt: current.updatedAt || undefined };
+    }
     dirtyRef.current = false;
     setStatus("saving");
     try {
-      await api<ScreenplayDoc>(
+      const saved = await api<ScreenplayDoc>(
         `/api/projects/${current.projectId}/episodes/${current.episodeId}/screenplay`,
         {
           method: "PUT",
@@ -112,17 +117,24 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
             title: current.title,
             cover: current.cover,
             nodes: current.nodes,
+            baseUpdatedAt: current.updatedAt,
           },
           noCache: true,
         }
       );
+      if (saved.updatedAt) {
+        setUpdatedAt(saved.updatedAt);
+        payloadRef.current = { ...payloadRef.current, updatedAt: saved.updatedAt };
+      }
       setStatus("saved");
       setError(null);
       window.dispatchEvent(new CustomEvent(derivedEntitiesChangedEvent, { detail: { projectId: current.projectId } }));
+      return { updatedAt: saved.updatedAt || current.updatedAt || undefined };
     } catch (err) {
       dirtyRef.current = true;
       setStatus("error");
       setError(err instanceof Error ? err.message : "保存失败");
+      return { updatedAt: current.updatedAt || undefined };
     }
   }, []);
 
@@ -174,6 +186,7 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
         setTitleState(docRes.title || projectRes.name || "");
         setCoverState(normalizeCover(docRes.cover));
         setNodesState(normalizeNodes(docRes.nodes));
+        setUpdatedAt(docRes.updatedAt || "");
         setStatus("idle");
         hydratedRef.current = true;
         setReady(true);
@@ -201,8 +214,8 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
-      void putNow().finally(() => {
-        detail?.done?.();
+      void putNow().then((info) => {
+        detail?.done?.(info);
       });
     };
 
@@ -222,6 +235,7 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
       setCoverState(normalizeCover(doc.cover));
       setNodesState(normalizeNodes(doc.nodes));
       if (doc.format) setFormat(doc.format);
+      if (doc.updatedAt) setUpdatedAt(doc.updatedAt);
       setStatus("saved");
       setError(null);
       window.dispatchEvent(new CustomEvent(derivedEntitiesChangedEvent, { detail: { projectId: current.projectId } }));
@@ -278,7 +292,7 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
       format,
       cover,
       nodes,
-      updatedAt: "",
+      updatedAt,
     },
     status,
     error,

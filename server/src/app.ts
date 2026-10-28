@@ -22,8 +22,16 @@ import { llmConfigs } from './routes/llm-config.js';
 const app = new Hono<AuthEnv>();
 
 // --- Global middleware ---
+function allowedCorsOrigin(origin: string): string {
+  const allow = new Set([config.frontendUrl, ...config.corsAllowedOrigins]);
+  if (origin && allow.has(origin)) return origin;
+  // No Origin (same-origin / non-browser) — echo configured frontend.
+  if (!origin) return config.frontendUrl;
+  return '';
+}
+
 app.use('*', cors({
-  origin: (origin) => origin || config.frontendUrl,
+  origin: allowedCorsOrigin,
   credentials: true,
   allowHeaders: ['Content-Type', 'X-Request-Id'],
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

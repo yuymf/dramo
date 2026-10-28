@@ -25,10 +25,16 @@ export const config = {
   // Storage (local only)
   storageDriver: 'local' as const,
   storageLocalDir: process.env.STORAGE_LOCAL_DIR || './uploads',
-  storageBaseUrl: process.env.STORAGE_BASE_URL || `http://localhost:${safeParseInt(process.env.PORT, 12321)}/uploads`,
+  storageBaseUrl: process.env.STORAGE_BASE_URL || `http://localhost:${safeParseInt(process.env.PORT, 12321)}/api/files`,
 
   // Frontend URL
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:12323',
+
+  // Extra CORS origins (comma-separated), always includes frontendUrl
+  corsAllowedOrigins: (process.env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
 
   // Stable Diffusion worker pool (A1111-compatible JSON array).
   // Empty / unset → sd-pool.service applies the two default slots.

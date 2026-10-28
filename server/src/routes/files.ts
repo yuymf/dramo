@@ -3,6 +3,8 @@ import path from 'node:path';
 import { Hono } from 'hono';
 import { config } from '../config/index.js';
 import type { AuthEnv } from '../middleware/session.js';
+import { resolveAccess } from '../services/access.service.js';
+import { requireUser } from './helpers.js';
 
 const files = new Hono<AuthEnv>();
 
@@ -12,6 +14,7 @@ files.get('/files/projects/:projectId/:filename', async (c) => {
   if (!/^[a-zA-Z0-9_-]+$/.test(projectId) || !/^[a-zA-Z0-9._-]+$/.test(filename)) {
     return c.body(null, 404);
   }
+  await resolveAccess(projectId, requireUser(c).userId);
   const root = path.resolve(config.storageLocalDir, 'projects');
   const filePath = path.resolve(root, projectId, filename);
   if (!filePath.startsWith(root + path.sep)) {
@@ -34,7 +37,7 @@ files.get('/files/projects/:projectId/:filename', async (c) => {
       status: 200,
       headers: {
         'Content-Type': type,
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': 'private, max-age=31536000, immutable',
       },
     });
   } catch {

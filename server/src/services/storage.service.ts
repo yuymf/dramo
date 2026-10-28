@@ -10,7 +10,7 @@ export interface StoredImage {
 
 /**
  * Local filesystem storage. Files live under config.storageLocalDir
- * and are served by nginx at /uploads in production.
+ * and are served via /api/v1/files (ACL) in production.
  */
 export class StorageService {
   constructor() {

@@ -846,7 +846,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
 
       if (pendingProposal.kind !== "script") throw new Error("修订范围已变化，请重新预览");
 
-      await requestScreenplayFlush();
+      const flushed = await requestScreenplayFlush();
       const doc = unwrap(
         await api<ScreenplayDoc | { data: ScreenplayDoc }>(
           `/api/projects/${projectId}/episodes/${episodeId}/screenplay/revise/accept`,
@@ -855,6 +855,7 @@ export function FloatingAI({ projectId, scopeNodeIds, onSend, mode = "script" }:
             body: {
               replacements: pendingProposal.replacements,
               scope: pendingProposal.scope,
+              baseUpdatedAt: flushed.updatedAt,
             },
             noCache: true,
             timeoutMs: 60_000,
