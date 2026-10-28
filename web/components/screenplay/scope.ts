@@ -13,7 +13,7 @@ export interface ScreenplayScopeDetail {
 }
 
 export interface ScreenplayFlushDetail {
-  done?: () => void;
+  done?: (info?: { updatedAt?: string }) => void;
 }
 
 export function dispatchScreenplayScope(
@@ -42,20 +42,22 @@ export function dispatchScreenplayRevised(doc: ScreenplayDoc): void {
   );
 }
 
-export function requestScreenplayFlush(timeoutMs = 4000): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
+export function requestScreenplayFlush(
+  timeoutMs = 4000
+): Promise<{ updatedAt?: string }> {
+  if (typeof window === "undefined") return Promise.resolve({});
   return new Promise((resolve) => {
     let settled = false;
-    const done = () => {
+    const done = (info?: { updatedAt?: string }) => {
       if (settled) return;
       settled = true;
-      resolve();
+      resolve(info ?? {});
     };
     window.dispatchEvent(
       new CustomEvent<ScreenplayFlushDetail>(SCREENPLAY_FLUSH_EVENT, {
         detail: { done },
       })
     );
-    window.setTimeout(done, timeoutMs);
+    window.setTimeout(() => done(), timeoutMs);
   });
 }

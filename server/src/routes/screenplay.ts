@@ -51,7 +51,7 @@ screenplay.post(`${EPISODE_PATH}/revise/accept`, async (c) => {
     projectId,
     episodeId,
     userId,
-    body as { replacements?: unknown; scope?: unknown }
+    body as { replacements?: unknown; scope?: unknown; baseUpdatedAt?: unknown }
   );
   return c.json(result);
 });
@@ -73,7 +73,7 @@ screenplay.put(EPISODE_PATH, async (c) => {
     projectId,
     episodeId,
     userId,
-    body as { title?: unknown; cover?: unknown; nodes?: unknown }
+    body as { title?: unknown; cover?: unknown; nodes?: unknown; baseUpdatedAt?: unknown }
   );
   return c.json(result);
 });

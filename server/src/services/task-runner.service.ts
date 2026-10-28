@@ -3,6 +3,7 @@ import { logger } from '../lib/logger.js';
 import { AppException, ErrorCode } from '../lib/errors.js';
 import { TaskStoreService } from './task-store.service.js';
 import { StorageService } from './storage.service.js';
+import { resolveAccess } from './access.service.js';
 import {
   getSdPool,
   isUnreachableError,
@@ -71,6 +72,7 @@ export class TaskRunnerService {
   }
 
   async createTask(data: CreateGenerationInput) {
+    await resolveAccess(data.projectId, data.userId, { write: true });
     await this.assertEntity(data);
 
     const task = await this.insertTask({

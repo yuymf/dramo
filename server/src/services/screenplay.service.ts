@@ -548,6 +548,24 @@ function toLocationRecord(row: {
   };
 }
 
+
+function requireBaseUpdatedAt(value: unknown): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new AppException(ErrorCode.MISSING_REQUIRED_FIELD, 'baseUpdatedAt 不能为空');
+  }
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) {
+    throw new AppException(ErrorCode.INVALID_INPUT, 'baseUpdatedAt 无效');
+  }
+  return new Date(ms).toISOString();
+}
+
+function assertUnchangedUpdatedAt(actual: Date, baseUpdatedAtIso: string): void {
+  if (actual.toISOString() !== baseUpdatedAtIso) {
+    throw new AppException(ErrorCode.CONFLICT, '剧本已变化，请重新加载');
+  }
+}
+
 export class ScreenplayService {
   async requireAccess(
     projectId: string,
@@ -596,12 +614,15 @@ export class ScreenplayService {
     projectId: string,
     episodeId: string,
     userId: string,
-    body: { title?: unknown; cover?: unknown; nodes?: unknown }
+    body: { title?: unknown; cover?: unknown; nodes?: unknown; baseUpdatedAt?: unknown }
   ): Promise<ScreenplayDoc> {
     const loaded = await this.loadEpisode(projectId, episodeId, userId, { write: true });
     if (body.nodes === undefined) {
       throw new AppException(ErrorCode.MISSING_REQUIRED_FIELD, 'nodes 不能为空');
     }
+    const baseUpdatedAt = loaded.screenplay
+      ? requireBaseUpdatedAt(body.baseUpdatedAt)
+      : undefined;
 
     const existingCover = loaded.screenplay
       ? normalizeCover(loaded.screenplay.cover)
@@ -620,6 +641,7 @@ export class ScreenplayService {
       cover,
       nodes,
       summary: '保存',
+      baseUpdatedAt,
     });
 
     await deriveFromNodes(projectId, nodes, episodeId);
@@ -732,12 +754,13 @@ export class ScreenplayService {
     projectId: string,
     episodeId: string,
     userId: string,
-    body: { replacements?: unknown; scope?: unknown }
+    body: { replacements?: unknown; scope?: unknown; baseUpdatedAt?: unknown }
   ): Promise<ScreenplayDoc> {
     const loaded = await this.loadEpisode(projectId, episodeId, userId, { write: true });
     if (!loaded.screenplay) {
       throw new AppException(ErrorCode.NOT_FOUND, '剧本不存在');
     }
+    const baseUpdatedAt = requireBaseUpdatedAt(body.baseUpdatedAt);
 
     const parsedScope = this.parseScope(body.scope);
     const replacements = parseNodesInput(body.replacements);
@@ -756,26 +779,13 @@ export class ScreenplayService {
       cover,
       nodes,
       summary: '修订',
+      baseUpdatedAt,
     });
 
     await deriveFromNodes(projectId, nodes, episodeId);
     return toDoc(screenplay, loaded.access.format);
   }
 
-  /** @deprecated Prefer previewRevise + acceptRevise. Kept only if callers still expect one-shot. */
-  async reviseScreenplay(
-    projectId: string,
-    episodeId: string,
-    userId: string,
-    body: { instruction?: unknown; scope?: unknown },
-    requestId?: string
-  ): Promise<ScreenplayDoc> {
-    const proposal = await this.previewRevise(projectId, episodeId, userId, body, requestId);
-    return this.acceptRevise(projectId, episodeId, userId, {
-      replacements: proposal.replacements,
-      scope: proposal.scope,
-    });
-  }
 
   async listCharacters(projectId: string, userId: string): Promise<{ data: CharacterRecord[] }> {
     await this.requireAccess(projectId, userId);
@@ -902,6 +912,7 @@ export class ScreenplayService {
     cover: Cover;
     nodes: ScreenplayNode[];
     summary: string;
+    baseUpdatedAt?: string;
   }) {
     const coverJson = input.cover as unknown as Prisma.InputJsonValue;
     const nodesJson = input.nodes as unknown as Prisma.InputJsonValue;
@@ -911,6 +922,16 @@ export class ScreenplayService {
       try {
         return await prisma.$transaction(async (tx) => {
           const current = existing;
+          if (current && input.baseUpdatedAt) {
+            const fresh = await tx.screenplay.findUnique({
+              where: { id: current.id },
+              select: { updatedAt: true },
+            });
+            if (!fresh) {
+              throw new AppException(ErrorCode.NOT_FOUND, '剧本不存在');
+            }
+            assertUnchangedUpdatedAt(fresh.updatedAt, input.baseUpdatedAt);
+          }
           const screenplay = current
             ? await tx.screenplay.update({
                 where: { id: current.id },
