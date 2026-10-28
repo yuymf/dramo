@@ -1,5 +1,7 @@
 name: CI
 
+# Runs on Grok Bot box self-hosted runners (hosted minutes billing-blocked).
+
 on:
   push:
     branches: [main]
@@ -16,7 +18,7 @@ concurrency:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -36,7 +38,7 @@ jobs:
 
   test:
     name: Server unit tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -62,7 +64,7 @@ jobs:
 
   agentos-pytest:
     name: AgentOS pytest
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 15
     steps:
       - name: Checkout

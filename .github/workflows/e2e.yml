@@ -1,10 +1,11 @@
 name: E2E
 
+# Soft-disabled for auto runs: workflow_dispatch only.
+# Needs Docker Compose (docker.sock). The Grok Bot box has no Docker daemon
+# today — keep runs-on: ubuntu-latest so this can run on hosted runners when
+# billing allows, or on any self-hosted host that has Docker. Manual / rare.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,6 +17,7 @@ concurrency:
 jobs:
   playwright:
     name: Playwright e2e
+    # Docker Compose required — not available on the current Grok Bot box.
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
