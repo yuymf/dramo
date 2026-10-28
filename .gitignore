@@ -8,8 +8,12 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 
-# Environment variables
+# Environment variables — never commit real values
 .env
+.env.*
+!.env.example
+!**/.env.example
+!**/*.example
 .env.local
 .env.*.local
 .env.production
@@ -26,24 +30,30 @@ yarn-error.log*
 # Next.js
 .next/
 
-# IDE
+# IDE / editor
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# AI / Agent tooling
+# AI / agent tooling (never ship process dumps)
 .claude/
 .codex/
 .cursor/
+.agents/
+.agent/
 .superpowers/
 .specify/
 .playwright-mcp/
 .gstack/
 **/docs/superpowers/
+AGENTS.md
+CONTEXT.md
+**/NIGHTLY*.md
+**/PONY*.md
 
-# Planning-with-files temporary artifacts (per-module scratch files)
+# Planning-with-files temporary artifacts
 **/findings.md
 **/progress.md
 **/task_plan.md

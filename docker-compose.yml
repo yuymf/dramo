@@ -1,3 +1,12 @@
+# Dramo release Compose — one command for the full stack.
+# 1) cp .env.example .env   # set ENCRYPTION_KEY (openssl rand -hex 32)
+#    or: ./deploy/setup-dramo.sh   # generates secrets + up --build
+# 2) docker compose up -d --build
+# Open http://localhost (Nginx :80 → web + /api → server → agentos)
+#
+# Web-only on Vercel is possible (see README); server / agentos / Postgres
+# still need this Docker path (or equivalent hosts). Not a fake "full stack on Vercel".
+
 services:
   postgres:
     image: postgres:15-alpine
