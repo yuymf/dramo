@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -12,6 +10,9 @@
 
 # testing
 /coverage
+playwright-report/
+test-results/
+blob-report/
 
 # next.js
 /.next/
@@ -30,8 +31,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — keep examples only
+.env
+.env.*
+!.env.example
+!env.local.example
 
 # vercel
 .vercel
@@ -40,18 +44,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-
+# agent tooling
 .playwright-mcp
 .specify
 .cursor
+.codex
+.claude
+.superpowers/
 
 *.pyc
+__pycache__/
 
-# Local file uploads (development)
-/backend/uploads/
+# Local uploads
 /uploads/
-backend/agentos/__pycache__/app.cpython-312.pyc
-.vscode/launch.json
-
-# Superpowers brainstorm sessions
-.superpowers/
