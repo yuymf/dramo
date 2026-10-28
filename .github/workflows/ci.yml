@@ -1,5 +1,7 @@
 name: CI
 
+# Runs on Grok Bot box self-hosted runners (hosted minutes billing-blocked).
+
 on:
   push:
     branches: [main]
@@ -16,7 +18,7 @@ concurrency:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -26,7 +28,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
 
       - name: Install npm dependencies
         run: npm ci
@@ -36,7 +37,7 @@ jobs:
 
   test:
     name: Server unit tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -46,7 +47,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
 
       - name: Install npm dependencies
         run: npm ci
@@ -55,34 +55,38 @@ jobs:
         run: npm run prisma:generate
 
       - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        run: |
+          if command -v ffmpeg >/dev/null 2>&1; then
+            ffmpeg -version | head -1
+            exit 0
+          fi
+          if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+            sudo apt-get update && sudo apt-get install -y ffmpeg
+          else
+            echo "::error::ffmpeg missing and sudo apt unavailable on this runner"
+            exit 1
+          fi
 
       - name: Run server Jest
         run: npm run test
 
   agentos-pytest:
     name: AgentOS pytest
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, X64, box]
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: |
-            agentos/requirements.txt
-            agentos/requirements-dev.txt
-
-      - name: Install AgentOS dependencies
+      # setup-python prebuilt 3.11 is unavailable on this Debian 13 box OS.
+      # Use system python3 (3.13+) with a venv so we do not touch the box site-packages.
+      - name: Install AgentOS dependencies (system python3)
         working-directory: agentos
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run pytest
         working-directory: agentos
-        run: pytest
+        run: .venv/bin/pytest
