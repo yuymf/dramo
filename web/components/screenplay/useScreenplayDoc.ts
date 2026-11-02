@@ -93,10 +93,10 @@ export function useScreenplayDoc(projectId: string | undefined): UseScreenplayDo
 
   const hydratedRef = useRef(false);
   const dirtyRef = useRef(false);
-  const payloadRef = useRef({ title, cover, nodes, episodeId, projectId });
+  const payloadRef = useRef({ title, cover, nodes, episodeId, projectId, updatedAt });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  payloadRef.current = { title, cover, nodes, episodeId, projectId };
+  payloadRef.current = { title, cover, nodes, episodeId, projectId, updatedAt };
 
   const putNow = useCallback(async (): Promise<{ updatedAt?: string }> => {
     const current = payloadRef.current;
